@@ -1,0 +1,30 @@
+{
+  "name": "@x2zod/json-schema",
+  "version": "0.0.0",
+  "private": true,
+  "description": "JSON Schema input plugin for x2zod.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gkze/x2zod.git",
+    "directory": "packages/json-schema"
+  },
+  "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "check": "bun run lint && bun run typecheck && bun run test",
+    "lint": "bun --eval \"void 0\"",
+    "test": "bun test --pass-with-no-tests",
+    "typecheck": "tsgo --project tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@x2zod/core": "workspace:*",
+    "zod": "4.3.6"
+  },
+  "devDependencies": {
+    "@types/bun": "1.3.13",
+    "tsconfig": "workspace:*"
+  }
+}

@@ -1,0 +1,70 @@
+#:schema https://www.schemastore.org/prek.json
+
+[[repos]]
+repo = "local"
+
+[[repos.hooks]]
+id = "taplo"
+name = "taplo"
+language = "system"
+entry = "bun run toml:check"
+pass_filenames = false
+stages = ["pre-commit"]
+
+[[repos.hooks]]
+id = "shfmt"
+name = "shfmt"
+language = "system"
+entry = "bun run shell:format:check"
+pass_filenames = false
+stages = ["pre-commit"]
+
+[[repos.hooks]]
+id = "shellcheck"
+name = "shellcheck"
+language = "system"
+entry = "bun run shell:lint"
+pass_filenames = false
+stages = ["pre-commit"]
+
+[[repos.hooks]]
+id = "markdownlint"
+name = "markdownlint"
+language = "system"
+entry = "bun run markdown:lint"
+pass_filenames = false
+stages = ["pre-commit"]
+
+[[repos.hooks]]
+id = "oxfmt"
+name = "oxfmt"
+language = "system"
+entry = "bun run format:check"
+pass_filenames = false
+stages = ["pre-commit"]
+
+[[repos.hooks]]
+id = "lint"
+name = "lint"
+language = "system"
+entry = "bun run lint"
+pass_filenames = false
+stages = ["pre-commit"]
+
+[[repos.hooks]]
+id = "commitlint"
+name = "commitlint"
+language = "system"
+entry = "bun run commitlint --edit"
+pass_filenames = true
+always_run = true
+stages = ["commit-msg"]
+
+[[repos.hooks]]
+id = "check"
+name = "check"
+language = "system"
+entry = "bun run check"
+pass_filenames = false
+always_run = true
+stages = ["pre-push"]

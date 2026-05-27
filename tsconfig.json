@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "tsconfig/base.json",
+  "files": [],
+  "references": [
+    { "path": "./apps/cli" },
+    { "path": "./packages/core" },
+    { "path": "./packages/json-schema" },
+    { "path": "./packages/tsconfig" },
+    { "path": "./tsconfig.configs.json" }
+  ]
+}

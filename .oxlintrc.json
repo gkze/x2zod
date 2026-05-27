@@ -1,0 +1,101 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "categories": {
+    "correctness": "error",
+    "nursery": "error",
+    "pedantic": "error",
+    "perf": "error",
+    "restriction": "error",
+    "style": "error",
+    "suspicious": "error"
+  },
+  "env": { "builtin": true, "node": true },
+  "globals": { "Bun": "readonly", "fetch": "readonly" },
+  "ignorePatterns": [
+    "coverage/**",
+    "dist/**",
+    "node_modules/**",
+    "packages/*/src/generated/**",
+    "packages/core/src/targets/**/generated/**",
+    "src/targets/**/generated/**"
+  ],
+  "options": {
+    "denyWarnings": true,
+    "maxWarnings": 0,
+    "reportUnusedDisableDirectives": "error",
+    "respectEslintDisableDirectives": false,
+    "typeAware": true,
+    "typeCheck": true
+  },
+  "plugins": ["eslint", "import", "jsdoc", "node", "oxc", "promise", "typescript", "unicorn"],
+  "rules": {
+    "consistent-type-definitions": "off",
+    "curly": ["error", "multi-line"],
+    "exports-last": "off",
+    "group-exports": "off",
+    "id-length": ["error", { "exceptionPatterns": ["^T[A-Z]"], "exceptions": ["T", "z"] }],
+    "no-magic-numbers": [
+      "error",
+      {
+        "ignore": [0, 1, 2],
+        "ignoreArrayIndexes": true,
+        "ignoreDefaultValues": true,
+        "ignoreEnums": true,
+        "ignoreNumericLiteralTypes": true,
+        "ignoreReadonlyClassProperties": true
+      }
+    ],
+    "max-lines-per-function": [
+      "error",
+      { "max": 100, "skipBlankLines": true, "skipComments": true }
+    ],
+    "max-statements": ["error", 40],
+    "max-lines": ["error", 500],
+    "max-dependencies": ["error", { "max": 20 }],
+    "extensions": [
+      "error",
+      "ignorePackages",
+      {
+        "checkTypeImports": true,
+        "cjs": "never",
+        "cts": "never",
+        "js": "never",
+        "jsx": "never",
+        "mjs": "never",
+        "mts": "never",
+        "ts": "never",
+        "tsx": "never"
+      }
+    ],
+    "no-named-export": "off",
+    "no-null": "off",
+    "no-async-await": "off",
+    "no-default-export": "off",
+    "no-duplicate-imports": ["error", { "allowSeparateTypeImports": true }],
+    "no-nodejs-modules": "off",
+    "no-optional-chaining": "off",
+    "no-relative-parent-imports": "off",
+    "no-rest-spread-properties": "off",
+    "no-ternary": "off",
+    "no-undefined": "off",
+    "no-unsafe-type-assertion": "off",
+    "no-use-before-define": "off",
+    "prefer-default-export": "off",
+    "prefer-readonly-parameter-types": "off",
+    "sort-imports": "off",
+    "sort-keys": "off"
+  },
+  "settings": {
+    "jsdoc": {
+      "augmentsExtendsReplacesDocs": false,
+      "exemptDestructuredRootsFromChecks": false,
+      "ignoreInternal": false,
+      "ignorePrivate": false,
+      "ignoreReplacesDocs": false,
+      "implementsReplacesDocs": false,
+      "overrideReplacesDocs": false,
+      "tagNamePreference": {}
+    }
+  },
+  "overrides": [{ "files": ["apps/cli/src/cli.ts"], "rules": { "no-console": "off" } }]
+}

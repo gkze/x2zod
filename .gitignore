@@ -1,0 +1,9 @@
+dist
+coverage
+node_modules
+*.tsbuildinfo
+.turbo
+.direnv
+.env
+.env.local
+.envrc.local

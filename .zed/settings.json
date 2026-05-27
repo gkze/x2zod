@@ -1,0 +1,8 @@
+{
+  "languages": {
+    "JavaScript": { "language_servers": ["!biome", "..."] },
+    "JSON": { "language_servers": ["!biome", "..."] },
+    "JSONC": { "language_servers": ["!biome", "..."] },
+    "TypeScript": { "language_servers": ["!biome", "..."] }
+  }
+}

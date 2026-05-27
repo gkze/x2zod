@@ -1,0 +1,15 @@
+{
+  "name": "tsconfig",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./base.json": "./base.json"
+  },
+  "scripts": {
+    "check": "bun run lint && bun run typecheck && bun run test",
+    "lint": "bun --eval \"void 0\"",
+    "test": "bun test --pass-with-no-tests",
+    "typecheck": "tsgo --project tsconfig.json --noEmit"
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "name": "x2zod-monorepo",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Schema and IDL to Zod source compiler.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gkze/x2zod.git"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "type": "module",
+  "scripts": {
+    "actions:lint": "github-actionlint",
+    "check": "bun run format:check && bun run toml:check && bun run shell:format:check && bun run shell:lint && bun run markdown:lint && bun run lint && bun run typecheck && bun run test",
+    "commitlint": "commitlint",
+    "format": "oxfmt --write .",
+    "format:check": "oxfmt --check .",
+    "hooks:install": "prek install --hook-type pre-commit --hook-type commit-msg --hook-type pre-push --overwrite",
+    "hooks:run": "prek run --all-files",
+    "lint": "turbo run //#actions:lint //#lint:root lint",
+    "lint:fix": "oxlint --fix .",
+    "lint:root": "oxlint .markdownlint-cli2.mjs scripts",
+    "markdown:lint": "markdownlint-cli2",
+    "publish:jsr": "bun scripts/publish-packages.ts jsr",
+    "publish:npm": "bun scripts/publish-packages.ts npm",
+    "shell:format": "bun scripts/shfmt.ts --write",
+    "shell:format:check": "bun scripts/shfmt.ts",
+    "shell:lint": "${SHELLCHECK_BINARY:-shellcheck} .envrc",
+    "test": "turbo run test",
+    "toml:check": "taplo fmt --check prek.toml && taplo lint prek.toml",
+    "toml:format": "taplo fmt prek.toml",
+    "typecheck": "tsgo -b --noEmit",
+    "x2zod": "x2zod"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "21.0.1",
+    "@commitlint/config-conventional": "21.0.1",
+    "@commitlint/types": "21.0.1",
+    "@j178/prek": "0.4.2",
+    "@optique/core": "1.0.2",
+    "@optique/run": "1.0.2",
+    "@taplo/cli": "0.7.0",
+    "@types/bun": "1.3.13",
+    "@typescript/native-preview": "7.0.0-dev.20260427.1",
+    "@wasm-fmt/shfmt": "0.2.7",
+    "@x2zod/cli": "workspace:*",
+    "github-actionlint": "1.7.12",
+    "jsr": "0.14.3",
+    "markdownlint": "0.40.0",
+    "markdownlint-cli2": "0.22.1",
+    "oxfmt": "0.47.0",
+    "oxlint": "1.62.0",
+    "oxlint-tsgolint": "0.22.1",
+    "shellcheck": "4.1.0",
+    "tsconfig": "workspace:*",
+    "turbo": "2.9.6"
+  },
+  "engines": {
+    "bun": ">=1.3.14"
+  },
+  "packageManager": "bun@1.3.14"
+}
