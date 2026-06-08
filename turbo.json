@@ -2,13 +2,13 @@
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": ["bun.lock"],
   "tasks": {
-    "//#format:check": {
+    "//#format:check:root": {
       "inputs": [
         "$TURBO_ROOT$/.github/workflows/**/*.yaml",
         "$TURBO_ROOT$/.github/workflows/**/*.yml",
         "$TURBO_ROOT$/.oxfmtrc.json",
         "$TURBO_ROOT$/.markdownlint-cli2.mjs",
-        "$TURBO_ROOT$/.oxlintrc.json",
+        "$TURBO_ROOT$/.oxlintrc.jsonc",
         "$TURBO_ROOT$/.zed/**/*.json",
         "$TURBO_ROOT$/AGENTS.md",
         "$TURBO_ROOT$/README.md",
@@ -26,7 +26,52 @@
       ],
       "outputs": []
     },
-    "//#actions:lint": {
+    "//#format:check:shell": {
+      "inputs": [
+        "$TURBO_ROOT$/package.json",
+        "$TURBO_ROOT$/.envrc",
+        "$TURBO_ROOT$/scripts/shfmt.ts"
+      ],
+      "outputs": []
+    },
+    "//#format:check:toml": { "inputs": ["$TURBO_ROOT$/prek.toml"], "outputs": [] },
+    "//#format:root": {
+      "cache": false,
+      "inputs": [
+        "$TURBO_ROOT$/.github/workflows/**/*.yaml",
+        "$TURBO_ROOT$/.github/workflows/**/*.yml",
+        "$TURBO_ROOT$/.oxfmtrc.json",
+        "$TURBO_ROOT$/.markdownlint-cli2.mjs",
+        "$TURBO_ROOT$/.oxlintrc.jsonc",
+        "$TURBO_ROOT$/.zed/**/*.json",
+        "$TURBO_ROOT$/AGENTS.md",
+        "$TURBO_ROOT$/README.md",
+        "$TURBO_ROOT$/apps/**/*.json",
+        "$TURBO_ROOT$/apps/**/*.ts",
+        "$TURBO_ROOT$/commitlint.config.ts",
+        "$TURBO_ROOT$/docs/**/*.md",
+        "$TURBO_ROOT$/package.json",
+        "$TURBO_ROOT$/packages/**/*.json",
+        "$TURBO_ROOT$/packages/**/*.ts",
+        "$TURBO_ROOT$/prek.toml",
+        "$TURBO_ROOT$/scripts/**/*.ts",
+        "$TURBO_ROOT$/tsconfig*.json",
+        "$TURBO_ROOT$/turbo.json"
+      ],
+      "outputs": []
+    },
+    "//#format:shell": {
+      "cache": false,
+      "inputs": [
+        "$TURBO_ROOT$/package.json",
+        "$TURBO_ROOT$/.envrc",
+        "$TURBO_ROOT$/scripts/shfmt.ts"
+      ],
+      "outputs": []
+    },
+    "//#format:toml": { "cache": false, "inputs": ["$TURBO_ROOT$/prek.toml"], "outputs": [] },
+    "//#lint:actions": {
+      "passThroughEnv": ["ACTIONLINT_BIN"],
       "inputs": [
         "$TURBO_ROOT$/.github/workflows/**/*.yaml",
         "$TURBO_ROOT$/.github/workflows/**/*.yml",
@@ -34,18 +79,7 @@
       ],
       "outputs": []
     },
-    "//#lint:root": {
-      "inputs": [
-        "$TURBO_ROOT$/package.json",
-        "$TURBO_ROOT$/tsconfig.configs.json",
-        "$TURBO_ROOT$/packages/tsconfig/base.json",
-        "$TURBO_ROOT$/.oxlintrc.json",
-        "$TURBO_ROOT$/.markdownlint-cli2.mjs",
-        "$TURBO_ROOT$/scripts/**/*.ts"
-      ],
-      "outputs": []
-    },
-    "//#markdown:lint": {
+    "//#lint:markdown": {
       "inputs": [
         "$TURBO_ROOT$/.markdownlint-cli2.mjs",
         "$TURBO_ROOT$/**/*.md",
@@ -54,28 +88,35 @@
       ],
       "outputs": []
     },
-    "//#shell:format:check": {
+    "//#lint:root": {
       "inputs": [
         "$TURBO_ROOT$/package.json",
-        "$TURBO_ROOT$/.envrc",
-        "$TURBO_ROOT$/scripts/shfmt.ts"
+        "$TURBO_ROOT$/tsconfig.configs.json",
+        "$TURBO_ROOT$/packages/tsconfig/base.json",
+        "$TURBO_ROOT$/packages/eslint-plugins/package.json",
+        "$TURBO_ROOT$/packages/eslint-plugins/src/**/*.ts",
+        "$TURBO_ROOT$/.oxlintrc.jsonc",
+        "$TURBO_ROOT$/.markdownlint-cli2.mjs",
+        "$TURBO_ROOT$/commitlint.config.ts",
+        "$TURBO_ROOT$/scripts/**/*.ts"
       ],
       "outputs": []
     },
-    "//#shell:lint": { "inputs": ["$TURBO_ROOT$/.envrc"], "outputs": [] },
-    "//#toml:check": { "inputs": ["$TURBO_ROOT$/prek.toml"], "outputs": [] },
+    "//#lint:shell": { "inputs": ["$TURBO_ROOT$/.envrc"], "outputs": [] },
+    "//#lint:toml": { "inputs": ["$TURBO_ROOT$/prek.toml"], "outputs": [] },
     "lint": {
       "inputs": [
         "$TURBO_DEFAULT$",
-        "$TURBO_ROOT$/.oxlintrc.json",
+        "$TURBO_ROOT$/.oxlintrc.jsonc",
+        "$TURBO_ROOT$/packages/eslint-plugins/package.json",
+        "$TURBO_ROOT$/packages/eslint-plugins/src/**/*.ts",
         "$TURBO_ROOT$/tsconfig.json",
         "$TURBO_ROOT$/packages/tsconfig/base.json"
       ],
       "outputs": []
     },
-    "test": { "dependsOn": ["^test"], "inputs": ["$TURBO_DEFAULT$"], "outputs": [] },
+    "test": { "inputs": ["$TURBO_DEFAULT$"], "outputs": [] },
     "typecheck": {
-      "dependsOn": ["^typecheck"],
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",

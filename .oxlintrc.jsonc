@@ -1,0 +1,148 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "categories": {
+    "correctness": "error",
+    "nursery": "error",
+    "pedantic": "error",
+    "perf": "error",
+    "restriction": "error",
+    "style": "error",
+    "suspicious": "error",
+  },
+  "env": { "builtin": true, "node": true },
+  "globals": { "Bun": "readonly", "fetch": "readonly" },
+  "ignorePatterns": [
+    "coverage/**",
+    "dist/**",
+    "node_modules/**",
+    "packages/*/src/generated/**",
+    "packages/core/src/targets/**/generated/**",
+    "src/targets/**/generated/**",
+  ],
+  "options": {
+    "denyWarnings": true,
+    "maxWarnings": 0,
+    "reportUnusedDisableDirectives": "error",
+    "typeAware": true,
+    "typeCheck": true,
+  },
+  "jsPlugins": ["./packages/eslint-plugins/src/index.ts"],
+  "plugins": ["eslint", "import", "jsdoc", "node", "oxc", "promise", "typescript", "unicorn"],
+  "rules": {
+    "curly": ["error", "multi"],
+    // Export placement is presentation-only; inline exported declarations keep APIs near implementation.
+    "exports-last": "off",
+    // Export grouping is presentation-only; inline named exports are clearer for typed library APIs.
+    "group-exports": "off",
+    "id-length": ["error", { "exceptionPatterns": ["^T[A-Z]"], "exceptions": ["T", "z"] }],
+    "no-magic-numbers": [
+      "error",
+      {
+        "ignore": [0, 1, 2],
+        "ignoreArrayIndexes": true,
+        "ignoreDefaultValues": true,
+        "ignoreEnums": true,
+        "ignoreNumericLiteralTypes": true,
+        "ignoreReadonlyClassProperties": true,
+      },
+    ],
+    "max-lines-per-function": [
+      "error",
+      { "max": 100, "skipBlankLines": true, "skipComments": true },
+    ],
+    "max-statements": ["error", 40],
+    "max-lines": ["error", 500],
+    "max-dependencies": ["error", { "max": 20 }],
+    "extensions": [
+      "error",
+      "ignorePackages",
+      {
+        "checkTypeImports": true,
+        "cjs": "never",
+        "cts": "never",
+        "js": "never",
+        "jsx": "never",
+        "mjs": "never",
+        "mts": "never",
+        "ts": "never",
+        "tsx": "never",
+      },
+    ],
+    // Named exports are the TypeScript library default; they preserve canonical names and auto-imports.
+    "no-default-export": "error",
+    // Named exports are the TypeScript library default; do not force default-only module APIs.
+    "no-named-export": "off",
+    // JSON Schema and generated Zod plans need null as a first-class literal, not a banned sentinel.
+    "no-null": "off",
+    // Async APIs are real package/script boundaries here; banning async/await would obscure control flow.
+    "no-async-await": "off",
+    "no-duplicate-imports": ["error", { "allowSeparateTypeImports": true }],
+    // CLI, publish scripts, and the Oxlint plugin legitimately use Node built-ins.
+    "no-nodejs-modules": "off",
+    // Optional chaining keeps nullable/schema-tree traversal direct and type-safe.
+    "no-optional-chaining": "off",
+    // Package tests intentionally reach nearby source with relative imports until public package self-imports are warranted.
+    "no-relative-parent-imports": "off",
+    // Object and array spread are idiomatic for immutable IR updates and option construction.
+    "no-rest-spread-properties": "off",
+    // Ternaries keep compact expression builders readable and match the repo's expression-return style.
+    "no-ternary": "off",
+    // Explicit undefined checks are clearer than sentinel rewrites around TypeScript/native-preview APIs.
+    "no-undefined": "off",
+    // Branded values and native-preview AST/test APIs still need narrow assertions at API boundaries.
+    "no-unsafe-type-assertion": "off",
+    // Recursive schemas and builders need forward references; enforcing declaration order creates worse structure.
+    "no-use-before-define": "off",
+    // Single-export modules should still use named exports for stable refactors and package APIs.
+    "prefer-default-export": "off",
+    // External callback types make readonly parameter checking noisy beyond the repo's own typed IRs.
+    "prefer-readonly-parameter-types": "off",
+    // oxfmt/import grouping already owns import order; this rule creates duplicate style churn.
+    "sort-imports": "off",
+    // Object key order often encodes schema/source emission order, so sorting keys would reduce readability.
+    "sort-keys": "off",
+    "x2zod/compact-arrow-returns": "error",
+    "x2zod/compact-control-statements": "error",
+    "x2zod/const-arrow-functions": "error",
+    "x2zod/split-long-strings": "error",
+  },
+  "settings": {
+    "jsdoc": {
+      "augmentsExtendsReplacesDocs": false,
+      "exemptDestructuredRootsFromChecks": false,
+      "ignoreInternal": false,
+      "ignorePrivate": false,
+      "ignoreReplacesDocs": false,
+      "implementsReplacesDocs": false,
+      "overrideReplacesDocs": false,
+      "tagNamePreference": {},
+    },
+  },
+  "overrides": [
+    {
+      "files": ["packages/core/src/**/*.ts", "packages/json-schema/src/**/*.ts"],
+      "rules": {
+        // Published library source should stay runtime-neutral; hosts, tests, and scripts own Node adapters.
+        "no-nodejs-modules": "error",
+      },
+    },
+    {
+      "files": ["apps/cli/src/cli.ts"],
+      "rules": {
+        // The CLI entrypoint is the only place allowed to write user-facing process output.
+        "no-console": "off",
+      },
+    },
+    {
+      "files": [
+        ".markdownlint-cli2.mjs",
+        "commitlint.config.ts",
+        "packages/eslint-plugins/src/index.ts",
+      ],
+      "rules": {
+        // These config/plugin entrypoints need default exports because their consumers load default exports.
+        "no-default-export": "off",
+      },
+    },
+  ],
+}

@@ -17,8 +17,8 @@
     "access": "public"
   },
   "scripts": {
-    "check": "bun run lint && bun run typecheck && bun run test",
-    "lint": "cd ../.. && oxlint apps/cli",
+    "check": "turbo run lint typecheck test --filter=@x2zod/cli",
+    "lint": "bun --cwd ../.. oxlint apps/cli",
     "test": "bun test --pass-with-no-tests",
     "typecheck": "tsgo --project tsconfig.json --noEmit"
   },

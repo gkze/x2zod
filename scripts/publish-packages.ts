@@ -2,6 +2,14 @@ import { existsSync } from "node:fs";
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 
+import { object } from "@optique/core/constructs";
+import { message as optiqueMessage } from "@optique/core/message";
+import { argument, option } from "@optique/core/primitives";
+import { defineProgram } from "@optique/core/program";
+import { choice } from "@optique/core/valueparser";
+import type { RunOptions } from "@optique/run";
+import { runSync } from "@optique/run";
+
 type Registry = "jsr" | "npm";
 
 type DependencyField = "dependencies" | "optionalDependencies" | "peerDependencies";
@@ -25,8 +33,27 @@ const dependencyFields: readonly DependencyField[] = [
   "peerDependencies",
 ];
 const packageNamePrefix = "@x2zod/";
+const registries = ["jsr", "npm"] as const;
 const rootDirectory = new URL("..", import.meta.url).pathname;
 const workspaceGlobSuffix = "/*";
+const program = defineProgram({
+  metadata: { brief: optiqueMessage`Publish x2zod workspace packages.`, name: "publish-packages" },
+  parser: object({
+    allowEmpty: option("--allow-empty", {
+      description: optiqueMessage`Exit successfully when there are no publishable workspace packages.`,
+    }),
+    dryRun: option("--dry-run", {
+      description: optiqueMessage`Run the registry publish command without publishing packages.`,
+    }),
+    registry: argument(choice(registries), {
+      description: optiqueMessage`Package registry to publish to.`,
+    }),
+  }),
+});
+const runOptions = {
+  aboveError: "usage",
+  help: { option: { names: ["-h", "--help"] } },
+} satisfies RunOptions;
 
 const writeLine = (message: string): void => {
   process.stdout.write(`${message}\n`);
@@ -37,19 +64,6 @@ const fail = (message: string): never => {
   process.exitCode = 1;
   throw new Error(message);
 };
-
-const parseRegistry = (args: readonly string[]): Registry => {
-  if (args.includes("jsr")) return "jsr";
-  if (args.includes("npm")) return "npm";
-
-  return fail("usage: bun scripts/publish-packages.ts <npm|jsr> [--dry-run] [--allow-empty]");
-};
-
-const parseOptions = (args: readonly string[]): Options => ({
-  allowEmpty: args.includes("--allow-empty"),
-  dryRun: args.includes("--dry-run"),
-  registry: parseRegistry(args),
-});
 
 const readPackageJson = async (path: string): Promise<PackageJson> =>
   JSON.parse(await readFile(path, "utf8")) as PackageJson;
@@ -111,9 +125,8 @@ const sortByInternalDependencies = (
 
   const visit = (workspacePackage: WorkspacePackage): void => {
     if (visited.has(workspacePackage.name)) return;
-    if (visiting.has(workspacePackage.name)) {
+    if (visiting.has(workspacePackage.name))
       fail(`Workspace dependency cycle includes ${workspacePackage.name}.`);
-    }
 
     visiting.add(workspacePackage.name);
     for (const dependencyName of internalDependencies(workspacePackage, internalPackageNames)) {
@@ -125,11 +138,10 @@ const sortByInternalDependencies = (
     sorted.push(workspacePackage);
   };
 
-  for (const workspacePackage of workspacePackages.toSorted((left, right) =>
+  const sortedPackages = workspacePackages.toSorted((left, right) =>
     left.name.localeCompare(right.name),
-  )) {
-    visit(workspacePackage);
-  }
+  );
+  for (const workspacePackage of sortedPackages) visit(workspacePackage);
 
   return sorted;
 };
@@ -144,11 +156,10 @@ const workspaceDependencyIssues = (workspacePackage: WorkspacePackage): readonly
   );
 
 const assertPublishableManifest = (workspacePackage: WorkspacePackage): void => {
-  if (!workspacePackage.name.startsWith(packageNamePrefix)) {
+  if (!workspacePackage.name.startsWith(packageNamePrefix))
     fail(
       `Publishable workspace package names must use the ${packageNamePrefix} scope: ${workspacePackage.name}`,
     );
-  }
 
   const issues = workspaceDependencyIssues(workspacePackage);
   if (issues.length === 0) return;
@@ -170,7 +181,7 @@ const jsrCliEntrypoint = (): string => {
   const entrypoint = candidates.find((candidate) => existsSync(candidate));
   if (entrypoint !== undefined) return entrypoint;
 
-  return fail("JSR CLI is not installed. Run bun install first.");
+  return fail(["JSR CLI is not installed.", "Run bun install first."].join(" "));
 };
 
 const commandForPackage = ({ dryRun, registry }: Options): string[] =>
@@ -229,11 +240,13 @@ const publishPackages = async (options: Options): Promise<void> => {
   await publishSequentially(options, workspacePackages);
 };
 
-await publishPackages(parseOptions(Bun.argv.slice(2))).catch((error: unknown) => {
-  if (process.exitCode === undefined) {
-    process.stderr.write(
-      error instanceof Error ? `${error.message}\n` : "Unknown publish failure.\n",
-    );
-    process.exitCode = 1;
-  }
-});
+await publishPackages(runSync(program, { ...runOptions, args: Bun.argv.slice(2) })).catch(
+  (error: unknown) => {
+    if (process.exitCode === undefined) {
+      process.stderr.write(
+        error instanceof Error ? `${error.message}\n` : "Unknown publish failure.\n",
+      );
+      process.exitCode = 1;
+    }
+  },
+);

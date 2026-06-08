@@ -55,12 +55,13 @@
               ];
           };
 
-          nativeBuildInputs = [
-            pkgs.bun
+          nativeBuildInputs = with pkgs; [
+            actionlint
+            bun
             pkgs.bun2nix.hook
-            pkgs.makeWrapper
-            pkgs.nodejs_20
-            pkgs.shellcheck
+            makeWrapper
+            nodejs_25
+            shellcheck
           ];
 
           bunDeps = pkgs.bun2nix.fetchBunDeps {
@@ -72,6 +73,7 @@
           doCheck = true;
 
           env.TURBO_TELEMETRY_DISABLED = "1";
+          env.ACTIONLINT_BIN = lib.getExe pkgs.actionlint;
           env.SHELLCHECK_BINARY = lib.getExe pkgs.shellcheck;
 
           checkPhase = ''
@@ -89,7 +91,7 @@
 
             cp -R \
               .oxfmtrc.json \
-              .oxlintrc.json \
+              .oxlintrc.jsonc \
               apps \
               bun.lock \
               node_modules \
@@ -149,16 +151,19 @@
             packages =
               (with pkgs; [
                 bun
+                actionlint
                 deadnix
                 git
                 nil
                 nixfmt
-                nodejs_20
+                nodejs_25
                 shellcheck
                 shfmt
                 statix
               ])
               ++ [ bun2nix.packages.${system}.bun2nix ];
+
+            ACTIONLINT_BIN = lib.getExe pkgs.actionlint;
 
             shellHook = ''
               if [ ! -d node_modules ]; then

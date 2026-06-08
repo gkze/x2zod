@@ -54,6 +54,17 @@
         "tsconfig": "workspace:*",
       },
     },
+    "packages/eslint-plugins": {
+      "name": "@x2zod/eslint-plugins",
+      "version": "0.0.0",
+      "dependencies": {
+        "@typescript/native-preview": "7.0.0-dev.20260427.1",
+      },
+      "devDependencies": {
+        "@types/bun": "1.3.13",
+        "tsconfig": "workspace:*",
+      },
+    },
     "packages/json-schema": {
       "name": "@x2zod/json-schema",
       "version": "0.0.0",
@@ -309,6 +320,8 @@
     "@x2zod/cli": ["@x2zod/cli@workspace:apps/cli"],
 
     "@x2zod/core": ["@x2zod/core@workspace:packages/core"],
+
+    "@x2zod/eslint-plugins": ["@x2zod/eslint-plugins@workspace:packages/eslint-plugins"],
 
     "@x2zod/json-schema": ["@x2zod/json-schema@workspace:packages/json-schema"],
 
