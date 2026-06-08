@@ -2,13 +2,14 @@ import { describe, expect, test } from "bun:test";
 
 import { z } from "zod/v4";
 
-import { compileToZodSource, createDiagnostic, err, ok, zodFactory } from "../src/index";
+import { compileToZodSource, createDiagnostic, err, ok, ts, zodFactory } from "../src/index";
 import type {
   CompileToZodSourceResult,
   InputDocument,
   InputPlugin,
   PreparedInput,
-  ts,
+  ZodEmissionModuleInput,
+  ZodFactoryName,
 } from "../src/index";
 
 const emptyOptionsSchema = z.object({});
@@ -19,16 +20,45 @@ type FactoryOptions = Readonly<{ factory: "number" | "string" }>;
 type FactoryPlugin = InputPlugin<string, FactoryOptions, FactoryOptionInput>;
 type FactoryPreparedInputResult = Awaited<ReturnType<FactoryPlugin["prepare"]>>;
 type FactoryEmissionModuleResult = Awaited<ReturnType<FactoryPlugin["lower"]>>;
+type IdentifierLike = Readonly<{ text: string }>;
+type ExpressionLike = ts.Expression;
+type PropertyAccessLike = ExpressionLike & Readonly<{ name: IdentifierLike }>;
+type CallExpressionLike = ExpressionLike & Readonly<{ expression: PropertyAccessLike }>;
+type VariableDeclarationLike = Readonly<{ initializer: ExpressionLike; name: IdentifierLike }>;
+type VariableStatementLike = ts.VariableStatement &
+  Readonly<{ declarationList: Readonly<{ declarations: readonly [VariableDeclarationLike] }> }>;
+type ImportDeclarationLike = Readonly<{ moduleSpecifier: IdentifierLike }>;
 
 const document = {
   source: { id: "inline-test", kind: "inline" },
   text: "{}",
 } satisfies InputDocument;
+const generatedFileName = "/__x2zod__/x2zod.generated.ts";
+
+const emissionModuleForFactory = (factory: ZodFactoryName): ZodEmissionModuleInput => ({
+  declarations: [{ expression: zodFactory(factory), symbol: "root" }],
+  root: "root",
+});
+
+const firstVariableDeclaration = (sourceFile: ts.SourceFile): VariableDeclarationLike => {
+  const statement = sourceFile.statements.find(
+    (item) => item.kind === ts.SyntaxKind.VariableStatement,
+  );
+  if (statement === undefined) throw new Error("Missing variable statement.");
+
+  return (statement as unknown as VariableStatementLike).declarationList.declarations[0];
+};
+
+const importPath = (sourceFile: ts.SourceFile): string =>
+  (sourceFile.statements[0] as unknown as ImportDeclarationLike).moduleSpecifier.text;
+
+const zodCallName = (sourceFile: ts.SourceFile): string =>
+  (firstVariableDeclaration(sourceFile).initializer as unknown as CallExpressionLike).expression
+    .name.text;
 
 const unwrap = (result: CompileToZodSourceResult): SourceValue => {
-  if (!result.ok) {
+  if (!result.ok)
     throw new Error(result.diagnostics.map((diagnostic) => diagnostic.message).join("\n"));
-  }
 
   return result.value;
 };
@@ -41,7 +71,7 @@ const stringPlugin = {
     return result;
   },
   lower: async (): Promise<ResultEmissionModule> => {
-    const result = await Promise.resolve(ok({ root: zodFactory("string") }));
+    const result = await Promise.resolve(ok(emissionModuleForFactory("string")));
     return result;
   },
 } satisfies InputPlugin<string, EmptyOptions>;
@@ -68,7 +98,7 @@ const defaultedOptionsPlugin = (receivedOptions: FactoryOptions[]): FactoryPlugi
   ): Promise<FactoryEmissionModuleResult> => {
     await Promise.resolve();
     receivedOptions.push(options);
-    return ok({ root: zodFactory(options.factory) });
+    return ok(emissionModuleForFactory(options.factory));
   },
 });
 
@@ -83,18 +113,12 @@ describe("compileToZodSource", () => {
     const { sourceFile } = unwrap(result);
     const expectedStatementCount = 3;
 
-    expect(sourceFile.fileName).toBe("x2zod.generated.ts");
+    expect(sourceFile.fileName).toBe(generatedFileName);
+    expect(sourceFile.text).toBe("");
     expect(sourceFile.statements.length).toBe(expectedStatementCount);
-    expect(sourceFile.text).toBe(
-      [
-        'import { z } from "zod/v4";',
-        "",
-        "export const userSchema = z.string();",
-        "",
-        "export type User = z.infer<typeof userSchema>;",
-        "",
-      ].join("\n"),
-    );
+    expect(importPath(sourceFile)).toBe("zod/v4");
+    expect(firstVariableDeclaration(sourceFile).name.text).toBe("userSchema");
+    expect(zodCallName(sourceFile)).toBe("string");
   });
 
   test("uses the configured Zod import path", async () => {
@@ -105,7 +129,7 @@ describe("compileToZodSource", () => {
       pluginOptions: {},
     });
 
-    expect(unwrap(result).sourceFile.text).toStartWith('import { z } from "zod";');
+    expect(importPath(unwrap(result).sourceFile)).toBe("zod");
   });
 
   test("validates plugin options and passes parsed defaults to plugin steps", async () => {
@@ -118,7 +142,9 @@ describe("compileToZodSource", () => {
       pluginOptions: {},
     });
 
-    expect(unwrap(result).sourceFile.text).toContain("export const metricSchema = z.number();");
+    const { sourceFile } = unwrap(result);
+    expect(firstVariableDeclaration(sourceFile).name.text).toBe("metricSchema");
+    expect(zodCallName(sourceFile)).toBe("number");
     expect(receivedOptions).toEqual([{ factory: "number" }, { factory: "number" }]);
   });
 
@@ -135,7 +161,7 @@ describe("compileToZodSource", () => {
         return result;
       },
       lower: async (_input: PreparedInput<string>): Promise<ResultEmissionModule> => {
-        const result = await Promise.resolve(ok({ root: zodFactory("never") }));
+        const result = await Promise.resolve(ok(emissionModuleForFactory("never")));
         return result;
       },
     } satisfies InputPlugin<string, EmptyOptions>;

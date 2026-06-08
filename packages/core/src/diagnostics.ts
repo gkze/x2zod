@@ -9,6 +9,7 @@ export type JsonPointer = string & z.$brand<"JsonPointer">;
 export type DiagnosticSeverity = "error" | "warning";
 export type CoreDiagnosticCode =
   | "ambiguous_schema"
+  | "cyclic_reference"
   | "dialect_conflict"
   | "emitter_failure"
   | "invalid_diagnostic_code"
@@ -62,6 +63,7 @@ export const diagnosticSeveritySchema: z.ZodType<DiagnosticSeverity, DiagnosticS
 
 const coreDiagnosticCodeSchemaValue: z.ZodType<CoreDiagnosticCode, CoreDiagnosticCode> = z.enum([
   "ambiguous_schema",
+  "cyclic_reference",
   "dialect_conflict",
   "emitter_failure",
   "invalid_diagnostic_code",

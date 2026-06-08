@@ -4,19 +4,26 @@ import type {
   ImportDeclaration,
   ModifierLike,
   Path,
+  PropertyName,
   SourceFile,
   Statement,
   TypeAliasDeclaration,
+  TypeNode,
   VariableStatement,
 } from "@typescript/native-preview/ast";
 import {
+  createArrayLiteralExpression,
   createCallExpression,
   createIdentifier,
   createImportClause,
   createImportDeclaration,
   createImportSpecifier,
+  createKeywordExpression,
   createNamedImports,
+  createNumericLiteral,
+  createObjectLiteralExpression,
   createPropertyAccessExpression,
+  createPropertyAssignment,
   createQualifiedName,
   createSourceFile as createNativeSourceFile,
   createStringLiteral,
@@ -33,13 +40,24 @@ import { z } from "zod/v4";
 import { createDiagnostic, formatZodError } from "./diagnostics";
 import { err, ok } from "./result";
 import type { Result } from "./result";
-import type { ZodEmissionModule, ZodExpression } from "./zod-plan";
+import { resolveZodDeclarationNames } from "./source-declarations";
+import type { NamedZodDeclaration } from "./source-declarations";
+import type {
+  ZodArgument,
+  ZodEmissionModule,
+  ZodExpression,
+  ZodLiteralValue,
+  ZodMethodCall,
+  ZodSymbol,
+} from "./zod-plan";
+import { validateZodEmissionModule } from "./zod-plan-validation";
 
 const defaultZodImportPath = "zod/v4";
-const generatedFileName = "x2zod.generated.ts";
+const generatedFileName = "/__x2zod__/x2zod.generated.ts";
 const identifierPattern = /^[A-Za-z_$][\w$]*$/u;
 const nonEmptyStringLength = 1;
 const noTokenFlags = 0;
+const syntheticSourceText = "";
 const typeNameField = "typeName";
 
 export type DeclarationExportMode = "all" | "root";
@@ -54,6 +72,7 @@ export type ResolvedZodSourceOutputOptions = Readonly<{
   zodImportPath: string;
   declarationExportMode: DeclarationExportMode;
 }>;
+export type ZodSourceFile = Readonly<{ sourceFile: SourceFile }>;
 
 const declarationExportModeSchemaValue: z.ZodType<DeclarationExportMode, DeclarationExportMode> =
   z.enum(["all", "root"]);
@@ -82,15 +101,6 @@ export const zodSourceOutputOptionsSchema: z.ZodType<
   ZodSourceOutputOptions
 > = zodSourceOutputOptionsSchemaValue;
 
-export type ZodSourceFile = Readonly<{ sourceFile: SourceFile }>;
-
-const escapeStringLiteral = (value: string): string => JSON.stringify(value);
-
-const schemaConstNameForType = (typeName: TypeScriptIdentifier): string =>
-  `${typeName.slice(0, 1).toLowerCase()}${typeName.slice(1)}Schema`;
-
-const renderZodExpression = (expression: ZodExpression): string => `z.${expression.factory}()`;
-
 const hasIssueAtPath = (error: z.ZodError, pathHead: PropertyKey): boolean =>
   error.issues.some((issue) => issue.path[0] === pathHead);
 
@@ -110,35 +120,6 @@ export const resolveZodSourceOutputOptions = (
       );
 };
 
-const createZodExpression = (expression: ZodExpression): Expression =>
-  createCallExpression(
-    createPropertyAccessExpression(
-      createIdentifier("z"),
-      undefined,
-      createIdentifier(expression.factory),
-      NodeFlags.None,
-    ),
-    undefined,
-    undefined,
-    [],
-    NodeFlags.None,
-  );
-
-const renderSourceText = (
-  module: ZodEmissionModule,
-  options: ResolvedZodSourceOutputOptions,
-  schemaConstName: string,
-): string =>
-  [
-    `import { z } from ${escapeStringLiteral(options.zodImportPath)};`,
-    "",
-    `export const ${schemaConstName} = ${renderZodExpression(module.root)};`,
-    "",
-    `export type ${options.typeName} = z.infer<typeof ${schemaConstName}>;`,
-    "",
-  ].join("\n");
-
-// Native preview exposes branded internal node types that its factories cannot fully infer yet.
 const createModifierToken = (kind: SyntaxKind.ExportKeyword): ModifierLike =>
   createToken(kind) as ModifierLike;
 
@@ -157,26 +138,134 @@ const createZodImport = (zodImportPath: string): ImportDeclaration =>
     createStringLiteral(zodImportPath, noTokenFlags),
   );
 
-const createRootSchemaStatement = (
-  schemaConstName: string,
+const createPropertyName = (key: string): PropertyName =>
+  identifierPattern.test(key) ? createIdentifier(key) : createStringLiteral(key, noTokenFlags);
+
+// Native preview currently types property-assignment annotations as required.
+// Ordinary object literal properties intentionally omit that node.
+const omittedTypeNode = (): TypeNode => undefined as unknown as TypeNode;
+
+const assertNever = (value: never): never => {
+  throw new Error(`Unexpected Zod IR node: ${JSON.stringify(value)}`);
+};
+
+const createLiteralExpression = (value: ZodLiteralValue): Expression => {
+  if (typeof value === "string") return createStringLiteral(value, noTokenFlags);
+  if (typeof value === "number") return createNumericLiteral(String(value), noTokenFlags);
+  if (value === true) return createKeywordExpression(SyntaxKind.TrueKeyword);
+  if (value === false) return createKeywordExpression(SyntaxKind.FalseKeyword);
+  return createKeywordExpression(SyntaxKind.NullKeyword);
+};
+
+const createArgumentExpression = (
+  argument: ZodArgument,
+  schemaConstNames: ReadonlyMap<ZodSymbol, string>,
+): Expression => {
+  switch (argument.kind) {
+    case "array": {
+      return createArrayLiteralExpression(
+        argument.elements.map((element) => createArgumentExpression(element, schemaConstNames)),
+        false,
+      );
+    }
+    case "expression": {
+      return createZodExpression(argument.expression, schemaConstNames);
+    }
+    case "literal": {
+      return createLiteralExpression(argument.value);
+    }
+    case "object": {
+      return createObjectLiteralExpression(
+        argument.properties.map((property) =>
+          createPropertyAssignment(
+            undefined,
+            createPropertyName(property.key),
+            undefined,
+            omittedTypeNode(),
+            createZodExpression(property.expression, schemaConstNames),
+          ),
+        ),
+        false,
+      );
+    }
+    default: {
+      return assertNever(argument);
+    }
+  }
+};
+
+const createCalledExpression = (
+  expression: Expression,
+  call: ZodMethodCall,
+  schemaConstNames: ReadonlyMap<ZodSymbol, string>,
+): Expression =>
+  createCallExpression(
+    createPropertyAccessExpression(
+      expression,
+      undefined,
+      createIdentifier(call.method),
+      NodeFlags.None,
+    ),
+    undefined,
+    undefined,
+    call.args.map((argument) => createArgumentExpression(argument, schemaConstNames)),
+    NodeFlags.None,
+  );
+
+const createBaseZodExpression = (
   expression: ZodExpression,
+  schemaConstNames: ReadonlyMap<ZodSymbol, string>,
+): Expression => {
+  if (expression.kind === "reference")
+    return createIdentifier(schemaConstNames.get(expression.symbol) ?? expression.symbol);
+
+  return createCallExpression(
+    createPropertyAccessExpression(
+      createIdentifier("z"),
+      undefined,
+      createIdentifier(expression.factory),
+      NodeFlags.None,
+    ),
+    undefined,
+    undefined,
+    expression.args.map((argument) => createArgumentExpression(argument, schemaConstNames)),
+    NodeFlags.None,
+  );
+};
+
+const createZodExpression = (
+  expression: ZodExpression,
+  schemaConstNames: ReadonlyMap<ZodSymbol, string>,
+): Expression => {
+  let called = createBaseZodExpression(expression, schemaConstNames);
+  for (const call of expression.calls)
+    called = createCalledExpression(called, call, schemaConstNames);
+  return called;
+};
+
+const createSchemaStatementWithNames = (
+  namedDeclaration: NamedZodDeclaration,
+  schemaConstNames: ReadonlyMap<ZodSymbol, string>,
 ): VariableStatement =>
   createVariableStatement(
-    [createExportModifier()],
+    namedDeclaration.exportSchema ? [createExportModifier()] : undefined,
     createVariableDeclarationList(
       [
         createVariableDeclaration(
-          createIdentifier(schemaConstName),
+          createIdentifier(namedDeclaration.schemaConstName),
           undefined,
           undefined,
-          createZodExpression(expression),
+          createZodExpression(namedDeclaration.declaration.expression, schemaConstNames),
         ),
       ],
       NodeFlags.Const,
     ),
   );
 
-const createRootTypeStatement = (typeName: string, schemaConstName: string): TypeAliasDeclaration =>
+const createRootTypeStatement = (
+  typeName: TypeScriptIdentifier,
+  schemaConstName: string,
+): TypeAliasDeclaration =>
   createTypeAliasDeclaration(
     [createExportModifier()],
     createIdentifier(typeName),
@@ -186,11 +275,11 @@ const createRootTypeStatement = (typeName: string, schemaConstName: string): Typ
     ]),
   );
 
-const createSourceFile = (statements: readonly Statement[], sourceText: string): SourceFile =>
+const createSourceFile = (statements: readonly Statement[]): SourceFile =>
   createNativeSourceFile(
     statements,
     createToken(SyntaxKind.EndOfFile),
-    sourceText,
+    syntheticSourceText,
     generatedFileName,
     toNativePath(generatedFileName),
   );
@@ -199,20 +288,22 @@ export const buildZodSourceFile = (
   module: ZodEmissionModule,
   options: ZodSourceOutputOptions,
 ): Result<ZodSourceFile> => {
+  const validModule = validateZodEmissionModule(module);
+  if (!validModule.ok) return validModule;
+
   const output = resolveZodSourceOutputOptions(options);
   if (!output.ok) return output;
 
-  const schemaConstName = schemaConstNameForType(output.value.typeName);
-  const sourceText = renderSourceText(module, output.value, schemaConstName);
+  const namedModule = resolveZodDeclarationNames(validModule.value, output.value);
+  if (!namedModule.ok) return namedModule;
 
   return ok({
-    sourceFile: createSourceFile(
-      [
-        createZodImport(output.value.zodImportPath),
-        createRootSchemaStatement(schemaConstName, module.root),
-        createRootTypeStatement(output.value.typeName, schemaConstName),
-      ],
-      sourceText,
-    ),
+    sourceFile: createSourceFile([
+      createZodImport(output.value.zodImportPath),
+      ...namedModule.value.declarations.map((declaration) =>
+        createSchemaStatementWithNames(declaration, namedModule.value.schemaConstNames),
+      ),
+      createRootTypeStatement(output.value.typeName, namedModule.value.rootSchemaConstName),
+    ]),
   });
 };
