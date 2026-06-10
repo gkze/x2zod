@@ -69,3 +69,8 @@ bun run check
 ```
 
 `bun run check` runs formatting, strict TypeScript typechecking, linting, and Bun tests.
+
+## Git
+
+- Never use `--no-verify` for commits or pushes. If hooks fail, fix the hook issue, change the
+  commit split so hooks can run correctly, or stop and report the blocker.

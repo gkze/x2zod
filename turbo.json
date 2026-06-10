@@ -2,7 +2,7 @@
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": ["bun.lock"],
   "tasks": {
-    "//#format:check:root": {
+    "//#format:check:workspace": {
       "inputs": [
         "$TURBO_ROOT$/.github/workflows/**/*.yaml",
         "$TURBO_ROOT$/.github/workflows/**/*.yml",
@@ -35,7 +35,7 @@
       "outputs": []
     },
     "//#format:check:toml": { "inputs": ["$TURBO_ROOT$/prek.toml"], "outputs": [] },
-    "//#format:root": {
+    "//#format:workspace": {
       "cache": false,
       "inputs": [
         "$TURBO_ROOT$/.github/workflows/**/*.yaml",
@@ -88,7 +88,7 @@
       ],
       "outputs": []
     },
-    "//#lint:root": {
+    "//#lint:repo": {
       "inputs": [
         "$TURBO_ROOT$/package.json",
         "$TURBO_ROOT$/tsconfig.configs.json",
@@ -102,8 +102,13 @@
       ],
       "outputs": []
     },
-    "//#lint:shell": { "inputs": ["$TURBO_ROOT$/.envrc"], "outputs": [] },
+    "//#lint:shell": {
+      "inputs": ["$TURBO_ROOT$/.envrc"],
+      "outputs": [],
+      "passThroughEnv": ["SHELLCHECK_BINARY"]
+    },
     "//#lint:toml": { "inputs": ["$TURBO_ROOT$/prek.toml"], "outputs": [] },
+    "gen:check": { "inputs": ["$TURBO_DEFAULT$"], "outputs": [] },
     "lint": {
       "inputs": [
         "$TURBO_DEFAULT$",

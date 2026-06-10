@@ -7,7 +7,7 @@ repo = "local"
 id = "taplo"
 name = "taplo"
 language = "system"
-entry = "bun run toml:check"
+entry = "bun run format:check:toml"
 pass_filenames = false
 stages = ["pre-commit"]
 
@@ -15,7 +15,7 @@ stages = ["pre-commit"]
 id = "shfmt"
 name = "shfmt"
 language = "system"
-entry = "bun run shell:format:check"
+entry = "bun run format:check:shell"
 pass_filenames = false
 stages = ["pre-commit"]
 
@@ -23,7 +23,7 @@ stages = ["pre-commit"]
 id = "shellcheck"
 name = "shellcheck"
 language = "system"
-entry = "bun run shell:lint"
+entry = "bun run lint:shell"
 pass_filenames = false
 stages = ["pre-commit"]
 
@@ -31,7 +31,7 @@ stages = ["pre-commit"]
 id = "markdownlint"
 name = "markdownlint"
 language = "system"
-entry = "bun run markdown:lint"
+entry = "bun run lint:markdown"
 pass_filenames = false
 stages = ["pre-commit"]
 
