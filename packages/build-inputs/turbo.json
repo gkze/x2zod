@@ -1,0 +1,44 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "gen": {
+      "inputs": [
+        "package.json",
+        "src/build-inputs.ts",
+        "src/generate-build-inputs-schema.ts",
+        "tsconfig.json"
+      ],
+      "outputs": ["schema/build-inputs.schema.json"]
+    },
+    "gen:check": {
+      "inputs": [
+        "package.json",
+        "schema/build-inputs.schema.json",
+        "src/build-inputs.ts",
+        "src/generate-build-inputs-schema.ts",
+        "tsconfig.json"
+      ],
+      "outputs": []
+    },
+    "gen:schema": {
+      "inputs": [
+        "package.json",
+        "src/build-inputs.ts",
+        "src/generate-build-inputs-schema.ts",
+        "tsconfig.json"
+      ],
+      "outputs": ["schema/build-inputs.schema.json"]
+    },
+    "gen:check:schema": {
+      "inputs": [
+        "package.json",
+        "schema/build-inputs.schema.json",
+        "src/build-inputs.ts",
+        "src/generate-build-inputs-schema.ts",
+        "tsconfig.json"
+      ],
+      "outputs": []
+    }
+  }
+}

@@ -1,0 +1,140 @@
+{
+  "$id": "https://conductor.build/schemas/settings.repo.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Conductor repository settings",
+  "description": "Schema for repository-scoped Conductor settings files (.conductor/settings.toml, .conductor/settings.local.toml, or their .json equivalents). Only workspace-configurable settings are valid here. The structure is the same for both formats.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema URL for editor autocomplete and validation."
+    },
+    "bedrock_region": { "type": "string", "description": "AWS Bedrock region for Claude." },
+    "claude_code_executable_path": {
+      "type": "string",
+      "description": "Override the Claude Code executable path, for example hsclaude."
+    },
+    "claude_provider": {
+      "type": "string",
+      "description": "Provider backing Claude, for example anthropic, bedrock, or vertex."
+    },
+    "codex_executable_path": {
+      "type": "string",
+      "description": "Override the Codex executable path."
+    },
+    "codex_provider": { "type": "string", "description": "Provider backing Codex." },
+    "enterprise_data_privacy": {
+      "type": "boolean",
+      "description": "Enable enterprise data privacy."
+    },
+    "environment_variable_files": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Env files to parse for environment variables."
+    },
+    "environment_variables": {
+      "type": "object",
+      "description": "Environment variables passed to agents running in this repository. Top-level keys apply to both local and cloud agents; use [environment_variables.local] and [environment_variables.cloud] sections for context-specific variables.",
+      "propertyNames": { "pattern": "(^[A-Za-z_][A-Za-z0-9_]*$)|(local|cloud)" },
+      "properties": {
+        "local": {
+          "type": "object",
+          "description": "Environment variables passed to local agents.",
+          "propertyNames": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+          "additionalProperties": { "type": "string" }
+        },
+        "cloud": {
+          "type": "object",
+          "description": "Environment variables passed to cloud agents.",
+          "propertyNames": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+          "additionalProperties": { "type": "string" }
+        }
+      },
+      "additionalProperties": { "type": "string" }
+    },
+    "file_include_globs": {
+      "type": "string",
+      "description": "Glob patterns for files surfaced in the workspace file picker."
+    },
+    "git": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "archive_on_merge": {
+          "type": "boolean",
+          "description": "Archive a workspace automatically when its PR merges."
+        },
+        "branch_prefix": { "type": "string", "description": "Custom branch name prefix." },
+        "branch_prefix_type": {
+          "type": "string",
+          "description": "How branch name prefixes are generated."
+        },
+        "delete_branch_on_archive": {
+          "type": "boolean",
+          "description": "Delete the workspace branch when archiving."
+        },
+        "worktree_push_auto_setup_remote": {
+          "type": "boolean",
+          "description": "Automatically configure the upstream remote on first push."
+        }
+      }
+    },
+    "prompts": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "code_review": {
+          "type": "string",
+          "description": "Custom prompt for the code review action."
+        },
+        "create_pr": { "type": "string", "description": "Custom prompt for the create PR action." },
+        "fix_errors": {
+          "type": "string",
+          "description": "Custom prompt for the fix errors action."
+        },
+        "general": {
+          "type": "string",
+          "description": "Custom prompt appended to every agent session."
+        },
+        "rename_branch": {
+          "type": "string",
+          "description": "Custom prompt for the rename branch action."
+        },
+        "resolve_merge_conflicts": {
+          "type": "string",
+          "description": "Custom prompt for the resolve merge conflicts action."
+        }
+      }
+    },
+    "scripts": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "archive": {
+          "type": "string",
+          "description": "Shell script run when a workspace is archived."
+        },
+        "auto_run_after_setup": {
+          "type": "boolean",
+          "description": "When true, starts the run script automatically after a new local workspace finishes setup."
+        },
+        "run": {
+          "type": "string",
+          "description": "Shell script run to start the app for a workspace."
+        },
+        "run_mode": { "type": "string", "description": "How the run script is executed." },
+        "setup": {
+          "type": "string",
+          "description": "Shell script run when a workspace is created."
+        }
+      }
+    },
+    "spotlight_testing": { "type": "boolean", "description": "Enable spotlight testing." },
+    "ssh_key_path": {
+      "type": "string",
+      "description": "Path to the SSH private key used for cloud workspaces."
+    },
+    "vertex_project_id": { "type": "string", "description": "Google Vertex project ID for Claude." }
+  }
+}

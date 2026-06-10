@@ -1,0 +1,25 @@
+{
+  "urls": {
+    "https://json.schemastore.org/claude-code-settings.json": {
+      "sha256": "d87df275876a029defe5c3eb71daae8954add92058e977232a00d0d50af5b1d9",
+      "sizeBytes": 115836
+    },
+    "https://developers.openai.com/codex/config-schema.json": {
+      "sha256": "645892eb58f1e9f6fb9fb36ad846c443c7334df7c92b30c371361082936fc573",
+      "sizeBytes": 130249
+    },
+    "https://conductor.build/schemas/settings.repo.schema.json": {
+      "sha256": "6208f22e9cd1388cf26633c14f0f0ab32eebd851dc0a7616818bd773cbc5e280",
+      "sizeBytes": 5510
+    },
+    "https://conductor.build/schemas/settings.schema.json": {
+      "sha256": "d4b93fcb0bf7b8c390019ddcb789abd73d3b58e242f9f9748f035662b771e509",
+      "sizeBytes": 7106
+    },
+    "https://cursor.com/schemas/environment.schema.json": {
+      "sha256": "2be1348a0f1ec479fef62fea22c4b4eb0c9aebd1926c784a58db6a1e0095f20e",
+      "sizeBytes": 4618
+    }
+  },
+  "version": 1
+}

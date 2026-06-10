@@ -1,0 +1,68 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://x2zod.dev/schemas/build-inputs.schema.json",
+  "title": "Build Inputs",
+  "description": "Declaration file for external source artifacts materialized by @x2zod/build-inputs.",
+  "type": "object",
+  "properties": {
+    "$schema": { "type": "string", "minLength": 1 },
+    "inputs": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "archiveFormat": { "type": "string", "enum": ["tar", "tar.gz", "zip"] },
+              "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+              "type": { "type": "string", "const": "archive" },
+              "unpack": {
+                "type": "object",
+                "properties": {
+                  "directory": { "type": "string", "minLength": 1 },
+                  "exclude": {
+                    "default": [],
+                    "type": "array",
+                    "items": { "type": "string", "minLength": 1 }
+                  },
+                  "include": {
+                    "default": [],
+                    "type": "array",
+                    "items": { "type": "string", "minLength": 1 }
+                  },
+                  "stripComponents": {
+                    "default": 0,
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": ["directory"],
+                "additionalProperties": false
+              },
+              "url": { "type": "string", "format": "uri" }
+            },
+            "required": ["archiveFormat", "id", "type", "unpack", "url"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "format": { "type": "string", "enum": ["json", "markdown", "text"] },
+              "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+              "path": { "type": "string", "minLength": 1 },
+              "type": { "type": "string", "const": "file" },
+              "url": { "type": "string", "format": "uri" }
+            },
+            "required": ["id", "path", "url"],
+            "additionalProperties": false
+          }
+        ]
+      }
+    },
+    "version": { "type": "number", "const": 1 }
+  },
+  "required": ["inputs", "version"],
+  "additionalProperties": false
+}

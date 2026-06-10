@@ -1,0 +1,55 @@
+{
+  "name": "@x2zod/build-inputs",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Pinned external build input materialization for x2zod tests and fixtures.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gkze/x2zod.git",
+    "directory": "packages/build-inputs"
+  },
+  "bin": {
+    "build-inputs": "./src/build-inputs-cli.ts"
+  },
+  "type": "module",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./build-inputs": {
+      "types": "./src/build-inputs.ts",
+      "default": "./src/build-inputs.ts"
+    },
+    "./directory-merkle-tree": {
+      "types": "./src/directory-merkle-tree.ts",
+      "default": "./src/directory-merkle-tree.ts"
+    }
+  },
+  "scripts": {
+    "check": "turbo run typecheck gen:check test --filter=@x2zod/build-inputs",
+    "gen": "bun run gen:schema",
+    "gen:check": "bun run gen:check:schema",
+    "gen:check:schema": "bun ./src/generate-build-inputs-schema.ts --check",
+    "gen:schema": "bun ./src/generate-build-inputs-schema.ts",
+    "test": "bun test --pass-with-no-tests",
+    "typecheck": "tsgo --project tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@optique/core": "1.0.2",
+    "minimatch": "10.2.5",
+    "p-limit": "7.3.0",
+    "tar-v6": "npm:tar@6.2.1",
+    "ts-pattern": "5.9.0",
+    "yauzl": "2.10.0",
+    "zod": "4.3.6"
+  },
+  "devDependencies": {
+    "@types/bun": "1.3.13",
+    "@types/tar": "6.1.13",
+    "@types/yauzl": "2.10.3",
+    "tsconfig": "workspace:*"
+  }
+}
