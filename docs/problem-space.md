@@ -327,12 +327,24 @@ The design discussion after this landscape pass resolved the initial open questi
   `x2zod compile --kind json-schema --input <input> --output <output> --name <TypeName>`.
 - V1 targets Draft 2020-12 and Draft 7 in the JSON Schema plugin, starting with Ajv-backed
   schema-document preflight.
+- This dialect split supports one modern semantic target and one common compatibility target. Draft
+  2019-09, Draft 6, Draft 4, JSON Hyper-Schema, JTD, and OpenAPI Schema Object stay out of V1 unless
+  a concrete source corpus justifies a future dialect, source profile, or separate plugin.
 - Draft 2020-12 dynamic references and vocabularies stay in scope, but implementation should be
   dependency-backed where possible. Spike `@hyperjump/json-schema` before building custom dialect,
   vocabulary, annotation, or dynamic-reference machinery.
 - Existing validators handle schema-document validity and dialect/vocabulary enforcement. `x2zod`
   tests focus on validated-schema to Zod expression-plan mapping and deterministic TypeScript source
   emission, with representative runtime smoke tests.
+- JSON Schema implementation decisions should maximize existing tooling. Ajv or another selected
+  JSON Schema tool owns validation and dialect evidence; source-map parsers own JSON Pointer spans;
+  ref and dynamic-ref behavior should be dependency-backed where possible. `x2zod` owns the emission
+  lowerer, diagnostics, generated helper ABI, and deterministic TypeScript source.
+- The first JSON Schema implementation slice is narrower than the V1 semantic target: start with
+  parser/source spans, Ajv preflight, dialect detection, unknown-keyword policy, primitives, enums,
+  arrays, objects, `additionalProperties`, metadata-only `default` / `format`, and local refs; land
+  dynamic refs, required format assertions, composition, `patternProperties`, and `unevaluated*`
+  after the dependency spike proves the preparation strategy.
 - URI refs are supported through the selected reference strategy. Remote fetching requires explicit
   opt-in; external schemas can be provided through a registry.
 - Generated output imports only Zod by default, with generated helpers deduplicated at module scope.

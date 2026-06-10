@@ -81,6 +81,21 @@ Advanced JSON Schema support remains in scope, but should enter through direct Z
 dependency-backed preparation, or generated helpers with tests. The project should avoid building a
 general JSON Schema validator under the name of Zod source generation.
 
+The tooling-first rule applies to every JSON Schema implementation decision:
+
+- schema-document validity, dialect selection, meta-schema behavior, and vocabulary enforcement
+  should be delegated to existing JSON Schema tooling whenever possible;
+- JSON Pointer/source-span mapping should use an existing parser or source-map library instead of a
+  handwritten JSON parser;
+- reference graph construction, dynamic reference behavior, annotation collection, and
+  `unevaluated*` bookkeeping should be dependency-backed unless a spike proves existing libraries
+  cannot expose the needed lowering data;
+- generated runtime helpers may preserve JSON Schema semantics, but their behavior should be tested
+  against Ajv or the selected JSON Schema tool on targeted fixtures;
+- existing JSON Schema-to-Zod libraries are comparison oracles, not the compiler architecture. The
+  product boundary remains an owned lowering layer that maps prepared JSON Schema data into the
+  `@x2zod/core` Zod emission model.
+
 ## Input Documents
 
 Core and the CLI use a document envelope rather than pre-parsing input files. The CLI reads the
@@ -486,6 +501,22 @@ diagnostic.
 
 V1 supports JSON Schema Draft 2020-12 and Draft 7.
 
+This split is intentional. Draft 2020-12 is the modern semantic target: it exercises vocabularies,
+dynamic references, annotation-dependent evaluation, `unevaluated*`, and format assertion policy.
+Draft 7 is the practical compatibility target: it remains common in real schemas and gives broad
+coverage without carrying every historical dialect.
+
+Other JSON Schema-family specifications are out of scope for V1 unless a future design change adds a
+new dialect option, source profile, or input plugin:
+
+- Draft 2019-09 is transitional; its complexity should be handled through Draft 2020-12 unless a
+  concrete corpus requires direct support.
+- Draft 6, Draft 4, and older drafts are legacy dialects with older keyword and reference behavior.
+- JSON Hyper-Schema adds link and HTTP relation semantics outside Zod validation generation.
+- JSON Type Definition (JTD) is a separate schema language rather than a JSON Schema dialect.
+- OpenAPI Schema Object is JSON-Schema-adjacent but not identical; OpenAPI-flavored producers should
+  use an explicit future source profile or plugin decision instead of implicit JSON Schema support.
+
 Dialect selection uses the schema's `$schema` when present. If the caller also supplies a dialect
 option and it conflicts with `$schema`, compilation fails with a diagnostic. If `$schema` is absent,
 the caller or CLI default selects the dialect.
@@ -562,6 +593,14 @@ Locked v1 behavior:
 
 Unsupported or unlowerable semantics should fail with diagnostics instead of silently degrading to
 `z.any()`.
+
+V1 implementation should be staged separately from V1 semantic scope. The first implementation slice
+should cover document parsing, source-location mapping, Ajv preflight, dialect detection, unknown
+keyword policy, primitives, `const` / `enum`, arrays, objects, required and optional properties,
+`additionalProperties`, metadata-only `default` / `format`, and local refs. Draft 2020-12
+vocabularies, required format assertions, Draft 7 support, dynamic refs, composition keywords,
+`patternProperties`, and `unevaluated*` stay in V1 scope but should land only with dependency-backed
+preparation, explicit lowering tests, and targeted runtime comparisons against JSON Schema tooling.
 
 ## Diagnostics
 
