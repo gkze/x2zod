@@ -1,34 +1,37 @@
 import { describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
-import { join } from "node:path";
-import { pathToFileURL } from "node:url";
+import { rmSync } from "node:fs";
+import { join, resolve } from "node:path";
 
 import {
+  buildNodeBundle,
+  createTemporaryDirectory,
+  importGeneratedExport,
+  isRecord,
+  nativePreviewExternals,
+  runNode,
+} from "../../../test/native-source-harness";
+import {
   buildZodSourceFile,
-  parseZodEmissionModule,
   ts,
-  zodCall,
   zodDeclaration,
   zodDeclarationNameHint,
   zodModule,
   zodPlan,
   zodSymbol,
 } from "../src/index";
-import type { DiagnosticCode, ZodEmissionModule, ZodEmissionModuleInput } from "../src/index";
+import type { ZodEmissionModule } from "../src/index";
 
 const rootSymbol = zodSymbol("root");
 const generatedFileName = "/__x2zod__/x2zod.generated.ts";
+const corePackageRootDirectory = resolve(import.meta.dirname, "..");
 const coreEntrypoint = "src/index.ts";
-const coreTestTempDirectory = join(process.cwd(), "node_modules/.cache");
+const sourcePrinterEntryPoint = join(import.meta.dirname, "source-print-helper.ts");
+const coreTestTempDirectory = join(corePackageRootDirectory, "node_modules/.cache");
 const coreTestTempPrefix = "x2zod-test-";
 const bundledCoreFileName = "index.mjs";
-const textDecoder = new TextDecoder();
-const nativePreviewExternals = [
-  "@typescript/native-preview/ast",
-  "@typescript/native-preview/ast/factory",
-  "@typescript/native-preview/sync",
-  "zod/v4",
-] as const;
+const bundledSourcePrinterFileName = "source-print-helper.mjs";
+const generatedRuntimeFileName = "generated-runtime.ts";
+const maximumCount = 10;
 const defaultOutputOptions = { typeName: "User" } satisfies Parameters<
   typeof buildZodSourceFile
 >[1];
@@ -49,6 +52,9 @@ type VariableStatementLike = ts.VariableStatement &
     modifiers?: readonly Readonly<{ kind: ts.SyntaxKind }>[] | undefined;
   }>;
 type ImportDeclarationLike = Readonly<{ moduleSpecifier: IdentifierLike }>;
+type RuntimeParseResult = Readonly<{ success: boolean }>;
+type RuntimeZodSchema = Readonly<{ safeParse: (value: unknown) => RuntimeParseResult }>;
+type RuntimeUser = Record<string, unknown>;
 
 const sourceFileFor = (
   module: ZodEmissionModule,
@@ -62,13 +68,6 @@ const sourceFileFor = (
 
 const rootOnlyModule = (expression: Parameters<typeof zodDeclaration>[1]): ZodEmissionModule =>
   zodModule(rootSymbol, [zodDeclaration(rootSymbol, expression)]);
-
-const expectInvalidModule = (module: ZodEmissionModuleInput, code: DiagnosticCode): void => {
-  const result = parseZodEmissionModule(module);
-  expect(result.ok).toBe(false);
-  if (result.ok) throw new Error("Expected module parsing to fail.");
-  expect(result.diagnostics[0].code).toBe(code);
-};
 
 const variableStatements = (sourceFile: ts.SourceFile): readonly VariableStatementLike[] =>
   sourceFile.statements
@@ -114,63 +113,43 @@ const propertyInitializer = (declaration: VariableDeclarationLike, key: string):
 const importPath = (sourceFile: ts.SourceFile): string =>
   (sourceFile.statements[0] as unknown as ImportDeclarationLike).moduleSpecifier.text;
 
-const outputText = (output: Uint8Array): string => textDecoder.decode(output);
-
 const buildCoreBundle = (bundleFile: string): void => {
-  const result = Bun.spawnSync({
-    cmd: [
-      "bun",
-      "build",
-      coreEntrypoint,
-      "--outfile",
-      bundleFile,
-      "--target",
-      "node",
-      "--format",
-      "esm",
-      ...nativePreviewExternals.flatMap((external) => ["--external", external]),
-    ],
-    stderr: "pipe",
-    stdout: "pipe",
+  buildNodeBundle({
+    cwd: corePackageRootDirectory,
+    entryPoint: coreEntrypoint,
+    externals: nativePreviewExternals,
+    outfile: bundleFile,
   });
-
-  expect(outputText(result.stderr)).toBe("");
-  expect(result.exitCode).toBe(0);
 };
 
-const nativePrinterScript = (bundleFile: string): string =>
-  [
-    'import { API, Emitter } from "@typescript/native-preview/sync";',
-    `const core = await import(${JSON.stringify(pathToFileURL(bundleFile).href)});`,
-    'const root = core.zodSymbol("root");',
-    "const module = core.zodModule(root, [",
-    "  core.zodDeclaration(root, core.zodPlan.object({ name: core.zodPlan.string() })),",
-    "]);",
-    'const result = core.buildZodSourceFile(module, { typeName: "User" });',
-    "if (!result.ok)",
-    "  throw new Error(",
-    String.raw`    result.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),`,
-    "  );",
-    "const api = new API({ cwd: process.cwd() });",
-    "const emitter = new Emitter(api.client);",
-    "try {",
-    "  console.log(emitter.printNode(result.value.sourceFile));",
-    "} finally {",
-    "  api.close();",
-    "}",
-  ].join("\n");
-
-const printWithNativeEmitter = (bundleFile: string): string => {
-  const result = Bun.spawnSync({
-    cmd: ["node", "--no-warnings", "--eval", nativePrinterScript(bundleFile)],
-    stderr: "pipe",
-    stdout: "pipe",
+const buildSourcePrinterBundle = (bundleFile: string): void => {
+  buildNodeBundle({
+    cwd: corePackageRootDirectory,
+    entryPoint: sourcePrinterEntryPoint,
+    externals: nativePreviewExternals,
+    outfile: bundleFile,
   });
-
-  expect(outputText(result.stderr)).toBe("");
-  expect(result.exitCode).toBe(0);
-  return outputText(result.stdout);
 };
+
+const printWithNativeEmitter = (printerBundleFile: string, coreBundleFile: string): string =>
+  runNode({ args: [printerBundleFile, coreBundleFile], cwd: corePackageRootDirectory });
+
+const isRuntimeZodSchema = (value: unknown): value is RuntimeZodSchema =>
+  isRecord(value) && typeof value["safeParse"] === "function";
+
+const importGeneratedUserSchema = async (generatedFile: string): Promise<RuntimeZodSchema> => {
+  const schema = await importGeneratedExport(generatedFile, "userSchema", isRuntimeZodSchema);
+  return schema;
+};
+
+const validRuntimeUser = (): RuntimeUser => ({
+  count: 1,
+  pair: ["left", 2],
+  payload: { value: "present" },
+  slug: "abc",
+  status: "open",
+  tags: ["tag"],
+});
 
 describe("buildZodSourceFile", () => {
   test("emits primitive root declarations", () => {
@@ -206,9 +185,19 @@ describe("buildZodSourceFile", () => {
           age: zodPlan.optional(zodPlan.number()),
           tags: zodPlan.array(zodPlan.string()),
           mode: zodPlan.union([zodPlan.literal("build"), zodPlan.literal("watch")]),
+          status: zodPlan.enum(["open", "closed"]),
+          boundedTags: zodPlan.max(zodPlan.min(zodPlan.array(zodPlan.string()), 1), maximumCount),
+          slug: zodPlan.regex(zodPlan.string(), "^[a-z]+$"),
+          pair: zodPlan.tuple([zodPlan.string(), zodPlan.number()]),
+          payload: zodPlan.required(
+            zodPlan.object({ maybe: zodPlan.optional(zodPlan.string()), value: zodPlan.unknown() }),
+            ["value"],
+          ),
           active: zodPlan.nullable(zodPlan.boolean()),
+          count: zodPlan.lte(zodPlan.gt(zodPlan.integer(), 0), maximumCount),
+          extra: zodPlan.catchall(zodPlan.passthrough(zodPlan.object({})), zodPlan.unknown()),
           "dash-key": zodPlan.literal(null),
-          nested: zodPlan.reference(addressSymbol),
+          nested: zodPlan.strict(zodPlan.reference(addressSymbol)),
         }),
       ),
     ]);
@@ -228,8 +217,15 @@ describe("buildZodSourceFile", () => {
     expect(zodCallName(propertyInitializer(rootDeclaration, "name"))).toBe("string");
     expect(zodCallName(propertyInitializer(rootDeclaration, "tags"))).toBe("array");
     expect(zodCallName(propertyInitializer(rootDeclaration, "mode"))).toBe("union");
+    expect(zodCallName(propertyInitializer(rootDeclaration, "status"))).toBe("enum");
+    expect(zodCallName(propertyInitializer(rootDeclaration, "boundedTags"))).toBe("max");
+    expect(zodCallName(propertyInitializer(rootDeclaration, "slug"))).toBe("regex");
+    expect(zodCallName(propertyInitializer(rootDeclaration, "pair"))).toBe("tuple");
+    expect(zodCallName(propertyInitializer(rootDeclaration, "payload"))).toBe("required");
     expect(zodCallName(propertyInitializer(rootDeclaration, "dash-key"))).toBe("literal");
-    expect(propertyInitializer(rootDeclaration, "nested").text).toBe("addressSchema");
+    expect(zodCallName(propertyInitializer(rootDeclaration, "count"))).toBe("lte");
+    expect(zodCallName(propertyInitializer(rootDeclaration, "extra"))).toBe("catchall");
+    expect(zodCallName(propertyInitializer(rootDeclaration, "nested"))).toBe("strict");
     expect(zodCallName(propertyInitializer(rootDeclaration, "age"))).toBe("optional");
     expect(
       zodCallName(
@@ -238,7 +234,9 @@ describe("buildZodSourceFile", () => {
       ),
     ).toBe("number");
   });
+});
 
+describe("buildZodSourceFile declaration ordering and exports", () => {
   test("orders declarations before their reference sites", () => {
     const middleSymbol = zodSymbol("middle");
     const leafSymbol = zodSymbol("leaf");
@@ -279,17 +277,40 @@ describe("buildZodSourceFile", () => {
 });
 
 describe("buildZodSourceFile native printing", () => {
-  test("returns source files printable by the aligned native TypeScript emitter", () => {
-    mkdirSync(coreTestTempDirectory, { recursive: true });
-    const directory = mkdtempSync(join(coreTestTempDirectory, coreTestTempPrefix));
-    const bundleFile = join(directory, bundledCoreFileName);
+  test("returns source files printable by the aligned native TypeScript emitter", async () => {
+    const directory = createTemporaryDirectory({
+      prefix: coreTestTempPrefix,
+      rootDirectory: coreTestTempDirectory,
+    });
+    const coreBundleFile = join(directory, bundledCoreFileName);
+    const printerBundleFile = join(directory, bundledSourcePrinterFileName);
+    const generatedFile = join(directory, generatedRuntimeFileName);
 
     try {
-      buildCoreBundle(bundleFile);
-      const printedSource = printWithNativeEmitter(bundleFile);
+      buildCoreBundle(coreBundleFile);
+      buildSourcePrinterBundle(printerBundleFile);
+      const printedSource = printWithNativeEmitter(printerBundleFile, coreBundleFile);
 
       expect(printedSource).toContain("export const userSchema");
       expect(printedSource).toContain("export type User");
+      expect(printedSource).toContain("z.enum");
+      expect(printedSource).toContain("new RegExp");
+      expect(printedSource).toContain("z.tuple");
+      expect(printedSource).toContain(".int().gt(0).lte(10)");
+      expect(printedSource).toContain(".required({ value: true })");
+      expect(printedSource).toContain(".min(1).max(2)");
+
+      await Bun.write(generatedFile, printedSource);
+      const userSchema = await importGeneratedUserSchema(generatedFile);
+
+      expect(userSchema.safeParse(validRuntimeUser()).success).toBe(true);
+      expect(userSchema.safeParse({ ...validRuntimeUser(), count: 0 }).success).toBe(false);
+      expect(userSchema.safeParse({ ...validRuntimeUser(), payload: {} }).success).toBe(false);
+      expect(userSchema.safeParse({ ...validRuntimeUser(), slug: "ABC" }).success).toBe(false);
+      expect(userSchema.safeParse({ ...validRuntimeUser(), tags: [] }).success).toBe(false);
+      expect(userSchema.safeParse({ ...validRuntimeUser(), tags: ["a", "b", "c"] }).success).toBe(
+        false,
+      );
     } finally {
       rmSync(directory, { force: true, recursive: true });
     }
@@ -305,6 +326,16 @@ describe("buildZodSourceFile declaration naming", () => {
     ]);
 
     expect(variableNames(sourceFileFor(module))).toEqual(["userConfigSchema", "userSchema"]);
+  });
+
+  test("uses TypeScript identifier rules for declaration names", () => {
+    const configSymbol = zodSymbol("config");
+    const module = zodModule(rootSymbol, [
+      zodDeclaration(configSymbol, zodPlan.string(), [zodDeclarationNameHint("CaféConfig")]),
+      zodDeclaration(rootSymbol, zodPlan.reference(configSymbol)),
+    ]);
+
+    expect(variableNames(sourceFileFor(module))).toEqual(["caféConfigSchema", "userSchema"]);
   });
 
   test("deduplicates declaration names from stable symbol identity", () => {
@@ -350,92 +381,5 @@ describe("buildZodSourceFile declaration naming", () => {
     expect(new Set(names).size).toBe(names.length);
     expect(names).toContain(fallbackName);
     expect(names).toContain([fallbackName, betaSchemaEncodedSuffix].join("X"));
-  });
-});
-
-describe("parseZodEmissionModule", () => {
-  test(
-    "rejects missing roots, duplicate symbols, unresolved refs, invalid factory args, and " +
-      "cycles",
-    () => {
-      expectInvalidModule({ declarations: [], root: "root" }, "invalid_zod_emission_module");
-      expectInvalidModule(
-        {
-          declarations: [
-            { expression: zodPlan.string(), symbol: "root" },
-            { expression: zodPlan.number(), symbol: "root" },
-          ],
-          root: "root",
-        },
-        "invalid_zod_emission_module",
-      );
-      expectInvalidModule(
-        {
-          declarations: [{ expression: zodPlan.reference(zodSymbol("missing")), symbol: "root" }],
-          root: "root",
-        },
-        "unresolved_reference",
-      );
-      expectInvalidModule(
-        {
-          declarations: [{ expression: { factory: "array", kind: "factory" }, symbol: "root" }],
-          root: "root",
-        },
-        "invalid_zod_emission_module",
-      );
-      expectInvalidModule(
-        {
-          declarations: [{ expression: zodPlan.reference(zodSymbol("root")), symbol: "root" }],
-          root: "root",
-        },
-        "cyclic_reference",
-      );
-    },
-  );
-
-  test("rejects unsupported method calls, invalid method args, and duplicate object keys", () => {
-    expectInvalidModule(
-      {
-        declarations: [{ expression: zodCall(zodPlan.string(), "min"), symbol: "root" }],
-        root: "root",
-      },
-      "invalid_zod_emission_module",
-    );
-    expectInvalidModule(
-      {
-        declarations: [
-          {
-            expression: zodCall(zodPlan.string(), "optional", [{ kind: "literal", value: true }]),
-            symbol: "root",
-          },
-        ],
-        root: "root",
-      },
-      "invalid_zod_emission_module",
-    );
-    expectInvalidModule(
-      {
-        declarations: [
-          {
-            expression: {
-              args: [
-                {
-                  kind: "object",
-                  properties: [
-                    { expression: zodPlan.string(), key: "name" },
-                    { expression: zodPlan.number(), key: "name" },
-                  ],
-                },
-              ],
-              factory: "object",
-              kind: "factory",
-            },
-            symbol: "root",
-          },
-        ],
-        root: "root",
-      },
-      "invalid_zod_emission_module",
-    );
   });
 });

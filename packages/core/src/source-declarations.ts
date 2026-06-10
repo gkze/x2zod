@@ -2,11 +2,10 @@ import { createDiagnostic } from "./diagnostics";
 import { err, ok } from "./result";
 import type { Result } from "./result";
 import type { DeclarationExportMode, TypeScriptIdentifier } from "./source";
+import { isTypeScriptIdentifier, typeScriptIdentifierSegments } from "./typescript-identifiers";
 import type { ZodDeclaration, ZodEmissionModule, ZodSymbol } from "./zod-plan";
 import { collectZodExpressionReferences } from "./zod-plan-analysis";
 
-const identifierPattern = /^[A-Za-z_$][\w$]*$/u;
-const identifierSegmentPattern = /[A-Za-z0-9_$]+/gu;
 const radixAlphanumeric = 36;
 const schemaSuffix = "Schema";
 const maximumBasicMultilingualPlaneCodePoint = 65_535;
@@ -51,12 +50,13 @@ const schemaConstNameForType = (typeName: TypeScriptIdentifier): string =>
   `${lowerFirst(typeName)}${schemaSuffix}`;
 
 const normalizedIdentifierBase = (value: string): string | undefined => {
-  const parts = value.match(identifierSegmentPattern);
-  if (parts === null) return undefined;
+  const parts = typeScriptIdentifierSegments(value);
+  if (parts === undefined) return undefined;
 
   const [head, ...tail] = parts;
+  if (head === undefined) return undefined;
   const base = `${lowerFirst(head)}${tail.map((part) => upperFirst(part)).join("")}`;
-  return identifierPattern.test(base) ? base : `schema${upperFirst(base)}`;
+  return isTypeScriptIdentifier(base) ? base : `schema${upperFirst(base)}`;
 };
 
 const schemaNameCandidate = (declaration: ZodDeclaration): string => {

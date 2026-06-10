@@ -4,6 +4,7 @@ import type {
   ImportDeclaration,
   ModifierLike,
   Path,
+  PropertyAssignment,
   PropertyName,
   SourceFile,
   Statement,
@@ -20,6 +21,7 @@ import {
   createImportSpecifier,
   createKeywordExpression,
   createNamedImports,
+  createNewExpression,
   createNumericLiteral,
   createObjectLiteralExpression,
   createPropertyAccessExpression,
@@ -42,6 +44,11 @@ import { err, ok } from "./result";
 import type { Result } from "./result";
 import { resolveZodDeclarationNames } from "./source-declarations";
 import type { NamedZodDeclaration } from "./source-declarations";
+import {
+  isTypeScriptIdentifier,
+  typeScriptIdentifierSchema as typeScriptIdentifierSchemaValue,
+} from "./typescript-identifiers";
+import type { TypeScriptIdentifier as TypeScriptIdentifierValue } from "./typescript-identifiers";
 import type {
   ZodArgument,
   ZodEmissionModule,
@@ -50,25 +57,25 @@ import type {
   ZodMethodCall,
   ZodSymbol,
 } from "./zod-plan";
+import { zodMethodMetadataFor } from "./zod-plan-metadata";
 import { validateZodEmissionModule } from "./zod-plan-validation";
+export type { TypeScriptIdentifier } from "./typescript-identifiers";
 
 const defaultZodImportPath = "zod/v4";
 const generatedFileName = "/__x2zod__/x2zod.generated.ts";
-const identifierPattern = /^[A-Za-z_$][\w$]*$/u;
 const nonEmptyStringLength = 1;
 const noTokenFlags = 0;
 const syntheticSourceText = "";
 const typeNameField = "typeName";
 
 export type DeclarationExportMode = "all" | "root";
-export type TypeScriptIdentifier = string & z.$brand<"TypeScriptIdentifier">;
 export type ZodSourceOutputOptions = Readonly<{
   typeName: string;
   zodImportPath?: string | undefined;
   declarationExportMode?: DeclarationExportMode | undefined;
 }>;
 export type ResolvedZodSourceOutputOptions = Readonly<{
-  typeName: TypeScriptIdentifier;
+  typeName: TypeScriptIdentifierValue;
   zodImportPath: string;
   declarationExportMode: DeclarationExportMode;
 }>;
@@ -79,11 +86,7 @@ const declarationExportModeSchemaValue: z.ZodType<DeclarationExportMode, Declara
 export const declarationExportModeSchema: z.ZodType<DeclarationExportMode, DeclarationExportMode> =
   declarationExportModeSchemaValue;
 
-const typeScriptIdentifierSchemaValue: z.ZodType<TypeScriptIdentifier, string> = z
-  .string()
-  .regex(identifierPattern)
-  .transform((value): TypeScriptIdentifier => value as TypeScriptIdentifier);
-export const typeScriptIdentifierSchema: z.ZodType<TypeScriptIdentifier, string> =
+export const typeScriptIdentifierSchema: z.ZodType<TypeScriptIdentifierValue, string> =
   typeScriptIdentifierSchemaValue;
 
 const zodSourceOutputOptionsSchemaValue: z.ZodType<
@@ -139,7 +142,7 @@ const createZodImport = (zodImportPath: string): ImportDeclaration =>
   );
 
 const createPropertyName = (key: string): PropertyName =>
-  identifierPattern.test(key) ? createIdentifier(key) : createStringLiteral(key, noTokenFlags);
+  isTypeScriptIdentifier(key) ? createIdentifier(key) : createStringLiteral(key, noTokenFlags);
 
 // Native preview currently types property-assignment annotations as required.
 // Ordinary object literal properties intentionally omit that node.
@@ -194,6 +197,53 @@ const createArgumentExpression = (
   }
 };
 
+const createRegexArgumentExpression = (argument: ZodArgument): Expression | undefined => {
+  if (argument.kind !== "literal" || typeof argument.value !== "string") return undefined;
+  return createNewExpression(createIdentifier("RegExp"), undefined, [
+    createStringLiteral(argument.value, noTokenFlags),
+  ]);
+};
+
+const createRequiredKeysArgumentExpression = (argument: ZodArgument): Expression | undefined => {
+  if (argument.kind !== "array") return undefined;
+
+  const properties: PropertyAssignment[] = [];
+  for (const element of argument.elements) {
+    if (element.kind !== "literal" || typeof element.value !== "string") return undefined;
+    properties.push(
+      createPropertyAssignment(
+        undefined,
+        createPropertyName(element.value),
+        undefined,
+        omittedTypeNode(),
+        createKeywordExpression(SyntaxKind.TrueKeyword),
+      ),
+    );
+  }
+
+  return createObjectLiteralExpression(properties, false);
+};
+
+const createMethodArgumentExpression = (
+  argument: ZodArgument,
+  call: ZodMethodCall,
+  schemaConstNames: ReadonlyMap<ZodSymbol, string>,
+): Expression => {
+  const printArgument = zodMethodMetadataFor(call.method)?.printArgument;
+  if (printArgument === "regex")
+    return (
+      createRegexArgumentExpression(argument) ??
+      createArgumentExpression(argument, schemaConstNames)
+    );
+  if (printArgument === "requiredKeys")
+    return (
+      createRequiredKeysArgumentExpression(argument) ??
+      createArgumentExpression(argument, schemaConstNames)
+    );
+
+  return createArgumentExpression(argument, schemaConstNames);
+};
+
 const createCalledExpression = (
   expression: Expression,
   call: ZodMethodCall,
@@ -208,7 +258,7 @@ const createCalledExpression = (
     ),
     undefined,
     undefined,
-    call.args.map((argument) => createArgumentExpression(argument, schemaConstNames)),
+    call.args.map((argument) => createMethodArgumentExpression(argument, call, schemaConstNames)),
     NodeFlags.None,
   );
 
@@ -263,7 +313,7 @@ const createSchemaStatementWithNames = (
   );
 
 const createRootTypeStatement = (
-  typeName: TypeScriptIdentifier,
+  typeName: TypeScriptIdentifierValue,
   schemaConstName: string,
 ): TypeAliasDeclaration =>
   createTypeAliasDeclaration(

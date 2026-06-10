@@ -6,13 +6,20 @@ import type {
   ZodEmissionModule,
   ZodExpression,
   ZodFactoryExpression,
-  ZodFactoryName,
   ZodMethodCall,
   ZodSymbol,
 } from "./zod-plan";
 import { collectZodExpressionReferences } from "./zod-plan-analysis";
+import { zodFactoryMetadata, zodMethodMetadataFor } from "./zod-plan-metadata";
+import type {
+  ZodArgumentMetadata,
+  ZodArrayElementKind,
+  ZodFactoryName,
+  ZodLiteralArgumentValueType,
+} from "./zod-plan-metadata";
+import { validateZodCallReceivers } from "./zod-plan-receiver-validation";
+import type { ZodPlanValidationContext as ValidationContext } from "./zod-plan-receiver-validation";
 
-const minimumUnionOptions = 2;
 const asciiSpace = 32;
 const asciiHyphen = 45;
 const asciiGreaterThan = 62;
@@ -22,10 +29,8 @@ const referenceCycleSeparator = String.fromCodePoint(
   asciiGreaterThan,
   asciiSpace,
 );
-const unionFactoryExpectedArguments = ["an array of at least two", "expression arguments"].join(
-  " ",
-);
-const noArgumentMethods = new Set<string>(["nullable", "optional"]);
+
+type StringLiteralArgument = Readonly<{ kind: "literal"; value: string }>;
 
 const assertNever = (value: never): never => {
   throw new Error(`Unexpected Zod IR node: ${JSON.stringify(value)}`);
@@ -47,15 +52,6 @@ const findDuplicateSymbols = (
   declarations: ZodEmissionModule["declarations"],
 ): readonly ZodSymbol[] =>
   findDuplicateStrings(declarations.map((declaration) => declaration.symbol));
-
-const noArgumentFactories = new Set<ZodFactoryName>([
-  "boolean",
-  "never",
-  "null",
-  "number",
-  "string",
-  "unknown",
-]);
 
 const invalidFactoryArgs = (factory: ZodFactoryName, expected: string): Result<never> =>
   err(
@@ -89,16 +85,86 @@ const duplicateObjectKeys = (keys: readonly string[]): Result<never> =>
     }),
   );
 
-const validateArgumentShape = (argument: ZodArgument): Result<ZodArgument> => {
+const isStringLiteralArgument = (argument: ZodArgument): argument is StringLiteralArgument =>
+  argument.kind === "literal" && typeof argument.value === "string";
+
+const arrayArgumentValues = (
+  args: readonly ZodArgument[],
+  elementKind: ZodArrayElementKind,
+): readonly string[] | undefined => {
+  const [argument] = args;
+  if (argument?.kind !== "array") return undefined;
+  if (elementKind === "expression")
+    return argument.elements.every((element) => element.kind === "expression") ? [] : undefined;
+
+  const values = argument.elements.filter(isStringLiteralArgument);
+  return values.length === argument.elements.length
+    ? values.map((element) => element.value)
+    : undefined;
+};
+
+const literalArgumentMatchesType = (
+  argument: ZodArgument | undefined,
+  valueType: ZodLiteralArgumentValueType,
+): boolean => argument?.kind === "literal" && typeof argument.value === valueType;
+
+const isSingleArgument = (args: readonly ZodArgument[], kind: ZodArgument["kind"]): boolean =>
+  args.length === 1 && args[0]?.kind === kind;
+
+const argumentsMatchMetadata = (
+  args: readonly ZodArgument[],
+  metadata: ZodArgumentMetadata,
+): boolean => {
+  switch (metadata.kind) {
+    case "array": {
+      const [argument] = args;
+      const values = arrayArgumentValues(args, metadata.elementKind);
+      return (
+        args.length === 1 &&
+        argument?.kind === "array" &&
+        argument.elements.length >= metadata.minimumLength &&
+        values !== undefined
+      );
+    }
+    case "literal": {
+      const [argument] = args;
+      return args.length === 1 && literalArgumentMatchesType(argument, metadata.valueType);
+    }
+    case "none": {
+      return args.length === 0;
+    }
+    case "single": {
+      return isSingleArgument(args, metadata.argumentKind);
+    }
+    default: {
+      return assertNever(metadata);
+    }
+  }
+};
+
+const duplicateStringArrayArgumentValues = (
+  args: readonly ZodArgument[],
+  metadata: ZodArgumentMetadata,
+): readonly string[] => {
+  if (metadata.kind !== "array" || metadata.unique !== true) return [];
+
+  const values = arrayArgumentValues(args, metadata.elementKind);
+  return values === undefined ? [] : findDuplicateStrings(values);
+};
+
+const validateArgumentShape = (
+  argument: ZodArgument,
+  context: ValidationContext,
+): Result<ZodArgument> => {
   switch (argument.kind) {
     case "array": {
       const invalidElement = argument.elements
-        .map(validateArgumentShape)
+        .map((element) => validateArgumentShape(element, context))
         .find((result) => !result.ok);
       return invalidElement ?? ok(argument);
     }
     case "expression": {
-      const validExpression = validateExpressionShape(argument.expression);
+      const validExpression = validateExpressionShape(argument.expression, context);
       return validExpression.ok ? ok(argument) : validExpression;
     }
     case "literal": {
@@ -111,7 +177,7 @@ const validateArgumentShape = (argument: ZodArgument): Result<ZodArgument> => {
       if (duplicateKeys.length > 0) return duplicateObjectKeys(duplicateKeys);
 
       const invalidProperty = argument.properties
-        .map((property) => validateExpressionShape(property.expression))
+        .map((property) => validateExpressionShape(property.expression, context))
         .find((result) => !result.ok);
       return invalidProperty ?? ok(argument);
     }
@@ -121,67 +187,58 @@ const validateArgumentShape = (argument: ZodArgument): Result<ZodArgument> => {
   }
 };
 
-const validateCallShapes = (calls: readonly ZodMethodCall[]): Result<readonly ZodMethodCall[]> => {
-  const invalidCall = calls.map((call) => validateCallShape(call)).find((result) => !result.ok);
-  return invalidCall ?? ok(calls);
-};
+const validateCallShape = (
+  call: ZodMethodCall,
+  context: ValidationContext,
+): Result<ZodMethodCall> => {
+  const metadata = zodMethodMetadataFor(call.method);
+  if (metadata === undefined) return unsupportedMethod(call.method);
+  if (!argumentsMatchMetadata(call.args, metadata.args))
+    return invalidMethodArgs(call.method, metadata.args.expected);
 
-const validateCallShape = (call: ZodMethodCall): Result<ZodMethodCall> => {
-  if (!noArgumentMethods.has(call.method)) return unsupportedMethod(call.method);
-  if (call.args.length > 0) return invalidMethodArgs(call.method, "no arguments");
+  const duplicateValues = duplicateStringArrayArgumentValues(call.args, metadata.args);
+  if (duplicateValues.length > 0) return duplicateObjectKeys(duplicateValues);
 
-  const invalidArgument = call.args.map(validateArgumentShape).find((result) => !result.ok);
+  const invalidArgument = call.args
+    .map((argument) => validateArgumentShape(argument, context))
+    .find((result) => !result.ok);
   return invalidArgument ?? ok(call);
 };
 
-const isSingleArgument = (args: readonly ZodArgument[], kind: ZodArgument["kind"]): boolean =>
-  args.length === 1 && args[0]?.kind === kind;
-
-const validateNoArgumentFactory = (
-  expression: ZodFactoryExpression,
-): Result<ZodFactoryExpression> =>
-  expression.args.length === 0
-    ? ok(expression)
-    : invalidFactoryArgs(expression.factory, "no arguments");
-
-const validateUnionFactory = (expression: ZodFactoryExpression): Result<ZodFactoryExpression> => {
-  const [unionArgs] = expression.args;
-  return expression.args.length === 1 &&
-    unionArgs?.kind === "array" &&
-    unionArgs.elements.length >= minimumUnionOptions &&
-    unionArgs.elements.every((element) => element.kind === "expression")
-    ? ok(expression)
-    : invalidFactoryArgs(expression.factory, unionFactoryExpectedArguments);
+const validateCallShapes = (
+  calls: readonly ZodMethodCall[],
+  context: ValidationContext,
+): Result<readonly ZodMethodCall[]> => {
+  const invalidCall = calls
+    .map((call) => validateCallShape(call, context))
+    .find((result) => !result.ok);
+  return invalidCall ?? ok(calls);
 };
 
 const validateFactoryArgs = (expression: ZodFactoryExpression): Result<ZodFactoryExpression> => {
-  if (noArgumentFactories.has(expression.factory)) return validateNoArgumentFactory(expression);
-  if (expression.factory === "array")
-    return validateSingleArgumentFactory(expression, "expression");
-  if (expression.factory === "literal") return validateSingleArgumentFactory(expression, "literal");
-  if (expression.factory === "object") return validateSingleArgumentFactory(expression, "object");
-  if (expression.factory === "union") return validateUnionFactory(expression);
-  return ok(expression);
+  const metadata = zodFactoryMetadata[expression.factory];
+  return argumentsMatchMetadata(expression.args, metadata.args)
+    ? ok(expression)
+    : invalidFactoryArgs(expression.factory, metadata.args.expected);
 };
 
-const validateSingleArgumentFactory = (
-  expression: ZodFactoryExpression,
-  kind: ZodArgument["kind"],
-): Result<ZodFactoryExpression> =>
-  isSingleArgument(expression.args, kind)
-    ? ok(expression)
-    : invalidFactoryArgs(expression.factory, `one ${kind} argument`);
-
-const validateExpressionShape = (expression: ZodExpression): Result<ZodExpression> => {
-  const validCalls = validateCallShapes(expression.calls);
+const validateExpressionShape = (
+  expression: ZodExpression,
+  context: ValidationContext,
+): Result<ZodExpression> => {
+  const validCalls = validateCallShapes(expression.calls, context);
   if (!validCalls.ok) return validCalls;
-  if (expression.kind === "reference") return ok(expression);
+  if (expression.kind === "reference") return validateZodCallReceivers(expression, context);
 
   const validFactoryArgs = validateFactoryArgs(expression);
   if (!validFactoryArgs.ok) return validFactoryArgs;
 
-  const invalidArgument = expression.args.map(validateArgumentShape).find((result) => !result.ok);
-  return invalidArgument ?? ok(expression);
+  const invalidArgument = expression.args
+    .map((argument) => validateArgumentShape(argument, context))
+    .find((result) => !result.ok);
+  if (invalidArgument !== undefined) return invalidArgument;
+
+  return validateZodCallReceivers(expression, context);
 };
 
 const findReferenceCycle = (module: ZodEmissionModule): readonly ZodSymbol[] | undefined => {
@@ -267,8 +324,13 @@ export const validateZodEmissionModule = (module: ZodEmissionModule): Result<Zod
       }),
     );
 
+  const context: ValidationContext = {
+    declarations: new Map(
+      module.declarations.map((declaration) => [declaration.symbol, declaration]),
+    ),
+  };
   const invalidDeclaration = module.declarations
-    .map((declaration) => validateExpressionShape(declaration.expression))
+    .map((declaration) => validateExpressionShape(declaration.expression, context))
     .find((result) => !result.ok);
   return invalidDeclaration ?? ok(module);
 };
