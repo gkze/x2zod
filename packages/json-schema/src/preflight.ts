@@ -2,6 +2,7 @@ import { createDiagnostic, err, jsonPointerSchema, ok } from "@x2zod/core";
 import type { Diagnostic, JsonPointer, Result, SourceLocationMap } from "@x2zod/core";
 import AjvDraft7 from "ajv";
 import type { ErrorObject, Options, Schema } from "ajv";
+import AjvDraft2019 from "ajv/dist/2019";
 import AjvDraft2020 from "ajv/dist/2020";
 
 import { jsonSchemaDiagnosticLocation } from "./diagnostics";
@@ -29,8 +30,11 @@ const ajvPathToPointer = (instancePath: string): JsonPointer => {
   return rootPointer;
 };
 
-const ajvForDialect = (dialect: JsonSchemaDialect): AjvDraft7 | AjvDraft2020 =>
-  dialect === "draft-2020-12" ? new AjvDraft2020(ajvOptions) : new AjvDraft7(ajvOptions);
+const ajvForDialect = (dialect: JsonSchemaDialect): AjvDraft7 | AjvDraft2019 | AjvDraft2020 => {
+  if (dialect === "draft-2020-12") return new AjvDraft2020(ajvOptions);
+  if (dialect === "draft-2019-09") return new AjvDraft2019(ajvOptions);
+  return new AjvDraft7(ajvOptions);
+};
 
 const diagnosticForError = (error: ErrorObject, locations?: SourceLocationMap): Diagnostic => {
   const pointer = ajvPathToPointer(error.instancePath);

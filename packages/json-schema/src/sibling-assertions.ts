@@ -75,6 +75,14 @@ const isMetadataSiblingKeyword = (key: string, context: SiblingAssertionContext)
   jsonSchemaAnyOfAllowedSiblingKeywords.has(key) ||
   (context.sourceProfile === "opencode" && opencodeSourceProfileMetadataKeywords.has(key));
 
+const isSupportedUnevaluatedPropertiesSibling = (
+  key: string,
+  request: SiblingAssertionRequest,
+): boolean =>
+  request.keyword === jsonSchemaKeywords.allOf &&
+  key === jsonSchemaKeywords.unevaluatedProperties &&
+  typeof request.schema[jsonSchemaKeywords.unevaluatedProperties] === "boolean";
+
 const isAllowedSiblingKeyword = (
   key: string,
   request: SiblingAssertionRequest,
@@ -82,6 +90,7 @@ const isAllowedSiblingKeyword = (
 ): boolean =>
   key === request.keyword ||
   isMetadataSiblingKeyword(key, context) ||
+  isSupportedUnevaluatedPropertiesSibling(key, request) ||
   (allowsTypeSibling(request, context) && key === jsonSchemaKeywords.type);
 
 export const hasUnsupportedSiblingAssertions = (

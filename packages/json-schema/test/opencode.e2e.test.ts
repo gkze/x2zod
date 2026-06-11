@@ -3,6 +3,8 @@ import { existsSync, mkdirSync, rmSync } from "node:fs";
 import { join, resolve } from "node:path";
 import process from "node:process";
 
+import { z } from "zod/v4";
+
 import {
   buildNodeBundle,
   createTemporaryDirectory,
@@ -12,6 +14,7 @@ import {
   outputText,
   runNode,
 } from "../../../test/native-source-harness";
+import type { JsonValue } from "../src";
 
 const testDirectory = import.meta.dirname;
 const packageRootDirectory = resolve(testDirectory, "..");
@@ -38,10 +41,19 @@ const sampleOpenCodeConfig = {
   logLevel: "DEBUG",
   server: { hostname: openCodeTestHostname, mdns: false, port: openCodeTestPort },
   username: openCodeTestUsername,
-} as const;
+} as const satisfies JsonValue;
+const openCodeDebugConfigSchema = z.looseObject({
+  logLevel: z.literal(sampleOpenCodeConfig.logLevel),
+  server: z.looseObject({
+    hostname: z.literal(openCodeTestHostname),
+    port: z.literal(openCodeTestPort),
+  }),
+  username: z.literal(openCodeTestUsername),
+});
 
 type GeneratedZodSchema = Readonly<{ parse: (value: unknown) => unknown }>;
 type GeneratedOpenCodeConfigModule = Readonly<{ openCodeConfigSchema: GeneratedZodSchema }>;
+type OpenCodeDebugConfig = z.infer<typeof openCodeDebugConfigSchema>;
 type AssertOpenCodeAcceptsConfigRequest = Readonly<{
   configDirectory: string;
   configFile: string;
@@ -117,13 +129,8 @@ const openCodeEnvironment = (
   XDG_STATE_HOME: join(homeDirectory, ".local/state"),
 });
 
-const requireRecordProperty = (value: unknown, property: string): Record<string, unknown> => {
-  if (!isRecord(value)) throw new Error(`Expected ${property} to be an object.`);
-  return value;
-};
-
-const parseOpenCodeDebugConfigOutput = (stdout: Uint8Array): Record<string, unknown> =>
-  requireRecordProperty(JSON.parse(outputText(stdout)) as unknown, "OpenCode debug config output");
+const parseOpenCodeDebugConfigOutput = (stdout: Uint8Array): OpenCodeDebugConfig =>
+  openCodeDebugConfigSchema.parse(JSON.parse(outputText(stdout)));
 
 const assertOpenCodeAcceptsConfig = ({
   configDirectory,
@@ -144,12 +151,11 @@ const assertOpenCodeAcceptsConfig = ({
     throw new Error([outputText(result.stdout), outputText(result.stderr)].join("\n"));
 
   const config = parseOpenCodeDebugConfigOutput(result.stdout);
-  const server = requireRecordProperty(config["server"], "server");
 
-  expect(config["username"]).toBe(openCodeTestUsername);
-  expect(config["logLevel"]).toBe(sampleOpenCodeConfig.logLevel);
-  expect(server["hostname"]).toBe(openCodeTestHostname);
-  expect(server["port"]).toBe(openCodeTestPort);
+  expect(config.username).toBe(openCodeTestUsername);
+  expect(config.logLevel).toBe(sampleOpenCodeConfig.logLevel);
+  expect(config.server.hostname).toBe(openCodeTestHostname);
+  expect(config.server.port).toBe(openCodeTestPort);
 };
 
 describe("OpenCode config JSON Schema E2E", () => {

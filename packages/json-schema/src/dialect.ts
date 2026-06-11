@@ -12,6 +12,11 @@ const draft202012SchemaUris = new Set<string>([
   "https://json-schema.org/draft/2020-12/schema#",
 ]);
 
+const draft201909SchemaUris = new Set<string>([
+  "https://json-schema.org/draft/2019-09/schema",
+  "https://json-schema.org/draft/2019-09/schema#",
+]);
+
 const draft7SchemaUris = new Set<string>([
   "http://json-schema.org/draft-07/schema",
   "http://json-schema.org/draft-07/schema#",
@@ -23,6 +28,7 @@ const schemaPointer = jsonPointerFromPath([jsonSchemaKeywords.schema]);
 
 const dialectFromSchemaUri = (uri: string): JsonSchemaDialect | undefined => {
   if (draft202012SchemaUris.has(uri)) return "draft-2020-12";
+  if (draft201909SchemaUris.has(uri)) return "draft-2019-09";
   if (draft7SchemaUris.has(uri)) return "draft-7";
   return undefined;
 };

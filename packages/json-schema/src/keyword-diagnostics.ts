@@ -120,8 +120,28 @@ export const collectKeywordDiagnostics = (
     context,
   );
   collectSchemaArrayDiagnostics(
+    schema[jsonSchemaKeywords.allOf],
+    jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.allOf),
+    context,
+  );
+  collectSchemaArrayDiagnostics(
     schema[jsonSchemaKeywords.anyOf],
     jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.anyOf),
+    context,
+  );
+  collectSchemaArrayDiagnostics(
+    schema[jsonSchemaKeywords.oneOf],
+    jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.oneOf),
+    context,
+  );
+  collectChildSchemaDiagnostics(
+    schema[jsonSchemaKeywords.not],
+    jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.not),
+    context,
+  );
+  collectChildSchemaDiagnostics(
+    schema[jsonSchemaKeywords.propertyNames],
+    jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.propertyNames),
     context,
   );
 };

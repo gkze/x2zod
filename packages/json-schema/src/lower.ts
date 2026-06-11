@@ -10,21 +10,17 @@ import type {
 } from "@x2zod/core";
 
 import { hasJsonSchemaArrayKeywords, lowerJsonSchemaArray } from "./array";
+import { lowerJsonSchemaComposition } from "./composition-lower";
 import {
   applyJsonSchemaNumberBounds,
-  applyJsonSchemaStringPattern,
+  applyJsonSchemaStringConstraints,
+  firstJsonSchemaStringConstraintPointer,
   hasJsonSchemaNumberBounds,
-  hasJsonSchemaStringPattern,
+  hasJsonSchemaStringConstraints,
 } from "./constraints";
 import { addJsonSchemaDiagnostic, resultFromJsonSchemaDiagnostics } from "./diagnostics";
 import type { JsonSchemaDiagnosticInput, JsonSchemaDiagnosticSink } from "./diagnostics";
-import {
-  isJsonArray,
-  isJsonPrimitive,
-  isJsonSchemaValue,
-  jsonPointerFromPath,
-  jsonStringValues,
-} from "./document";
+import { isJsonArray, isJsonPrimitive, jsonPointerFromPath, jsonStringValues } from "./document";
 import type { JsonObject, JsonSchemaValue, JsonValue, ParsedJsonSchemaDocument } from "./document";
 import { collectKeywordDiagnostics } from "./keyword-diagnostics";
 import { jsonSchemaKeywords } from "./metadata";
@@ -35,6 +31,7 @@ import { emptyPointer, jsonSchemaPointerWithSegment } from "./pointer";
 import { jsonSchemaAddress, resolveJsonSchemaReference } from "./reference";
 import type { JsonSchemaAddress } from "./reference";
 import { hasUnsupportedSiblingAssertions } from "./sibling-assertions";
+import { oneOrUnion } from "./zod-expressions";
 
 const rootSymbol = "root";
 
@@ -114,12 +111,6 @@ const lowerLiteralValue = (
   return zodPlan.unknown();
 };
 
-const oneOrUnion = (expressions: readonly ZodExpression[]): ZodExpression => {
-  const [first, second, ...remaining] = expressions;
-  if (first === undefined) return zodPlan.never();
-  return second === undefined ? first : zodPlan.union([first, second, ...remaining]);
-};
-
 const lowerEnum = (
   values: JsonValue,
   pointer: JsonPointer,
@@ -166,7 +157,7 @@ const lowerTypeName = (typeName: string, request: LowerTypeRequest): ZodExpressi
       return lowerObjectSchema(schema, pointer, context);
     }
     case "string": {
-      return applyJsonSchemaStringPattern(
+      return applyJsonSchemaStringConstraints(
         { expression: zodPlan.string(), pointer, schema },
         diagnosticSink(context),
       );
@@ -235,43 +226,6 @@ const lowerTypeArray = (
   return oneOrUnion(expressions);
 };
 
-const lowerAnyOf = (
-  values: JsonValue,
-  pointer: JsonPointer,
-  context: LoweringContext,
-): ZodExpression => {
-  if (!isJsonArray(values)) {
-    addDiagnostic(context, {
-      code: "invalid_schema_document",
-      message: "JSON Schema anyOf must be an array of schemas.",
-      pointer,
-    });
-    return zodPlan.unknown();
-  }
-  if (values.length === 0) {
-    addDiagnostic(context, {
-      code: "invalid_schema_document",
-      message: "JSON Schema anyOf must contain at least one schema.",
-      pointer,
-    });
-    return zodPlan.unknown();
-  }
-
-  const expressions: ZodExpression[] = [];
-  for (const [index, schema] of values.entries()) {
-    const schemaPointer = jsonSchemaPointerWithSegment(pointer, index);
-    if (isJsonSchemaValue(schema)) expressions.push(lowerSchema(schemaPointer, schema, context));
-    else
-      addDiagnostic(context, {
-        code: "invalid_schema_document",
-        message: "JSON Schema anyOf entries must be boolean schemas or schema objects.",
-        pointer: schemaPointer,
-      });
-  }
-
-  return oneOrUnion(expressions);
-};
-
 const lowerArraySchema = (
   schema: JsonObject,
   pointer: JsonPointer,
@@ -300,22 +254,27 @@ const lowerUntypedConstraintSchema = (
   if (hasJsonSchemaNumberBounds(schema)) {
     addDiagnostic(context, {
       code: "unrepresentable_schema_combination",
-      message:
-        "JSON Schema numeric bounds without a number or integer type are not supported by this lowering slice.",
+      message: [
+        "JSON Schema numeric bounds without a number or integer type",
+        "are not supported by this lowering slice.",
+      ].join(" "),
       pointer,
     });
     return zodPlan.unknown();
   }
-  if (!hasJsonSchemaStringPattern(schema)) return undefined;
+  if (!hasJsonSchemaStringConstraints(schema)) return undefined;
 
-  applyJsonSchemaStringPattern(
+  applyJsonSchemaStringConstraints(
     { expression: zodPlan.string(), pointer, schema },
     diagnosticSink(context),
   );
   addDiagnostic(context, {
     code: "unrepresentable_schema_combination",
-    message: "JSON Schema pattern without a string type is not supported by this lowering slice.",
-    pointer: jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.pattern),
+    message: [
+      "JSON Schema string constraints without a string type",
+      "are not supported by this lowering slice.",
+    ].join(" "),
+    pointer: firstJsonSchemaStringConstraintPointer(schema, pointer),
   });
   return zodPlan.unknown();
 };
@@ -329,8 +288,10 @@ const lowerReference = (
   if (target === undefined) {
     addDiagnostic(context, {
       code: "unresolved_reference",
-      message:
-        "JSON Schema $ref target was not found. External references must be provided through plugin options.",
+      message: [
+        "JSON Schema $ref target was not found.",
+        "External references must be provided through plugin options.",
+      ].join(" "),
       pointer,
     });
     return zodPlan.unknown();
@@ -393,21 +354,14 @@ const lowerSchema = (
       context,
     );
   }
-  const anyOfValues = schema[jsonSchemaKeywords.anyOf];
-  if (anyOfValues !== undefined) {
-    if (
-      hasUnsupportedSiblingAssertions(
-        { keyword: jsonSchemaKeywords.anyOf, pointer, schema },
-        siblingAssertionContext(context),
-      )
-    )
-      return zodPlan.unknown();
-    return lowerAnyOf(
-      anyOfValues,
-      jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.anyOf),
-      context,
-    );
-  }
+  const compositionExpression = lowerJsonSchemaComposition(schema, pointer, {
+    ...diagnosticSink(context),
+    lowerSchema: (childPointer, childSchema) => lowerSchema(childPointer, childSchema, context),
+    resolveReference: (reference) =>
+      resolveJsonSchemaReference(reference, context.document.schema, context.options),
+    sourceProfile: context.options.sourceProfile,
+  });
+  if (compositionExpression !== undefined) return compositionExpression;
   const typeValue = schema[jsonSchemaKeywords.type];
   if (isJsonArray(typeValue))
     return lowerTypeArray(typeValue, {

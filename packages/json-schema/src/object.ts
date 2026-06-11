@@ -1,6 +1,7 @@
 import { zodPlan } from "@x2zod/core";
 import type { JsonPointer, ZodExpression } from "@x2zod/core";
 
+import { applyJsonSchemaStringConstraints, hasJsonSchemaStringConstraints } from "./constraints";
 import type { JsonSchemaDiagnosticSink } from "./diagnostics";
 import { isJsonArray, isJsonObject, isJsonSchemaValue } from "./document";
 import type { JsonObject, JsonSchemaValue } from "./document";
@@ -17,10 +18,19 @@ type ObjectShapeRequest = Readonly<{
   schema: JsonObject;
 }>;
 
+type PropertyNamesRequest = Readonly<{
+  context: ObjectLoweringContext;
+  expression: ZodExpression;
+  pointer: JsonPointer;
+  schema: JsonObject;
+}>;
+
 export const hasJsonSchemaObjectKeywords = (schema: JsonObject): boolean =>
   schema[jsonSchemaKeywords.additionalProperties] !== undefined ||
   schema[jsonSchemaKeywords.properties] !== undefined ||
-  schema[jsonSchemaKeywords.required] !== undefined;
+  schema[jsonSchemaKeywords.propertyNames] !== undefined ||
+  schema[jsonSchemaKeywords.required] !== undefined ||
+  schema[jsonSchemaKeywords.unevaluatedProperties] !== undefined;
 
 const addInvalidSchemaDiagnostic = (
   context: ObjectLoweringContext,
@@ -83,6 +93,32 @@ const propertyPointer = (pointer: JsonPointer, key: string): JsonPointer =>
 const additionalPropertiesPointer = (pointer: JsonPointer): JsonPointer =>
   jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.additionalProperties);
 
+const propertyNamesPointer = (pointer: JsonPointer): JsonPointer =>
+  jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.propertyNames);
+
+const unevaluatedPropertiesPointer = (pointer: JsonPointer): JsonPointer =>
+  jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.unevaluatedProperties);
+
+const addUnsupportedUnevaluatedPropertiesDiagnostic = (
+  schema: JsonObject,
+  pointer: JsonPointer,
+  context: ObjectLoweringContext,
+): void => {
+  const unevaluatedProperties = schema[jsonSchemaKeywords.unevaluatedProperties];
+  if (
+    unevaluatedProperties === undefined ||
+    typeof unevaluatedProperties === "boolean" ||
+    schema[jsonSchemaKeywords.additionalProperties] !== undefined
+  )
+    return;
+
+  context.addDiagnostic({
+    code: "unrepresentable_schema_combination",
+    message: "JSON Schema unevaluatedProperties schemas are not supported by this lowering slice.",
+    pointer: unevaluatedPropertiesPointer(pointer),
+  });
+};
+
 const lowerAdditionalPropertyValue = (
   schema: JsonObject,
   pointer: JsonPointer,
@@ -135,11 +171,55 @@ const objectShape = ({
   return shape;
 };
 
-const requireKeys = (expression: ZodExpression, keys: readonly string[]): ZodExpression => {
+export const applyJsonSchemaRequiredKeys = (
+  expression: ZodExpression,
+  keys: readonly string[],
+): ZodExpression => {
   const [firstKey, ...remainingKeys] = keys;
   return firstKey === undefined
     ? expression
     : zodPlan.required(expression, [firstKey, ...remainingKeys]);
+};
+
+const lowerPropertyNameSchema = (
+  propertyNames: JsonSchemaValue,
+  pointer: JsonPointer,
+  context: ObjectLoweringContext,
+): ZodExpression => {
+  if (propertyNames === true) return zodPlan.string();
+  if (propertyNames === false) return zodPlan.never();
+  if (hasJsonSchemaStringConstraints(propertyNames))
+    return applyJsonSchemaStringConstraints(
+      { expression: zodPlan.string(), pointer, schema: propertyNames },
+      context,
+    );
+  return context.lowerSchema(pointer, propertyNames);
+};
+
+const applyPropertyNames = ({
+  context,
+  expression,
+  pointer,
+  schema,
+}: PropertyNamesRequest): ZodExpression => {
+  const propertyNames = schema[jsonSchemaKeywords.propertyNames];
+  if (propertyNames === undefined || propertyNames === true) return expression;
+  const pointerToPropertyNames = propertyNamesPointer(pointer);
+  if (isJsonSchemaValue(propertyNames))
+    return zodPlan.intersection(
+      zodPlan.record(
+        lowerPropertyNameSchema(propertyNames, pointerToPropertyNames, context),
+        zodPlan.unknown(),
+      ),
+      expression,
+    );
+
+  addInvalidSchemaDiagnostic(
+    context,
+    pointerToPropertyNames,
+    "JSON Schema propertyNames must be a boolean or schema object.",
+  );
+  return expression;
 };
 
 export const lowerJsonSchemaObject = (
@@ -148,19 +228,28 @@ export const lowerJsonSchemaObject = (
   context: ObjectLoweringContext,
 ): ZodExpression => {
   const requiredKeys = requiredProperties(schema, pointer, context);
-  const object = requireKeys(
+  const object = applyJsonSchemaRequiredKeys(
     zodPlan.object(objectShape({ context, pointer, required: new Set(requiredKeys), schema })),
     requiredKeys,
   );
   const additionalProperties = schema[jsonSchemaKeywords.additionalProperties];
+  const unevaluatedProperties = schema[jsonSchemaKeywords.unevaluatedProperties];
+  const withPropertyNames = (expression: ZodExpression): ZodExpression =>
+    applyPropertyNames({ context, expression, pointer, schema });
+  addUnsupportedUnevaluatedPropertiesDiagnostic(schema, pointer, context);
 
-  if (additionalProperties === false) return zodPlan.strict(object);
-  if (additionalProperties === undefined || additionalProperties === true)
-    return zodPlan.passthrough(object);
+  if (additionalProperties === false) return withPropertyNames(zodPlan.strict(object));
+  if (additionalProperties === undefined)
+    return withPropertyNames(
+      unevaluatedProperties === false ? zodPlan.strict(object) : zodPlan.passthrough(object),
+    );
+  if (additionalProperties === true) return withPropertyNames(zodPlan.passthrough(object));
   if (isJsonSchemaValue(additionalProperties))
-    return zodPlan.catchall(
-      object,
-      context.lowerSchema(additionalPropertiesPointer(pointer), additionalProperties),
+    return withPropertyNames(
+      zodPlan.catchall(
+        object,
+        context.lowerSchema(additionalPropertiesPointer(pointer), additionalProperties),
+      ),
     );
 
   addInvalidSchemaDiagnostic(
@@ -168,5 +257,5 @@ export const lowerJsonSchemaObject = (
     additionalPropertiesPointer(pointer),
     "JSON Schema additionalProperties must be a boolean or schema object.",
   );
-  return object;
+  return withPropertyNames(object);
 };

@@ -156,7 +156,7 @@ describe("jsonSchemaInputPlugin lower", () => {
   test("fails loudly for known unsupported and unknown keywords", async () => {
     const unsupported = expectOk(
       await jsonSchemaInputPlugin.prepare(
-        fileDocument('{ "type": "string", "minLength": 3 }'),
+        fileDocument('{ "type": "array", "uniqueItems": true }'),
         options({ validator: "none" }),
       ),
     );
@@ -256,7 +256,7 @@ describe("jsonSchemaInputPlugin precise lower", () => {
                 prefixItems: [{ type: "string" }, { type: "number" }],
                 type: "array",
               },
-              slug: { pattern: "^[a-z]+$", type: "string" },
+              slug: { maxLength: 8, minLength: 3, pattern: "^[a-z]+$", type: "string" },
               tags: { items: { type: "string" }, maxItems: 3, minItems: 1, type: "array" },
               value: {},
             },
@@ -289,7 +289,12 @@ describe("jsonSchemaInputPlugin precise lower", () => {
     expect(pair.kind).toBe("factory");
     if (pair.kind !== "factory") throw new Error("Expected pair to lower to a factory.");
     expect(pair.factory).toBe("tuple");
-    expect(slug.calls.map((call) => String(call.method))).toEqual(["regex", "optional"]);
+    expect(slug.calls.map((call) => String(call.method))).toEqual([
+      "regex",
+      "min",
+      "max",
+      "optional",
+    ]);
     expect(tags.calls.map((call) => String(call.method))).toEqual(["min", "max", "optional"]);
   });
 
@@ -335,13 +340,13 @@ describe("jsonSchemaInputPlugin precise diagnostics", () => {
   test("collects unsupported keyword diagnostics from referenced external schemas", async () => {
     const pluginOptions = options({
       externalSchemas: {
-        [externalSchemaUri]: { $defs: { model: { minLength: 3, type: "string" } } },
+        [externalSchemaUri]: { $defs: { tags: { type: "array", uniqueItems: true } } },
       },
       validator: "none",
     });
     const prepared = expectOk(
       await jsonSchemaInputPlugin.prepare(
-        fileDocument(JSON.stringify({ $ref: `${externalSchemaUri}#/$defs/model` })),
+        fileDocument(JSON.stringify({ $ref: `${externalSchemaUri}#/$defs/tags` })),
         pluginOptions,
       ),
     );
@@ -350,7 +355,7 @@ describe("jsonSchemaInputPlugin precise diagnostics", () => {
 
     expectErrCode(result, "unsupported_keyword");
     expect(result.diagnostics?.map((diagnostic) => String(diagnostic.location?.pointer))).toContain(
-      "/$defs/model/minLength",
+      "/$defs/tags/uniqueItems",
     );
   });
 

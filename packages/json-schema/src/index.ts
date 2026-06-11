@@ -6,6 +6,14 @@ export {
   jsonSchemaValidatorSchema,
 } from "./options";
 export type {
+  JsonObject,
+  JsonPrimitive,
+  JsonSchemaValue,
+  JsonValue,
+  ParsedJsonSchemaDocument,
+} from "./document";
+export { jsonSchemaValueSchema } from "./document";
+export type {
   JsonSchemaDialect,
   JsonSchemaInputPluginKind,
   JsonSchemaInputPluginOptions,

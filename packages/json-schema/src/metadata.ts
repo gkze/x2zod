@@ -1,6 +1,6 @@
 export const jsonSchemaInputPluginKind = "json-schema" as const;
 
-export const jsonSchemaDialects = ["draft-2020-12", "draft-7"] as const;
+export const jsonSchemaDialects = ["draft-2020-12", "draft-2019-09", "draft-7"] as const;
 export const jsonSchemaValidators = ["ajv", "none"] as const;
 export const jsonSchemaSourceProfiles = ["none", "opencode"] as const;
 
@@ -13,6 +13,9 @@ export type JsonSchemaKeywordPolicy = "supported" | "unknown" | "unsupported";
 export const jsonSchemaKeywords = {
   additionalProperties: "additionalProperties",
   anchor: "$anchor",
+  allOf: "allOf",
+  allowComments: "allowComments",
+  allowTrailingCommas: "allowTrailingCommas",
   anyOf: "anyOf",
   comment: "$comment",
   const: "const",
@@ -23,6 +26,7 @@ export const jsonSchemaKeywords = {
   dynamicAnchor: "$dynamicAnchor",
   dynamicRef: "$dynamicRef",
   enum: "enum",
+  examples: "examples",
   exclusiveMaximum: "exclusiveMaximum",
   exclusiveMinimum: "exclusiveMinimum",
   format: "format",
@@ -30,16 +34,22 @@ export const jsonSchemaKeywords = {
   items: "items",
   maximum: "maximum",
   maxItems: "maxItems",
+  maxLength: "maxLength",
   minimum: "minimum",
   minItems: "minItems",
+  minLength: "minLength",
+  not: "not",
+  oneOf: "oneOf",
   pattern: "pattern",
   prefixItems: "prefixItems",
   properties: "properties",
+  propertyNames: "propertyNames",
   ref: "$ref",
   required: "required",
   schema: "$schema",
   title: "title",
   type: "type",
+  unevaluatedProperties: "unevaluatedProperties",
   vocabulary: "$vocabulary",
 } as const;
 
@@ -48,16 +58,20 @@ export const jsonSchemaMetadataKeywords: ReadonlySet<string> = new Set<string>([
   jsonSchemaKeywords.comment,
   jsonSchemaKeywords.default,
   jsonSchemaKeywords.description,
+  jsonSchemaKeywords.examples,
   jsonSchemaKeywords.format,
   jsonSchemaKeywords.id,
   jsonSchemaKeywords.schema,
   jsonSchemaKeywords.title,
   jsonSchemaKeywords.vocabulary,
+  jsonSchemaKeywords.allowComments,
+  jsonSchemaKeywords.allowTrailingCommas,
 ]);
 
 export const jsonSchemaSupportedKeywords: ReadonlySet<string> = new Set<string>([
   ...jsonSchemaMetadataKeywords,
   jsonSchemaKeywords.additionalProperties,
+  jsonSchemaKeywords.allOf,
   jsonSchemaKeywords.anyOf,
   jsonSchemaKeywords.const,
   jsonSchemaKeywords.definitions,
@@ -68,37 +82,36 @@ export const jsonSchemaSupportedKeywords: ReadonlySet<string> = new Set<string>(
   jsonSchemaKeywords.items,
   jsonSchemaKeywords.maximum,
   jsonSchemaKeywords.maxItems,
+  jsonSchemaKeywords.maxLength,
   jsonSchemaKeywords.minimum,
   jsonSchemaKeywords.minItems,
+  jsonSchemaKeywords.minLength,
+  jsonSchemaKeywords.not,
+  jsonSchemaKeywords.oneOf,
   jsonSchemaKeywords.pattern,
   jsonSchemaKeywords.prefixItems,
   jsonSchemaKeywords.properties,
+  jsonSchemaKeywords.propertyNames,
   jsonSchemaKeywords.ref,
   jsonSchemaKeywords.required,
   jsonSchemaKeywords.type,
+  jsonSchemaKeywords.unevaluatedProperties,
 ]);
 
 export const jsonSchemaUnsupportedStandardKeywords: ReadonlySet<string> = new Set<string>([
-  "allOf",
   "contains",
   "dependentRequired",
   "dependentSchemas",
   "else",
   "if",
   "maxContains",
-  "maxLength",
   "maxProperties",
   "minContains",
-  "minLength",
   "minProperties",
   "multipleOf",
-  "not",
-  "oneOf",
   "patternProperties",
-  "propertyNames",
   "then",
   "unevaluatedItems",
-  "unevaluatedProperties",
   "uniqueItems",
   jsonSchemaKeywords.dynamicAnchor,
   jsonSchemaKeywords.dynamicRef,

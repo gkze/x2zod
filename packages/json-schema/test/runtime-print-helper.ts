@@ -8,7 +8,7 @@ import {
   requiredArgument,
   writeNativeSourceFile,
 } from "../../../test/native-print-helper";
-import { jsonSchemaInputPlugin } from "../src";
+import { jsonSchemaInputPlugin, jsonSchemaValueSchema } from "../src";
 
 const schemaPathArgumentIndex = 2;
 const externalSchemaPathArgumentIndex = 3;
@@ -20,7 +20,11 @@ const externalSchemaPath = optionalArgument(externalSchemaPathArgumentIndex);
 const externalSchemas =
   externalSchemaPath === undefined
     ? {}
-    : { [externalSchemaUri]: JSON.parse(readFileSync(externalSchemaPath, "utf8")) as unknown };
+    : {
+        [externalSchemaUri]: jsonSchemaValueSchema.parse(
+          JSON.parse(readFileSync(externalSchemaPath, "utf8")),
+        ),
+      };
 
 const result = await compileToZodSource({
   document: { source: { kind: "file", path: schemaPath }, text: readFileSync(schemaPath, "utf8") },

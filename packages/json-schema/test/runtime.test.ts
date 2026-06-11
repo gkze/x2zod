@@ -10,6 +10,7 @@ import {
   nativePreviewExternals,
   runNode,
 } from "../../../test/native-source-harness";
+import type { JsonObject, JsonSchemaValue } from "../src";
 
 const packageRootDirectory = resolve(import.meta.dirname, "..");
 const tempRootDirectory = join(packageRootDirectory, "node_modules/.cache");
@@ -61,7 +62,7 @@ const printRuntimeFixture = (
     cwd: packageRootDirectory,
   });
 
-const runtimeFixtureSchema = (): unknown => ({
+const runtimeFixtureSchema = (): JsonSchemaValue => ({
   properties: {
     pair: {
       maxItems: 2,
@@ -99,7 +100,7 @@ const writeExternalReferenceFixture = async (
   );
 };
 
-const validRuntimeValue = (): Record<string, unknown> => ({
+const validRuntimeValue = (): JsonObject => ({
   metadata: { source: "additional-properties" },
   pair: ["left", 2],
   slug: "abc",

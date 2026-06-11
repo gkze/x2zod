@@ -7,7 +7,7 @@ import {
   requiredArgument,
   writeNativeSourceFile,
 } from "../../../test/native-print-helper";
-import { jsonSchemaInputPlugin } from "../src";
+import { jsonSchemaInputPlugin, jsonSchemaValueSchema } from "../src";
 
 const modelSchemaUri = "https://models.dev/model-schema.json";
 const openCodeConfigTypeName = "OpenCodeConfig";
@@ -20,7 +20,7 @@ const configSchemaPath = requiredArgument(
 );
 const modelSchemaPath = requiredArgument(modelSchemaPathArgumentIndex, "models.dev schema fixture");
 const configSchemaText = readFileSync(configSchemaPath, "utf8");
-const modelSchema = JSON.parse(readFileSync(modelSchemaPath, "utf8")) as unknown;
+const modelSchema = jsonSchemaValueSchema.parse(JSON.parse(readFileSync(modelSchemaPath, "utf8")));
 
 const result = await compileToZodSource({
   document: { source: { kind: "file", path: configSchemaPath }, text: configSchemaText },

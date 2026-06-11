@@ -22,7 +22,7 @@ type JsonSchemaInputPluginOptionsOutput = Readonly<{
 
 type JsonSchemaInputPluginOptionsInputValue = Readonly<{
   dialect?: JsonSchemaDialect | undefined;
-  externalSchemas?: Readonly<Record<string, unknown>> | undefined;
+  externalSchemas?: Readonly<Record<string, JsonSchemaValue>> | undefined;
   sourceProfile?: JsonSchemaSourceProfile | undefined;
   validator?: JsonSchemaValidator | undefined;
 }>;
@@ -46,10 +46,13 @@ export const jsonSchemaSourceProfileSchema: z.ZodType<
   JsonSchemaSourceProfile
 > = jsonSchemaSourceProfileSchemaValue;
 
+const jsonSchemaInputValueSchema: z.ZodType<JsonSchemaValue, JsonSchemaValue> =
+  z.custom<JsonSchemaValue>((value) => jsonSchemaValueSchema.safeParse(value).success);
+
 const externalSchemasSchemaValue: z.ZodType<
   Readonly<Record<string, JsonSchemaValue>>,
-  Readonly<Record<string, unknown>>
-> = z.record(z.string(), jsonSchemaValueSchema).readonly();
+  Readonly<Record<string, JsonSchemaValue>>
+> = z.record(z.string(), jsonSchemaInputValueSchema).readonly();
 
 const jsonSchemaInputPluginOptionsSchemaValue: z.ZodType<
   JsonSchemaInputPluginOptionsOutput,
