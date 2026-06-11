@@ -54,6 +54,7 @@
         "p-limit": "7.3.0",
         "tar-v6": "npm:tar@6.2.1",
         "ts-pattern": "5.9.0",
+        "type-fest": "5.7.0",
         "yauzl": "2.10.0",
         "zod": "4.3.6",
       },

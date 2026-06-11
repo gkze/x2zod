@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import * as tar from "tar-v6";
+import { z } from "zod/v4";
 
 import { buildInputIdSchema, buildInputs, sha256HexSchema } from "./build-inputs";
 import type { BuildInputId, Sha256Hex } from "./build-inputs";
@@ -12,6 +13,8 @@ import type { BuildInputId, Sha256Hex } from "./build-inputs";
 const testUrl = "https://example.com/source.json";
 const archiveTestUrl = "https://example.com/render-cli-source.tar.gz";
 const originalFetch = globalThis.fetch;
+const okJsonSchema = z.strictObject({ ok: z.literal(true) });
+const nestedOkJsonSchema = z.strictObject({ nested: z.strictObject({ ok: z.literal(true) }) });
 type FetchImplementation = (...args: Parameters<typeof fetch>) => ReturnType<typeof fetch>;
 
 const buildInputId = (value: string): BuildInputId => buildInputIdSchema.parse(value);
@@ -35,7 +38,7 @@ const writeBuildInputsConfig = async (rootDir: string): Promise<void> => {
 };
 
 const stubFetch = (fetchImplementation: FetchImplementation): void => {
-  globalThis.fetch = fetchImplementation as typeof fetch;
+  globalThis.fetch = Object.assign(fetchImplementation, { preconnect: originalFetch.preconnect });
 };
 
 afterEach(() => {
@@ -62,7 +65,7 @@ describe("buildInputs", () => {
       const expectedSizeBytes = Buffer.byteLength(downloadedContent, "utf8");
 
       expect(downloadedContent.endsWith("\n")).toBe(true);
-      expect(JSON.parse(downloadedContent)).toEqual({ ok: true });
+      expect(okJsonSchema.parse(JSON.parse(downloadedContent))).toEqual({ ok: true });
       await expect(readFile(join(rootDir, "build-inputs.lock.json"), "utf8")).resolves.toBe(
         `${JSON.stringify(
           {
@@ -107,7 +110,9 @@ describe("buildInputs", () => {
 
       if (!input) throw new Error("Expected a build input result");
 
-      expect(JSON.parse(downloadedContent) as unknown).toEqual({ nested: { ok: true } });
+      expect(nestedOkJsonSchema.parse(JSON.parse(downloadedContent))).toEqual({
+        nested: { ok: true },
+      });
       expect(downloadedContent).toBe('{ "nested": { "ok": true } }\n');
       expect(input.sha256).toBe(sha256Hex(downloadedContent));
     } finally {

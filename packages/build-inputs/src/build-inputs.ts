@@ -12,6 +12,7 @@ import { Minimatch } from "minimatch";
 import type { FileStat } from "tar-v6";
 import * as tar from "tar-v6";
 import { match, P } from "ts-pattern";
+import type { JsonValue } from "type-fest";
 import type { Entry as ZipEntry, ZipFile } from "yauzl";
 import * as yauzl from "yauzl";
 import { z } from "zod/v4";
@@ -26,19 +27,7 @@ export const buildInputsModes = ["check", "materialize", "update-lock"] as const
 
 const defaultConfigPath = "build-inputs.json";
 const defaultLockfilePath = "build-inputs.lock.json";
-type JsonPrimitive = boolean | null | number | string;
-type JsonObject = { [key: string]: JsonValue };
-type JsonValue = JsonObject | JsonPrimitive | JsonValue[];
-const jsonValueSchema: z.ZodType<JsonValue> = z.lazy(() =>
-  z.union([
-    z.string(),
-    z.number(),
-    z.boolean(),
-    z.null(),
-    z.array(jsonValueSchema),
-    z.record(z.string(), jsonValueSchema),
-  ]),
-);
+const jsonValueSchema: z.ZodType<JsonValue> = z.json();
 const buildInputIdPattern = /^[a-z0-9][a-z0-9-]*$/;
 
 const canParseSha256Hex = (value: string): boolean => {
