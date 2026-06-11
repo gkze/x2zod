@@ -8,8 +8,7 @@ import {
   requiredArgument,
   writeNativeSourceFile,
 } from "../../../test/native-print-helper";
-import { jsonSchemaInputPlugin } from "../src";
-import type { JsonSchemaInputPluginOptionsInput } from "../src";
+import { jsonSchemaInputPlugin, jsonSchemaInputPluginOptionsSchema } from "../src";
 
 const schemaPathArgumentIndex = 2;
 const typeNameArgumentIndex = 3;
@@ -21,7 +20,7 @@ const optionsPath = optionalArgument(optionsPathArgumentIndex);
 const pluginOptions =
   optionsPath === undefined
     ? {}
-    : (JSON.parse(readFileSync(optionsPath, "utf8")) as JsonSchemaInputPluginOptionsInput);
+    : jsonSchemaInputPluginOptionsSchema.parse(JSON.parse(readFileSync(optionsPath, "utf8")));
 
 const result = await compileToZodSource({
   document: { source: { kind: "file", path: schemaPath }, text: readFileSync(schemaPath, "utf8") },
