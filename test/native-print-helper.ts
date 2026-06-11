@@ -3,7 +3,10 @@ import process from "node:process";
 import type { SourceFile } from "@typescript/native-preview/ast";
 import { API, Emitter } from "@typescript/native-preview/sync";
 
+import { isRecord } from "./structural";
+
 type NativeEmitterClient = ConstructorParameters<typeof Emitter>[0];
+type NativeApiHandle = Readonly<{ client: NativeEmitterClient; close: () => void }>;
 
 export const diagnosticText = (
   diagnostics: readonly Readonly<{ code: string; message: string }>[],
@@ -20,10 +23,13 @@ export const requiredArgument = (index: number, name: string): string => {
 
 export const optionalArgument = (index: number): string | undefined => process.argv[index];
 
+const isNativeApiHandle = (value: unknown): value is NativeApiHandle =>
+  isRecord(value) && value["client"] !== undefined && typeof value["close"] === "function";
+
 export const printNativeSourceFile = (sourceFile: SourceFile): string => {
-  const api = new API({ cwd: process.cwd() });
-  const nativeClient = (api as unknown as Readonly<{ client: NativeEmitterClient }>).client;
-  const emitter = new Emitter(nativeClient);
+  const api: unknown = new API({ cwd: process.cwd() });
+  if (!isNativeApiHandle(api)) throw new Error("Native TypeScript API client is unavailable.");
+  const emitter = new Emitter(api.client);
 
   try {
     return emitter.printNode(sourceFile);

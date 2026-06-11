@@ -2,15 +2,17 @@ import { describe, expect, test } from "bun:test";
 
 import { z } from "zod/v4";
 
-import { compileToZodSource, createDiagnostic, err, ok, ts, zodFactory } from "../src/index";
+import { compileToZodSource, createDiagnostic, err, ok, zodFactory } from "../src/index";
 import type {
   CompileToZodSourceResult,
   InputDocument,
   InputPlugin,
   PreparedInput,
+  ts,
   ZodEmissionModuleInput,
   ZodFactoryName,
 } from "../src/index";
+import { firstVariableDeclaration, importPath, zodCallName } from "./ast-helpers";
 
 const emptyOptionsSchema = z.object({});
 type EmptyOptions = z.infer<typeof emptyOptionsSchema>;
@@ -20,14 +22,6 @@ type FactoryOptions = Readonly<{ factory: "number" | "string" }>;
 type FactoryPlugin = InputPlugin<string, FactoryOptions, FactoryOptionInput>;
 type FactoryPreparedInputResult = Awaited<ReturnType<FactoryPlugin["prepare"]>>;
 type FactoryEmissionModuleResult = Awaited<ReturnType<FactoryPlugin["lower"]>>;
-type IdentifierLike = Readonly<{ text: string }>;
-type ExpressionLike = ts.Expression;
-type PropertyAccessLike = ExpressionLike & Readonly<{ name: IdentifierLike }>;
-type CallExpressionLike = ExpressionLike & Readonly<{ expression: PropertyAccessLike }>;
-type VariableDeclarationLike = Readonly<{ initializer: ExpressionLike; name: IdentifierLike }>;
-type VariableStatementLike = ts.VariableStatement &
-  Readonly<{ declarationList: Readonly<{ declarations: readonly [VariableDeclarationLike] }> }>;
-type ImportDeclarationLike = Readonly<{ moduleSpecifier: IdentifierLike }>;
 
 const document = {
   source: { id: "inline-test", kind: "inline" },
@@ -39,22 +33,6 @@ const emissionModuleForFactory = (factory: ZodFactoryName): ZodEmissionModuleInp
   declarations: [{ expression: zodFactory(factory), symbol: "root" }],
   root: "root",
 });
-
-const firstVariableDeclaration = (sourceFile: ts.SourceFile): VariableDeclarationLike => {
-  const statement = sourceFile.statements.find(
-    (item) => item.kind === ts.SyntaxKind.VariableStatement,
-  );
-  if (statement === undefined) throw new Error("Missing variable statement.");
-
-  return (statement as unknown as VariableStatementLike).declarationList.declarations[0];
-};
-
-const importPath = (sourceFile: ts.SourceFile): string =>
-  (sourceFile.statements[0] as unknown as ImportDeclarationLike).moduleSpecifier.text;
-
-const zodCallName = (sourceFile: ts.SourceFile): string =>
-  (firstVariableDeclaration(sourceFile).initializer as unknown as CallExpressionLike).expression
-    .name.text;
 
 const unwrap = (result: CompileToZodSourceResult): SourceValue => {
   if (!result.ok)
@@ -118,7 +96,7 @@ describe("compileToZodSource", () => {
     expect(sourceFile.statements.length).toBe(expectedStatementCount);
     expect(importPath(sourceFile)).toBe("zod/v4");
     expect(firstVariableDeclaration(sourceFile).name.text).toBe("userSchema");
-    expect(zodCallName(sourceFile)).toBe("string");
+    expect(zodCallName(firstVariableDeclaration(sourceFile).initializer)).toBe("string");
   });
 
   test("uses the configured Zod import path", async () => {
@@ -144,7 +122,7 @@ describe("compileToZodSource", () => {
 
     const { sourceFile } = unwrap(result);
     expect(firstVariableDeclaration(sourceFile).name.text).toBe("metricSchema");
-    expect(zodCallName(sourceFile)).toBe("number");
+    expect(zodCallName(firstVariableDeclaration(sourceFile).initializer)).toBe("number");
     expect(receivedOptions).toEqual([{ factory: "number" }, { factory: "number" }]);
   });
 

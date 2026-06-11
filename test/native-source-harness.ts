@@ -3,6 +3,9 @@ import { mkdirSync, mkdtempSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
+import { isRecord } from "./structural";
+export { isRecord } from "./structural";
+
 const textDecoder = new TextDecoder();
 
 export const nativePreviewExternals = [
@@ -74,15 +77,12 @@ export const runNode = ({ args, cwd }: RunNodeRequest): string => {
   return outputText(result.stdout);
 };
 
-export const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null;
-
 export const importGeneratedExport = async <TValue>(
   generatedFile: string,
   exportName: string,
   isExport: (value: unknown) => value is TValue,
 ): Promise<TValue> => {
-  const imported = (await import(pathToFileURL(generatedFile).href)) as unknown;
+  const imported: unknown = await import(pathToFileURL(generatedFile).href);
   if (!isRecord(imported)) throw new Error("Generated module did not import as an object.");
 
   const exportedValue = imported[exportName];

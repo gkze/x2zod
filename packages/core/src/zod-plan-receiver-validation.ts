@@ -3,7 +3,7 @@ import { err, ok } from "./result";
 import type { Result } from "./result";
 import type { ZodDeclaration, ZodExpression, ZodMethodCall, ZodSymbol } from "./zod-plan";
 import { zodMethodMetadataFor } from "./zod-plan-metadata";
-import type { ZodFactoryName } from "./zod-plan-metadata";
+import type { ZodFactoryName, ZodReceiverRequirement } from "./zod-plan-metadata";
 
 const requiredKeysPrintStrategy = "requiredKeys";
 
@@ -33,16 +33,26 @@ const missingRequiredObjectKeys = (keys: readonly string[]): Result<never> =>
 const receiverDescription = (kind: ReceiverKind): string =>
   kind === "wrapped" ? "an unwrapped Zod schema" : `a Zod ${kind} schema`;
 
+const receiverRequirementDescription = (receiver: ZodReceiverRequirement): string => {
+  if (receiver === "arrayOrString") return "a Zod array or string schema receiver";
+  return `a Zod ${receiver} schema receiver`;
+};
+
 const expectedReceiverDescription = (method: ZodMethodCall["method"]): string | undefined => {
   const receiver = zodMethodMetadataFor(method)?.receiver;
   return receiver === undefined || receiver === "any"
     ? undefined
-    : `a Zod ${receiver} schema receiver`;
+    : receiverRequirementDescription(receiver);
 };
 
 const methodAllowsReceiverKind = (method: ZodMethodCall["method"], kind: ReceiverKind): boolean => {
   const receiver = zodMethodMetadataFor(method)?.receiver;
-  return receiver === undefined || receiver === "any" || receiver === kind;
+  return (
+    receiver === undefined ||
+    receiver === "any" ||
+    receiver === kind ||
+    (receiver === "arrayOrString" && (kind === "array" || kind === "string"))
+  );
 };
 
 const receiverKindAfterCall = (call: ZodMethodCall, kind: ReceiverKind): ReceiverKind =>

@@ -20,6 +20,14 @@ import {
   zodSymbol,
 } from "../src/index";
 import type { ZodEmissionModule } from "../src/index";
+import {
+  importPath,
+  propertyInitializer,
+  variableDeclaration,
+  variableStatements,
+  zodCallName,
+  zodCallReceiverExpression,
+} from "./ast-helpers";
 
 const rootSymbol = zodSymbol("root");
 const generatedFileName = "/__x2zod__/x2zod.generated.ts";
@@ -36,25 +44,16 @@ const defaultOutputOptions = { typeName: "User" } satisfies Parameters<
   typeof buildZodSourceFile
 >[1];
 
-type IdentifierLike = Readonly<{ text: string }>;
-type ExpressionLike = ts.Expression & Partial<IdentifierLike>;
-type PropertyAccessLike = ExpressionLike &
-  Readonly<{ expression: ExpressionLike; name: IdentifierLike }>;
-type CallExpressionLike = ExpressionLike &
-  Readonly<{ arguments: readonly ExpressionLike[]; expression: PropertyAccessLike }>;
-type PropertyAssignmentLike = Readonly<{ initializer: ExpressionLike; name: IdentifierLike }>;
-type ObjectLiteralLike = ExpressionLike &
-  Readonly<{ properties: readonly PropertyAssignmentLike[] }>;
-type VariableDeclarationLike = Readonly<{ initializer: ExpressionLike; name: IdentifierLike }>;
-type VariableStatementLike = ts.VariableStatement &
-  Readonly<{
-    declarationList: Readonly<{ declarations: readonly [VariableDeclarationLike] }>;
-    modifiers?: readonly Readonly<{ kind: ts.SyntaxKind }>[] | undefined;
-  }>;
-type ImportDeclarationLike = Readonly<{ moduleSpecifier: IdentifierLike }>;
 type RuntimeParseResult = Readonly<{ success: boolean }>;
 type RuntimeZodSchema = Readonly<{ safeParse: (value: unknown) => RuntimeParseResult }>;
-type RuntimeUser = Record<string, unknown>;
+type RuntimeUser = Readonly<{
+  count: number;
+  pair: readonly [string, number];
+  payload: Readonly<{ value: string }>;
+  slug: string;
+  status: "open";
+  tags: readonly [string];
+}>;
 
 const sourceFileFor = (
   module: ZodEmissionModule,
@@ -69,14 +68,6 @@ const sourceFileFor = (
 const rootOnlyModule = (expression: Parameters<typeof zodDeclaration>[1]): ZodEmissionModule =>
   zodModule(rootSymbol, [zodDeclaration(rootSymbol, expression)]);
 
-const variableStatements = (sourceFile: ts.SourceFile): readonly VariableStatementLike[] =>
-  sourceFile.statements
-    .filter((statement) => statement.kind === ts.SyntaxKind.VariableStatement)
-    .map((statement) => statement as unknown as VariableStatementLike);
-
-const variableDeclaration = (statement: VariableStatementLike): VariableDeclarationLike =>
-  statement.declarationList.declarations[0];
-
 const variableNames = (sourceFile: ts.SourceFile): readonly string[] =>
   variableStatements(sourceFile).map((statement) => variableDeclaration(statement).name.text);
 
@@ -88,30 +79,6 @@ const exportedVariableNames = (sourceFile: ts.SourceFile): readonly string[] =>
         false,
     )
     .map((statement) => variableDeclaration(statement).name.text);
-
-const zodCallName = (expression: ts.Expression): string =>
-  (expression as unknown as CallExpressionLike).expression.name.text;
-
-const firstCallArgument = (expression: ExpressionLike): ExpressionLike => {
-  const [argument] = (expression as unknown as CallExpressionLike).arguments;
-  if (argument === undefined) throw new Error("Missing call argument.");
-
-  return argument;
-};
-
-const objectProperties = (
-  declaration: VariableDeclarationLike,
-): readonly PropertyAssignmentLike[] =>
-  (firstCallArgument(declaration.initializer) as unknown as ObjectLiteralLike).properties;
-
-const propertyInitializer = (declaration: VariableDeclarationLike, key: string): ExpressionLike => {
-  const property = objectProperties(declaration).find((item) => item.name.text === key);
-  if (property === undefined) throw new Error(`Missing property: ${key}`);
-  return property.initializer;
-};
-
-const importPath = (sourceFile: ts.SourceFile): string =>
-  (sourceFile.statements[0] as unknown as ImportDeclarationLike).moduleSpecifier.text;
 
 const buildCoreBundle = (bundleFile: string): void => {
   buildNodeBundle({
@@ -169,7 +136,7 @@ describe("buildZodSourceFile", () => {
     expect(importPath(sourceFile)).toBe("zod/v4");
     expect(variableNames(sourceFile)).toEqual(["userSchema"]);
     expect(exportedVariableNames(sourceFile)).toEqual(["userSchema"]);
-    expect(zodCallName(schemaDeclaration.initializer as ts.Expression)).toBe("string");
+    expect(zodCallName(schemaDeclaration.initializer)).toBe("string");
   });
 
   test("emits objects, arrays, literals, unions, chained calls, and references", () => {
@@ -213,7 +180,7 @@ describe("buildZodSourceFile", () => {
       "addressSchema",
       "userSchema",
     ]);
-    expect(zodCallName(rootDeclaration.initializer as ts.Expression)).toBe("object");
+    expect(zodCallName(rootDeclaration.initializer)).toBe("object");
     expect(zodCallName(propertyInitializer(rootDeclaration, "name"))).toBe("string");
     expect(zodCallName(propertyInitializer(rootDeclaration, "tags"))).toBe("array");
     expect(zodCallName(propertyInitializer(rootDeclaration, "mode"))).toBe("union");
@@ -228,10 +195,7 @@ describe("buildZodSourceFile", () => {
     expect(zodCallName(propertyInitializer(rootDeclaration, "nested"))).toBe("strict");
     expect(zodCallName(propertyInitializer(rootDeclaration, "age"))).toBe("optional");
     expect(
-      zodCallName(
-        (propertyInitializer(rootDeclaration, "age") as unknown as CallExpressionLike).expression
-          .expression,
-      ),
+      zodCallName(zodCallReceiverExpression(propertyInitializer(rootDeclaration, "age"))),
     ).toBe("number");
   });
 });

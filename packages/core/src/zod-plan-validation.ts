@@ -111,6 +111,12 @@ const literalArgumentMatchesType = (
 const isSingleArgument = (args: readonly ZodArgument[], kind: ZodArgument["kind"]): boolean =>
   args.length === 1 && args[0]?.kind === kind;
 
+const isArgumentSequence = (
+  args: readonly ZodArgument[],
+  kinds: readonly ZodArgument["kind"][],
+): boolean =>
+  args.length === kinds.length && args.every((argument, index) => argument.kind === kinds[index]);
+
 const argumentsMatchMetadata = (
   args: readonly ZodArgument[],
   metadata: ZodArgumentMetadata,
@@ -123,6 +129,8 @@ const argumentsMatchMetadata = (
         args.length === 1 &&
         argument?.kind === "array" &&
         argument.elements.length >= metadata.minimumLength &&
+        (metadata.maximumLength === undefined ||
+          argument.elements.length <= metadata.maximumLength) &&
         values !== undefined
       );
     }
@@ -135,6 +143,9 @@ const argumentsMatchMetadata = (
     }
     case "single": {
       return isSingleArgument(args, metadata.argumentKind);
+    }
+    case "sequence": {
+      return isArgumentSequence(args, metadata.argumentKinds);
     }
     default: {
       return assertNever(metadata);

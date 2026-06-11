@@ -105,6 +105,8 @@ export type ZodFactoryArgumentsByName = Readonly<{
   null: readonly [];
   number: readonly [];
   object: readonly [ZodObjectShapeArgument];
+  intersection: readonly [ZodExpressionArgument, ZodExpressionArgument];
+  record: readonly [ZodExpressionArgument, ZodExpressionArgument];
   string: readonly [];
   tuple: readonly [ZodArrayArgument<ZodExpressionArgument>];
   union: readonly [ZodArrayArgument<ZodExpressionArgument>];
@@ -319,7 +321,7 @@ type ZodCallBuilder = <TMethod extends ZodKnownMethodName>(
   ...args: ZodMethodBuilderArguments<TMethod>
 ) => ZodExpression;
 
-export const zodCall = ((
+export const zodCall: ZodCallBuilder = (
   expression: ZodExpression,
   method: ZodKnownMethodName,
   ...args: readonly [args?: readonly ZodArgument[]]
@@ -329,7 +331,7 @@ export const zodCall = ((
     ...expression.calls,
     { args: args[0] ?? [], method: zodMethodNameSchemaValue.parse(method) },
   ],
-})) as ZodCallBuilder;
+});
 
 type ZodFactoryBuilderArguments<TFactory extends ZodFactoryName> =
   TFactory extends ZodNoArgumentFactoryName ? [] : [args: ZodFactoryArgumentsByName[TFactory]];
@@ -339,15 +341,10 @@ type ZodFactoryBuilder = <TFactory extends ZodFactoryName>(
   ...args: ZodFactoryBuilderArguments<TFactory>
 ) => ZodExpression;
 
-export const zodFactory = ((
+export const zodFactory: ZodFactoryBuilder = (
   factory: ZodFactoryName,
   ...args: readonly [args?: readonly ZodArgument[]]
-): ZodExpression => ({
-  args: args[0] ?? [],
-  calls: [],
-  factory,
-  kind: "factory",
-})) as ZodFactoryBuilder;
+): ZodExpression => ({ args: args[0] ?? [], calls: [], factory, kind: "factory" });
 
 export const zodReference = (symbol: ZodSymbol): ZodExpression => ({
   calls: [],
@@ -400,8 +397,12 @@ export const zodPlan = {
   number: (): ZodExpression => zodFactory("number"),
   object: (properties: Readonly<Record<string, ZodExpression>>): ZodExpression =>
     zodFactory("object", [zodObjectShapeArgument(properties)]),
+  intersection: (left: ZodExpression, right: ZodExpression): ZodExpression =>
+    zodFactory("intersection", [zodExpressionArgument(left), zodExpressionArgument(right)]),
   optional: (expression: ZodExpression): ZodExpression => zodCall(expression, "optional"),
   passthrough: (object: ZodExpression): ZodExpression => zodCall(object, "passthrough"),
+  record: (key: ZodExpression, value: ZodExpression): ZodExpression =>
+    zodFactory("record", [zodExpressionArgument(key), zodExpressionArgument(value)]),
   reference: (symbol: ZodSymbol): ZodExpression => zodReference(symbol),
   regex: (expression: ZodExpression, pattern: string): ZodExpression =>
     zodCall(expression, "regex", [zodLiteralArgument(pattern)]),

@@ -7,6 +7,8 @@ export const zodFactoryNames = [
   "null",
   "number",
   "object",
+  "intersection",
+  "record",
   "string",
   "tuple",
   "union",
@@ -35,52 +37,81 @@ export type ZodArgumentMetadata =
   | Readonly<{ kind: "none"; expected: string }>
   | Readonly<{ argumentKind: ZodArgumentKind; expected: string; kind: "single" }>
   | Readonly<{ expected: string; kind: "literal"; valueType: ZodLiteralArgumentValueType }>
+  | Readonly<{ argumentKinds: readonly ZodArgumentKind[]; expected: string; kind: "sequence" }>
   | Readonly<{
       elementKind: ZodArrayElementKind;
       expected: string;
       kind: "array";
+      maximumLength?: number | undefined;
       minimumLength: number;
       unique?: boolean | undefined;
     }>;
 
 export type ZodFactoryMetadata = Readonly<{ args: ZodArgumentMetadata }>;
 
+const noArguments = { expected: "no arguments", kind: "none" } satisfies ZodArgumentMetadata;
+const expressionArgument = {
+  argumentKind: "expression",
+  expected: "one expression argument",
+  kind: "single",
+} satisfies ZodArgumentMetadata;
+const objectArgument = {
+  argumentKind: "object",
+  expected: "one object argument",
+  kind: "single",
+} satisfies ZodArgumentMetadata;
+const literalArgument = {
+  argumentKind: "literal",
+  expected: "one literal argument",
+  kind: "single",
+} satisfies ZodArgumentMetadata;
+const numberLiteralArgument = {
+  expected: "one number literal argument",
+  kind: "literal",
+  valueType: "number",
+} satisfies ZodArgumentMetadata;
+const stringLiteralArgument = {
+  expected: "one string literal argument",
+  kind: "literal",
+  valueType: "string",
+} satisfies ZodArgumentMetadata;
+const twoExpressionArguments = {
+  argumentKinds: ["expression", "expression"],
+  expected: "two expression arguments",
+  kind: "sequence",
+} satisfies ZodArgumentMetadata;
+const stringLiteralArrayArgument = {
+  elementKind: "stringLiteral",
+  expected: "an array of at least one string literal argument",
+  kind: "array",
+  minimumLength: 1,
+} satisfies ZodArgumentMetadata;
+const uniqueStringLiteralArrayArgument = {
+  ...stringLiteralArrayArgument,
+  unique: true,
+} satisfies ZodArgumentMetadata;
+const expressionArrayArgument = (minimumLength: number, expected: string): ZodArgumentMetadata => ({
+  elementKind: "expression",
+  expected,
+  kind: "array",
+  minimumLength,
+});
+
 export const zodFactoryMetadata: Record<ZodFactoryName, ZodFactoryMetadata> = {
-  array: {
-    args: { argumentKind: "expression", expected: "one expression argument", kind: "single" },
-  },
-  boolean: { args: { expected: "no arguments", kind: "none" } },
-  enum: {
-    args: {
-      elementKind: "stringLiteral",
-      expected: "an array of at least one string literal argument",
-      kind: "array",
-      minimumLength: 1,
-    },
-  },
-  literal: { args: { argumentKind: "literal", expected: "one literal argument", kind: "single" } },
-  never: { args: { expected: "no arguments", kind: "none" } },
-  null: { args: { expected: "no arguments", kind: "none" } },
-  number: { args: { expected: "no arguments", kind: "none" } },
-  object: { args: { argumentKind: "object", expected: "one object argument", kind: "single" } },
-  string: { args: { expected: "no arguments", kind: "none" } },
-  tuple: {
-    args: {
-      elementKind: "expression",
-      expected: "an array of at least one expression argument",
-      kind: "array",
-      minimumLength: 1,
-    },
-  },
-  union: {
-    args: {
-      elementKind: "expression",
-      expected: "an array of at least two expression arguments",
-      kind: "array",
-      minimumLength: 2,
-    },
-  },
-  unknown: { args: { expected: "no arguments", kind: "none" } },
+  array: { args: expressionArgument },
+  boolean: { args: noArguments },
+  enum: { args: stringLiteralArrayArgument },
+  literal: { args: literalArgument },
+  never: { args: noArguments },
+  null: { args: noArguments },
+  number: { args: noArguments },
+  object: { args: objectArgument },
+  intersection: { args: twoExpressionArguments },
+  record: { args: twoExpressionArguments },
+  string: { args: noArguments },
+  tuple: { args: expressionArrayArgument(1, "an array of at least one expression argument") },
+  union: { args: expressionArrayArgument(2, "an array of at least two expression arguments") },
+  unknown: { args: noArguments },
 };
 
 export const zodMethodNames = [
@@ -115,7 +146,13 @@ export const zodNoArgumentMethodNames: readonly [
 export type ZodNoArgumentMethodName = (typeof zodNoArgumentMethodNames)[number];
 export type ZodArgumentMethodName = Exclude<ZodKnownMethodName, ZodNoArgumentMethodName>;
 
-export type ZodReceiverRequirement = "any" | "array" | "number" | "object" | "string";
+export type ZodReceiverRequirement =
+  | "any"
+  | "array"
+  | "arrayOrString"
+  | "number"
+  | "object"
+  | "string";
 export type ZodMethodPrintStrategy = "default" | "regex" | "requiredKeys";
 
 export type ZodMethodSpec = Readonly<{
@@ -125,97 +162,34 @@ export type ZodMethodSpec = Readonly<{
   wrapsReceiver: boolean;
 }>;
 
+const methodSpec = (
+  args: ZodArgumentMetadata,
+  receiver: ZodReceiverRequirement,
+  printArgument: ZodMethodPrintStrategy = "default",
+): ZodMethodSpec => ({ args, printArgument, receiver, wrapsReceiver: false });
+
+const wrappingMethodSpec = (args: ZodArgumentMetadata): ZodMethodSpec => ({
+  args,
+  printArgument: "default",
+  receiver: "any",
+  wrapsReceiver: true,
+});
+
 export const zodMethodSpecs: Record<ZodKnownMethodName, ZodMethodSpec> = {
-  catchall: {
-    args: { argumentKind: "expression", expected: "one expression argument", kind: "single" },
-    printArgument: "default",
-    receiver: "object",
-    wrapsReceiver: false,
-  },
-  gt: {
-    args: { expected: "one number literal argument", kind: "literal", valueType: "number" },
-    printArgument: "default",
-    receiver: "number",
-    wrapsReceiver: false,
-  },
-  gte: {
-    args: { expected: "one number literal argument", kind: "literal", valueType: "number" },
-    printArgument: "default",
-    receiver: "number",
-    wrapsReceiver: false,
-  },
-  int: {
-    args: { expected: "no arguments", kind: "none" },
-    printArgument: "default",
-    receiver: "number",
-    wrapsReceiver: false,
-  },
-  lt: {
-    args: { expected: "one number literal argument", kind: "literal", valueType: "number" },
-    printArgument: "default",
-    receiver: "number",
-    wrapsReceiver: false,
-  },
-  lte: {
-    args: { expected: "one number literal argument", kind: "literal", valueType: "number" },
-    printArgument: "default",
-    receiver: "number",
-    wrapsReceiver: false,
-  },
-  max: {
-    args: { expected: "one number literal argument", kind: "literal", valueType: "number" },
-    printArgument: "default",
-    receiver: "array",
-    wrapsReceiver: false,
-  },
-  min: {
-    args: { expected: "one number literal argument", kind: "literal", valueType: "number" },
-    printArgument: "default",
-    receiver: "array",
-    wrapsReceiver: false,
-  },
-  nullable: {
-    args: { expected: "no arguments", kind: "none" },
-    printArgument: "default",
-    receiver: "any",
-    wrapsReceiver: true,
-  },
-  optional: {
-    args: { expected: "no arguments", kind: "none" },
-    printArgument: "default",
-    receiver: "any",
-    wrapsReceiver: true,
-  },
-  passthrough: {
-    args: { expected: "no arguments", kind: "none" },
-    printArgument: "default",
-    receiver: "object",
-    wrapsReceiver: false,
-  },
-  regex: {
-    args: { expected: "one string literal argument", kind: "literal", valueType: "string" },
-    printArgument: "regex",
-    receiver: "string",
-    wrapsReceiver: false,
-  },
-  required: {
-    args: {
-      elementKind: "stringLiteral",
-      expected: "an array of at least one string literal argument",
-      kind: "array",
-      minimumLength: 1,
-      unique: true,
-    },
-    printArgument: "requiredKeys",
-    receiver: "object",
-    wrapsReceiver: false,
-  },
-  strict: {
-    args: { expected: "no arguments", kind: "none" },
-    printArgument: "default",
-    receiver: "object",
-    wrapsReceiver: false,
-  },
+  catchall: methodSpec(expressionArgument, "object"),
+  gt: methodSpec(numberLiteralArgument, "number"),
+  gte: methodSpec(numberLiteralArgument, "number"),
+  int: methodSpec(noArguments, "number"),
+  lt: methodSpec(numberLiteralArgument, "number"),
+  lte: methodSpec(numberLiteralArgument, "number"),
+  max: methodSpec(numberLiteralArgument, "arrayOrString"),
+  min: methodSpec(numberLiteralArgument, "arrayOrString"),
+  nullable: wrappingMethodSpec(noArguments),
+  optional: wrappingMethodSpec(noArguments),
+  passthrough: methodSpec(noArguments, "object"),
+  regex: methodSpec(stringLiteralArgument, "string", "regex"),
+  required: methodSpec(uniqueStringLiteralArrayArgument, "object", "requiredKeys"),
+  strict: methodSpec(noArguments, "object"),
 };
 export const zodMethodMetadata: Record<ZodKnownMethodName, ZodMethodSpec> = zodMethodSpecs;
 
