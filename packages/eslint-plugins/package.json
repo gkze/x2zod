@@ -12,6 +12,7 @@
   "type": "module",
   "imports": {
     "#index": "./src/index.ts",
+    "#options": "./src/options.ts",
     "#rule": "./src/rule.ts",
     "#rules/*": "./src/rules/*.ts",
     "#source": "./src/source.ts",

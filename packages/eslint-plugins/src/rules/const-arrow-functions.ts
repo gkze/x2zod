@@ -39,6 +39,7 @@ import {
   getTrailingCommentRanges,
 } from "@typescript/native-preview/ast/scanner";
 
+import { isOptionsRecord } from "#options";
 import { createSourceRule } from "#rule";
 import type { Rule, RuleContext } from "#rule";
 import { collectNodes, containsCommentMarker, getNodeStart, isSameNode, textForNode } from "#text";
@@ -53,7 +54,6 @@ interface NodeWithModifiers extends Node {
 }
 
 type FunctionToConvert = FunctionDeclaration | FunctionExpression;
-type OptionsRecord = Readonly<Record<string, unknown>>;
 
 const emptyText = "";
 const missingIndex = -1;
@@ -65,9 +65,6 @@ const constArrowDescription = [
 const constArrowMessage = ["Convert function to const", "arrow."].join(" ");
 
 const hasModifierList = (node: Node): node is NodeWithModifiers => "modifiers" in node;
-
-const isOptionsRecord = (value: unknown): value is OptionsRecord =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
 
 const hasModifier = (node: Node, kind: SyntaxKind): boolean => {
   const modifiers = hasModifierList(node) ? node.modifiers : undefined;

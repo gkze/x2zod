@@ -22,6 +22,8 @@ type PackageJson = Readonly<{
   optionalDependencies?: Readonly<Record<string, string>>;
   peerDependencies?: Readonly<Record<string, string>>;
 }>;
+type ParsedPackageJson = { -readonly [Key in keyof PackageJson]: PackageJson[Key] };
+type UnknownRecord = Readonly<Record<string, unknown>>;
 
 type WorkspacePackage = Readonly<{ directory: string; manifest: PackageJson; name: string }>;
 
@@ -65,8 +67,78 @@ const fail = (message: string): never => {
   throw new Error(message);
 };
 
+const isRecord = (value: unknown): value is UnknownRecord =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const optionalStringField = (
+  manifest: UnknownRecord,
+  path: string,
+  key: string,
+): string | undefined => {
+  const value = manifest[key];
+  if (value === undefined) return undefined;
+  if (typeof value === "string") return value;
+  return fail(`${path} field ${key} must be a string.`);
+};
+
+const optionalBooleanField = (
+  manifest: UnknownRecord,
+  path: string,
+  key: string,
+): boolean | undefined => {
+  const value = manifest[key];
+  if (value === undefined) return undefined;
+  if (typeof value === "boolean") return value;
+  return fail(`${path} field ${key} must be a boolean.`);
+};
+
+const optionalStringArrayField = (
+  manifest: UnknownRecord,
+  path: string,
+  key: string,
+): readonly string[] | undefined => {
+  const value = manifest[key];
+  if (value === undefined) return undefined;
+  if (Array.isArray(value) && value.every((item) => typeof item === "string")) return value;
+  return fail(`${path} field ${key} must be an array of strings.`);
+};
+
+const optionalStringRecordField = (
+  manifest: UnknownRecord,
+  path: string,
+  key: DependencyField,
+): Readonly<Record<string, string>> | undefined => {
+  const value = manifest[key];
+  if (value === undefined) return undefined;
+  if (!isRecord(value)) return fail(`${path} field ${key} must be an object.`);
+  const dependencies: Record<string, string> = {};
+  for (const [name, range] of Object.entries(value)) {
+    if (typeof range !== "string") return fail(`${path} field ${key}.${name} must be a string.`);
+    dependencies[name] = range;
+  }
+  return dependencies;
+};
+
+const parsePackageJson = (path: string, text: string): PackageJson => {
+  const value: unknown = JSON.parse(text);
+  if (!isRecord(value)) return fail(`${path} must contain a JSON object.`);
+
+  const manifest: ParsedPackageJson = {};
+  const name = optionalStringField(value, path, "name");
+  const privatePackage = optionalBooleanField(value, path, "private");
+  const workspaces = optionalStringArrayField(value, path, "workspaces");
+  if (name !== undefined) manifest.name = name;
+  if (privatePackage !== undefined) manifest.private = privatePackage;
+  if (workspaces !== undefined) manifest.workspaces = workspaces;
+  for (const field of dependencyFields) {
+    const dependencies = optionalStringRecordField(value, path, field);
+    if (dependencies !== undefined) manifest[field] = dependencies;
+  }
+  return manifest;
+};
+
 const readPackageJson = async (path: string): Promise<PackageJson> =>
-  JSON.parse(await readFile(path, "utf8")) as PackageJson;
+  parsePackageJson(path, await readFile(path, "utf8"));
 
 const workspaceDirectories = async (workspaceGlob: string): Promise<readonly string[]> => {
   if (!workspaceGlob.endsWith(workspaceGlobSuffix)) return [workspaceGlob];

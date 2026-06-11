@@ -18,6 +18,7 @@ import {
 } from "@typescript/native-preview/ast";
 import type { Node, SourceFile, StringLiteral } from "@typescript/native-preview/ast";
 
+import { isOptionsRecord } from "#options";
 import { createSourceRule } from "#rule";
 import type { Rule, RuleContext } from "#rule";
 import { getNativeService } from "#source";
@@ -30,13 +31,6 @@ import {
   textForNode,
 } from "#text";
 import type { TextReplacement } from "#text";
-
-interface OxfmtConfig {
-  printWidth?: unknown;
-  singleQuote?: unknown;
-  tabWidth?: unknown;
-  useTabs?: unknown;
-}
 
 interface StringFormatting {
   indentText: string;
@@ -69,7 +63,6 @@ interface NodeWithType extends Node {
 }
 
 type QuoteStyle = "double" | "single";
-type OptionsRecord = Readonly<Record<string, unknown>>;
 
 const defaultIndentWidth = 2;
 const defaultLineWidth = 80;
@@ -93,19 +86,17 @@ const defaultStringFormatting: StringFormatting = {
 const isPositiveInteger = (value: unknown): value is number =>
   typeof value === "number" && Number.isInteger(value) && value > 0;
 
-const isOptionsRecord = (value: unknown): value is OptionsRecord =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
-
 const getIndentText = (useTabs: unknown, tabWidth: unknown): string =>
   useTabs === true ? "	" : " ".repeat(isPositiveInteger(tabWidth) ? tabWidth : defaultIndentWidth);
 
 const parseOxfmtFormatting = (configText: string): StringFormatting => {
-  const config = JSON.parse(configText) as OxfmtConfig;
+  const parsed: unknown = JSON.parse(configText);
+  const config = isOptionsRecord(parsed) ? parsed : {};
 
   return {
-    indentText: getIndentText(config.useTabs, config.tabWidth),
-    lineWidth: isPositiveInteger(config.printWidth) ? config.printWidth : defaultLineWidth,
-    quoteStyle: config.singleQuote === true ? "single" : "double",
+    indentText: getIndentText(config["useTabs"], config["tabWidth"]),
+    lineWidth: isPositiveInteger(config["printWidth"]) ? config["printWidth"] : defaultLineWidth,
+    quoteStyle: config["singleQuote"] === true ? "single" : "double",
   };
 };
 
