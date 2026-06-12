@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, rmSync } from "node:fs";
 import { join, resolve } from "node:path";
 import process from "node:process";
+import { setTimeout as sleep } from "node:timers/promises";
 
 import { z } from "zod/v4";
 
@@ -35,6 +36,8 @@ const openCodeSchemaUrl = "https://opencode.ai/config.json";
 const openCodeTestHostname = "127.0.0.1";
 const openCodeTestPort = 4099;
 const openCodeTestUsername = "x2zod-e2e";
+const openCodeSubprocessDeadlineMs = 4000;
+const openCodeSubprocessTerminationGraceMs = 500;
 const nativePreviewShutdownStderr = "context canceled\n";
 const jsonSchemaNativePreviewExternals = [...nativePreviewExternals, "jsonc-parser"] as const;
 const sampleOpenCodeConfig = {
@@ -55,6 +58,7 @@ const openCodeDebugConfigSchema = z.looseObject({
 type GeneratedZodSchema = Readonly<{ parse: (value: unknown) => unknown }>;
 type GeneratedOpenCodeConfigModule = Readonly<{ openCodeConfigSchema: GeneratedZodSchema }>;
 type OpenCodeDebugConfig = z.infer<typeof openCodeDebugConfigSchema>;
+type OpenCodeSubprocessExit = Readonly<{ exitCode: number; timedOut: boolean }>;
 type AssertOpenCodeAcceptsConfigRequest = Readonly<{
   configDirectory: string;
   configFile: string;
@@ -134,25 +138,118 @@ const openCodeEnvironment = (
 const parseOpenCodeDebugConfigOutput = (stdout: Uint8Array): OpenCodeDebugConfig =>
   openCodeDebugConfigSchema.parse(JSON.parse(outputText(stdout)));
 
-const assertOpenCodeAcceptsConfig = ({
+const readSubprocessOutput = async (
+  output: ReadableStream<Uint8Array> | null,
+): Promise<Uint8Array> =>
+  output === null ? new Uint8Array() : new Uint8Array(await new Response(output).arrayBuffer());
+
+const formatSubprocessOutput = (name: string, value: Uint8Array): string => {
+  const text = outputText(value);
+  return text.length === 0 ? `${name}: <empty>` : `${name}:\n${text}`;
+};
+
+const openCodeSubprocessError = ({
+  cmd,
+  deadlineMs,
+  exitCode,
+  stderr,
+  stdout,
+  timedOut,
+}: Readonly<{
+  cmd: readonly string[];
+  deadlineMs: number;
+  exitCode: number;
+  stderr: Uint8Array;
+  stdout: Uint8Array;
+  timedOut: boolean;
+}>): Error =>
+  new Error(
+    [
+      timedOut
+        ? `OpenCode subprocess did not exit before the ${deadlineMs.toString()}ms deadline.`
+        : `OpenCode subprocess exited with code ${exitCode.toString()}.`,
+      `Command: ${cmd.join(" ")}`,
+      formatSubprocessOutput("stdout", stdout),
+      formatSubprocessOutput("stderr", stderr),
+    ].join("\n"),
+  );
+
+const runOpenCodeSubprocess = async ({
+  cmd,
+  cwd,
+  env,
+}: Readonly<{
+  cmd: readonly [string, ...string[]];
+  cwd: string;
+  env: Record<string, string>;
+}>): Promise<Uint8Array> => {
+  const subprocess = Bun.spawn([...cmd], {
+    cwd,
+    env,
+    stdin: "ignore",
+    stderr: "pipe",
+    stdout: "pipe",
+  });
+  const stdout = readSubprocessOutput(subprocess.stdout);
+  const stderr = readSubprocessOutput(subprocess.stderr);
+
+  const waitForExit = async (): Promise<OpenCodeSubprocessExit> => {
+    const waitForDeadline = async (): Promise<"deadline"> => {
+      await sleep(openCodeSubprocessDeadlineMs);
+      return "deadline";
+    };
+    const waitForSubprocessExit = async (timedOut: boolean): Promise<OpenCodeSubprocessExit> => ({
+      exitCode: await subprocess.exited,
+      timedOut,
+    });
+    const result = await Promise.race([waitForDeadline(), waitForSubprocessExit(false)]);
+
+    if (result !== "deadline") return result;
+
+    subprocess.kill("SIGTERM");
+
+    const waitForForceKill = async (): Promise<"force-kill"> => {
+      await sleep(openCodeSubprocessTerminationGraceMs);
+      return "force-kill";
+    };
+    const terminated = await Promise.race([waitForSubprocessExit(true), waitForForceKill()]);
+
+    if (terminated !== "force-kill") return terminated;
+
+    subprocess.kill("SIGKILL");
+    return { exitCode: await subprocess.exited, timedOut: true };
+  };
+
+  const exit = await waitForExit();
+  const [stdoutOutput, stderrOutput] = await Promise.all([stdout, stderr]);
+
+  if (exit.timedOut || exit.exitCode !== 0)
+    throw openCodeSubprocessError({
+      cmd,
+      deadlineMs: openCodeSubprocessDeadlineMs,
+      exitCode: exit.exitCode,
+      stderr: stderrOutput,
+      stdout: stdoutOutput,
+      timedOut: exit.timedOut,
+    });
+
+  return stdoutOutput;
+};
+
+const assertOpenCodeAcceptsConfig = async ({
   configDirectory,
   configFile,
   executable,
   homeDirectory,
   projectDirectory,
-}: AssertOpenCodeAcceptsConfigRequest): void => {
-  const result = Bun.spawnSync({
+}: AssertOpenCodeAcceptsConfigRequest): Promise<void> => {
+  const stdout = await runOpenCodeSubprocess({
     cmd: [executable, "debug", "config", "--pure"],
     cwd: projectDirectory,
     env: openCodeEnvironment(homeDirectory, configFile, configDirectory),
-    stderr: "pipe",
-    stdout: "pipe",
   });
 
-  if (result.exitCode !== 0)
-    throw new Error([outputText(result.stdout), outputText(result.stderr)].join("\n"));
-
-  const config = parseOpenCodeDebugConfigOutput(result.stdout);
+  const config = parseOpenCodeDebugConfigOutput(stdout);
 
   expect(config.username).toBe(openCodeTestUsername);
   expect(config.logLevel).toBe(sampleOpenCodeConfig.logLevel);
@@ -186,7 +283,7 @@ describe("OpenCode config JSON Schema E2E", () => {
       expect(parsedConfig).toEqual(sampleOpenCodeConfig);
 
       await Bun.write(generatedConfigFile, JSON.stringify(parsedConfig, null, 2));
-      assertOpenCodeAcceptsConfig({
+      await assertOpenCodeAcceptsConfig({
         configDirectory,
         configFile: generatedConfigFile,
         executable: openCodeExecutable(),
