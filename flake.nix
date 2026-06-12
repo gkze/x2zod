@@ -169,6 +169,7 @@
               ++ [ bun2nix.packages.${system}.bun2nix ];
 
             ACTIONLINT_BIN = lib.getExe pkgs.actionlint;
+            SHELLCHECK_BINARY = lib.getExe pkgs.shellcheck;
 
             shellHook = ''
               if [ ! -d node_modules ]; then
