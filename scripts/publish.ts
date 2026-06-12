@@ -322,9 +322,14 @@ const program = defineProgram({
     ),
     map(
       object({
-        dryRun: option("-d", "--dry-run", {
-          description: optiqueMessage`Run registry publish commands without writing registry versions.`,
-        }),
+        dryRun: map(
+          optional(
+            option("-d", "--dry-run", {
+              description: optiqueMessage`Run registry publish commands without writing registry versions.`,
+            }),
+          ),
+          (dryRun) => dryRun ?? false,
+        ),
         registry: optional(
           argument(choice(publishers.map(({ name }) => name)), {
             description: optiqueMessage`Optional registry adapter name. Omit to publish every adapter.`,
