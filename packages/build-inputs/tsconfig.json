@@ -4,8 +4,8 @@
     "composite": false,
     "declaration": false,
     "isolatedDeclarations": false,
-    "rootDir": "./src"
+    "rootDir": "."
   },
-  "include": ["src/**/*"],
+  "include": ["bin/**/*.ts", "src/**/*"],
   "exclude": ["node_modules", "dist"]
 }

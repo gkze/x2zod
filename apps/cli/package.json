@@ -9,7 +9,7 @@
     "directory": "apps/cli"
   },
   "bin": {
-    "x2zod": "bin/x2zod"
+    "x2zod": "bin/x2zod.ts"
   },
   "files": [
     "bin",

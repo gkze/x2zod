@@ -9,7 +9,7 @@
     "directory": "packages/build-inputs"
   },
   "bin": {
-    "build-inputs": "bin/build-inputs"
+    "build-inputs": "bin/build-inputs.ts"
   },
   "files": [
     "bin",
@@ -36,11 +36,12 @@
     "access": "public"
   },
   "scripts": {
-    "check": "turbo run typecheck gen:check test --filter=@x2zod/build-inputs",
+    "check": "turbo run lint typecheck gen:check test --filter=@x2zod/build-inputs",
     "gen": "bun run gen:schema",
     "gen:check": "bun run gen:check:schema",
     "gen:check:schema": "bun ./src/generate-build-inputs-schema.ts --check",
     "gen:schema": "bun ./src/generate-build-inputs-schema.ts",
+    "lint": "bun --cwd ../.. oxlint packages/build-inputs",
     "test": "bun test --pass-with-no-tests",
     "typecheck": "tsgo --project tsconfig.json --noEmit"
   },

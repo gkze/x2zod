@@ -53,6 +53,12 @@ jobs:
           package-manager-cache: false
           registry-url: https://registry.npmjs.org
 
+      - name: Setup Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
       - name: Install dependencies
         run: bun install --frozen-lockfile
 

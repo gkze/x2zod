@@ -58,10 +58,13 @@
           nativeBuildInputs = with pkgs; [
             actionlint
             bun
+            deadnix
             pkgs.bun2nix.hook
             makeWrapper
+            nixfmt
             nodejs_25
             shellcheck
+            statix
           ];
 
           bunDeps = pkgs.bun2nix.fetchBunDeps {
@@ -72,9 +75,11 @@
           dontBuild = true;
           doCheck = true;
 
-          env.TURBO_TELEMETRY_DISABLED = "1";
-          env.ACTIONLINT_BIN = lib.getExe pkgs.actionlint;
-          env.SHELLCHECK_BINARY = lib.getExe pkgs.shellcheck;
+          env = {
+            TURBO_TELEMETRY_DISABLED = "1";
+            ACTIONLINT_BIN = lib.getExe pkgs.actionlint;
+            SHELLCHECK_BINARY = lib.getExe pkgs.shellcheck;
+          };
 
           checkPhase = ''
             runHook preCheck
@@ -138,7 +143,7 @@
       });
 
       checks = eachSystem (system: {
-        default = self.packages.${system}.default;
+        inherit (self.packages.${system}) default;
       });
 
       devShells = eachSystem (

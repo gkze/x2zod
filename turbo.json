@@ -35,6 +35,10 @@
       "outputs": []
     },
     "//#format:check:toml": { "inputs": ["$TURBO_ROOT$/prek.toml"], "outputs": [] },
+    "//#format:check:nix": {
+      "inputs": ["$TURBO_ROOT$/bun.nix", "$TURBO_ROOT$/flake.nix", "$TURBO_ROOT$/package.json"],
+      "outputs": []
+    },
     "//#format:workspace": {
       "cache": false,
       "inputs": [
@@ -70,6 +74,11 @@
       "outputs": []
     },
     "//#format:toml": { "cache": false, "inputs": ["$TURBO_ROOT$/prek.toml"], "outputs": [] },
+    "//#format:nix": {
+      "cache": false,
+      "inputs": ["$TURBO_ROOT$/bun.nix", "$TURBO_ROOT$/flake.nix", "$TURBO_ROOT$/package.json"],
+      "outputs": []
+    },
     "//#lint:actions": {
       "dependsOn": ["//#lint:shell"],
       "passThroughEnv": ["ACTIONLINT_BIN", "SHELLCHECK_BINARY"],
@@ -109,6 +118,14 @@
       "passThroughEnv": ["SHELLCHECK_BINARY"]
     },
     "//#lint:toml": { "inputs": ["$TURBO_ROOT$/prek.toml"], "outputs": [] },
+    "//#lint:hooks": {
+      "inputs": ["$TURBO_ROOT$/package.json", "$TURBO_ROOT$/prek.toml"],
+      "outputs": []
+    },
+    "//#lint:nix": {
+      "inputs": ["$TURBO_ROOT$/bun.nix", "$TURBO_ROOT$/flake.nix", "$TURBO_ROOT$/package.json"],
+      "outputs": []
+    },
     "gen:check": { "inputs": ["$TURBO_DEFAULT$"], "outputs": [] },
     "lint": {
       "inputs": [
