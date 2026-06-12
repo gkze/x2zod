@@ -284,10 +284,7 @@ const jsrPublisher = {
         `${workspacePackage.packageJson.name} has stale or missing JSR metadata. Run bun run release:version.`,
       );
 
-    const publishArgs = [
-      ...(context.dryRun ? ["--dry-run", "--allow-dirty"] : []),
-      ...(!context.dryRun && runningInGitHubActions ? ["--provenance"] : []),
-    ];
+    const publishArgs = context.dryRun ? ["--dry-run", "--allow-dirty"] : [];
     await withMaterializedPackage(
       workspacePackage,
       context,
