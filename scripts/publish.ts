@@ -9,12 +9,13 @@ import { shouldSkipPackage } from "@changesets/should-skip-package";
 import type { Config, DependencyType } from "@changesets/types";
 import { getPackages } from "@manypkg/get-packages";
 import type { Package } from "@manypkg/get-packages";
-import { object, or } from "@optique/core/constructs";
+import { object } from "@optique/core/constructs";
 import { message as optiqueMessage } from "@optique/core/message";
-import { map, optional } from "@optique/core/modifiers";
+import { map, optional, withDefault } from "@optique/core/modifiers";
 import { argument, flag, option } from "@optique/core/primitives";
 import { defineProgram } from "@optique/core/program";
 import { choice, string } from "@optique/core/valueparser";
+import type { RunOptions } from "@optique/run";
 import { runSync } from "@optique/run";
 import { publish as publishJsr } from "jsr";
 import type { PublishOptions as JsrPublishOptions } from "jsr";
@@ -313,38 +314,44 @@ type PublishOptions = Readonly<{
 type PublishCommand = PublishOptions | Readonly<{ mode: "sync-jsr-metadata" }>;
 const program = defineProgram({
   metadata: { brief: optiqueMessage`Publish x2zod workspace packages.`, name: "publish" },
-  parser: or(
-    map(
-      flag("-s", "--sync-jsr-metadata", {
-        description: optiqueMessage`Sync JSR name and version metadata from package manifests.`,
-      }),
-      () => ({ mode: "sync-jsr-metadata" }) satisfies PublishCommand,
-    ),
-    map(
-      object({
-        dryRun: map(
-          optional(
-            option("-d", "--dry-run", {
-              description: optiqueMessage`Run registry publish commands without writing registry versions.`,
-            }),
-          ),
-          (dryRun) => dryRun ?? false,
-        ),
-        registry: optional(
-          argument(choice(publishers.map(({ name }) => name)), {
-            description: optiqueMessage`Optional registry adapter name. Omit to publish every adapter.`,
-          }),
-        ),
-        tag: optional(
-          option("-t", "--tag", string({ metavar: "TAG" }), {
-            description: optiqueMessage`npm dist-tag override for npm publishes.`,
-          }),
-        ),
-      }),
-      (options) => ({ ...options, mode: "publish" }) satisfies PublishCommand,
-    ),
+  parser: map(
+    object({
+      dryRun: withDefault(
+        option("-d", "--dry-run", {
+          description: optiqueMessage`Run registry publish commands without writing registry versions.`,
+        }),
+        false,
+      ),
+      registry: optional(
+        argument(choice(publishers.map(({ name }) => name)), {
+          description: optiqueMessage`Optional registry adapter name. Omit to publish every adapter.`,
+        }),
+      ),
+      shouldSyncJsrMetadata: withDefault(
+        flag("-s", "--sync-jsr-metadata", {
+          description: optiqueMessage`Sync JSR name and version metadata from package manifests.`,
+        }),
+        false,
+      ),
+      tag: optional(
+        option("-t", "--tag", string({ metavar: "TAG" }), {
+          description: optiqueMessage`npm dist-tag override for npm publishes.`,
+        }),
+      ),
+    }),
+    ({ shouldSyncJsrMetadata, ...options }): PublishCommand => {
+      if (!shouldSyncJsrMetadata) return { ...options, mode: "publish" };
+      if (options.dryRun || options.registry !== undefined || options.tag !== undefined)
+        fail("--sync-jsr-metadata cannot be combined with publish options.");
+
+      return { mode: "sync-jsr-metadata" };
+    },
   ),
 });
+const runOptions = {
+  aboveError: "usage",
+  help: { option: { names: ["-h", "--help"] } },
+} satisfies RunOptions;
 const sortByInternalDependencies = (workspacePackages: readonly Package[]): readonly Package[] => {
   const byName = new Map(
     workspacePackages.map((workspacePackage) => [
@@ -446,17 +453,14 @@ const publishPackages = async (options: PublishOptions): Promise<void> => {
     );
 };
 
-const main = async (command: PublishCommand): Promise<void> => {
+const main = async (): Promise<void> => {
+  const command = runSync(program, { ...runOptions, args: Bun.argv.slice(2) });
   if (command.mode === "sync-jsr-metadata") return syncJsrMetadata();
   await publishPackages(command);
 };
 
-await main(runSync(program, { aboveError: "usage", args: Bun.argv.slice(2) })).catch(
-  (error: unknown) => {
-    if (process.exitCode !== undefined) return;
-    process.stderr.write(
-      `${error instanceof Error ? error.message : "Unknown publish failure."}\n`,
-    );
-    process.exitCode = 1;
-  },
-);
+await main().catch((error: unknown) => {
+  if (process.exitCode !== undefined) return;
+  process.stderr.write(`${error instanceof Error ? error.message : "Unknown publish failure."}\n`);
+  process.exitCode = 1;
+});
