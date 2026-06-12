@@ -1,7 +1,7 @@
 import process from "node:process";
 
-import type { SourceFile } from "@typescript/native-preview/ast";
-import { API, Emitter } from "@typescript/native-preview/sync";
+import type { SourceFile } from "@typescript/native-preview/unstable/ast";
+import { API, Emitter } from "@typescript/native-preview/unstable/sync";
 
 import { isRecord } from "./structural";
 

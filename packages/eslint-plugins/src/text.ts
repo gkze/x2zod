@@ -1,5 +1,5 @@
-import { getTokenPosOfNode } from "@typescript/native-preview/ast";
-import type { Node, SourceFile } from "@typescript/native-preview/ast";
+import { getTokenPosOfNode } from "@typescript/native-preview/unstable/ast";
+import type { Node, SourceFile } from "@typescript/native-preview/unstable/ast";
 
 import type { Diagnostic, Range, RuleContext } from "#rule";
 

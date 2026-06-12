@@ -19,7 +19,7 @@ export const jsonSchemaPointerWithSegment = (
   segment: string | number,
 ): JsonPointer => jsonPointerFromPath([...jsonSchemaPointerSegments(pointer), String(segment)]);
 
-const arrayIndexSegmentPattern = /^(0|[1-9]\d*)$/u;
+const arrayIndexSegmentPattern = /^(?:0|[1-9]\d*)$/u;
 
 const valueAtPointerSegment = (
   value: JsonValue | undefined,

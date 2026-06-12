@@ -22,7 +22,7 @@ import {
   isVariableDeclarationList,
   isVariableStatement,
   SyntaxKind,
-} from "@typescript/native-preview/ast";
+} from "@typescript/native-preview/unstable/ast";
 import type {
   FunctionDeclaration,
   FunctionExpression,
@@ -33,11 +33,11 @@ import type {
   TypeNode,
   TypeParameterDeclaration,
   VariableDeclaration,
-} from "@typescript/native-preview/ast";
+} from "@typescript/native-preview/unstable/ast";
 import {
   getLeadingCommentRanges,
   getTrailingCommentRanges,
-} from "@typescript/native-preview/ast/scanner";
+} from "@typescript/native-preview/unstable/ast/scanner";
 
 import { parseOptionsRecord } from "#options";
 import { createSourceRule } from "#rule";

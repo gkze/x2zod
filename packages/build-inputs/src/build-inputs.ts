@@ -1,5 +1,3 @@
-/// <reference path="./tar-v6.d.ts" />
-
 import { createHash } from "node:crypto";
 import { createWriteStream, existsSync } from "node:fs";
 import { access, chmod, mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
@@ -9,8 +7,8 @@ import { MIMEType } from "node:util";
 
 import type { MinimatchOptions } from "minimatch";
 import { Minimatch } from "minimatch";
-import type { FileStat } from "tar-v6";
-import * as tar from "tar-v6";
+import type { ReadEntry } from "tar";
+import * as tar from "tar";
 import { match, P } from "ts-pattern";
 import type { JsonValue } from "type-fest";
 import type { Entry as ZipEntry, ZipFile } from "yauzl";
@@ -28,7 +26,7 @@ export const buildInputsModes = ["check", "materialize", "update-lock"] as const
 const defaultConfigPath = "build-inputs.json";
 const defaultLockfilePath = "build-inputs.lock.json";
 const jsonValueSchema: z.ZodType<JsonValue> = z.json();
-const buildInputIdPattern = /^[a-z0-9][a-z0-9-]*$/;
+const buildInputIdPattern = /^[a-z0-9][a-z0-9-]*$/u;
 
 const canParseSha256Hex = (value: string): boolean => {
   if (value.length !== 64 || value !== value.toLowerCase()) return false;
@@ -344,7 +342,7 @@ const formatDownloadedContent = (
   format: Exclude<BuildInputFormat, "text">,
 ): string =>
   format === "json"
-    ? formatDownloadedJsonContent(content)
+    ? formatWithOxfmt(formatDownloadedJsonContent(content), getStructuredFormatPath(input, format))
     : formatWithOxfmt(content, getStructuredFormatPath(input, format));
 
 const readJsonFile = async (filePath: string): Promise<JsonValue> =>
@@ -681,7 +679,7 @@ const shouldMaterializeArchivePath = (
 const getArchiveOutputPath = (outputDir: string, relativePath: string): string =>
   resolveBuildInputPath(outputDir, relativePath, false);
 
-const readTarEntryType = (entry: FileStat): string | undefined => entry.header.type;
+const readTarEntryType = (entry: ReadEntry): string | undefined => entry.type;
 
 const materializableTarEntryTypes = new Set(["ContiguousFile", "Directory", "File", "OldFile"]);
 
@@ -694,7 +692,7 @@ const tarMetadataEntryTypes = new Set([
   "OldGnuLongPath",
 ]);
 
-const isTarMetadataEntry = (entry: FileStat): boolean => {
+const isTarMetadataEntry = (entry: ReadEntry): boolean => {
   const entryType = readTarEntryType(entry);
   return entryType === undefined ? false : tarMetadataEntryTypes.has(entryType);
 };
@@ -702,7 +700,7 @@ const isTarMetadataEntry = (entry: FileStat): boolean => {
 const assertSupportedTarEntry = (
   input: ResolvedBuildInputArchive,
   entryPath: string,
-  entry: FileStat,
+  entry: ReadEntry,
 ): void => {
   const entryType = readTarEntryType(entry);
 
@@ -729,6 +727,9 @@ const extractTarArchive = async (
     cwd: outputDir,
     file: archivePath,
     filter: (entryPath, entry) => {
+      if (!("header" in entry))
+        throw new Error(`Build input ${input.id} received an unexpected tar entry shape`);
+
       const relativePath = normalizeArchivePath(entryPath, input.unpack.stripComponents);
 
       if (relativePath === undefined) return false;

@@ -136,6 +136,7 @@ const applyJsonSchemaStringPattern = (
   }
 
   try {
+    // eslint-disable-next-line require-unicode-regexp -- JSON Schema patterns do not imply the Unicode flag.
     new RegExp(pattern).test("");
   } catch {
     context.addDiagnostic({

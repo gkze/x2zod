@@ -6,7 +6,7 @@
     systems.url = "github:nix-systems/default";
 
     bun2nix = {
-      url = "github:nix-community/bun2nix/2.0.8";
+      url = "github:nix-community/bun2nix/2.1.0";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.systems.follows = "systems";
     };
@@ -62,7 +62,7 @@
             pkgs.bun2nix.hook
             makeWrapper
             nixfmt
-            nodejs_25
+            nodejs_26
             shellcheck
             statix
           ];
@@ -161,7 +161,7 @@
                 git
                 nil
                 nixfmt
-                nodejs_25
+                nodejs_26
                 shellcheck
                 shfmt
                 statix

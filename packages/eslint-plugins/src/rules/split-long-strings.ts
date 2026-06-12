@@ -15,8 +15,8 @@ import {
   isNewExpression,
   isStringLiteral,
   SyntaxKind,
-} from "@typescript/native-preview/ast";
-import type { Node, SourceFile, StringLiteral } from "@typescript/native-preview/ast";
+} from "@typescript/native-preview/unstable/ast";
+import type { Node, SourceFile, StringLiteral } from "@typescript/native-preview/unstable/ast";
 
 import { parseOptionsRecord } from "#options";
 import { createSourceRule } from "#rule";
@@ -237,7 +237,7 @@ const findPreferredChunkEnd = (value: string, start: number, end: number): numbe
   const minimumEnd = start + Math.max(1, Math.floor(chunkLength * minimumChunkRatio));
 
   for (let index = end - 1; index > minimumEnd; index -= 1)
-    if (/\s/.test(value[index] ?? "")) return index;
+    if (/\s/u.test(value[index] ?? "")) return index;
 
   return end;
 };

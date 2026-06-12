@@ -1,4 +1,4 @@
-import { NodeFlags, SyntaxKind } from "@typescript/native-preview/ast";
+import { NodeFlags, SyntaxKind } from "@typescript/native-preview/unstable/ast";
 import type {
   Expression,
   ExportKeyword,
@@ -11,7 +11,7 @@ import type {
   TypeAliasDeclaration,
   TypeNode,
   VariableStatement,
-} from "@typescript/native-preview/ast";
+} from "@typescript/native-preview/unstable/ast";
 import {
   createArrayLiteralExpression,
   createCallExpression,
@@ -36,7 +36,7 @@ import {
   createVariableDeclaration,
   createVariableDeclarationList,
   createVariableStatement,
-} from "@typescript/native-preview/ast/factory";
+} from "@typescript/native-preview/unstable/ast/factory";
 import { z } from "zod/v4";
 
 import { createDiagnostic, formatZodError } from "./diagnostics";
@@ -59,6 +59,7 @@ import type {
 } from "./zod-plan";
 import { zodMethodMetadataFor } from "./zod-plan-metadata";
 import { validateZodEmissionModule } from "./zod-plan-validation";
+
 export type { TypeScriptIdentifier } from "./typescript-identifiers";
 
 const defaultZodImportPath = "zod/v4";

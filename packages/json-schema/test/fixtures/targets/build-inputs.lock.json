@@ -13,7 +13,7 @@
       "sizeBytes": 5510
     },
     "https://conductor.build/schemas/settings.schema.json": {
-      "sha256": "d4b93fcb0bf7b8c390019ddcb789abd73d3b58e242f9f9748f035662b771e509",
+      "sha256": "2405d010747f351913762fef10f8b662617a0e2f320448f48fbb2c5a04e6b4ae",
       "sizeBytes": 7106
     },
     "https://cursor.com/schemas/environment.schema.json": {

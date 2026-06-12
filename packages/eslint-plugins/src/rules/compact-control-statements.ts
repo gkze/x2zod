@@ -10,8 +10,8 @@ import {
   isThrowStatement,
   isWhileStatement,
   SyntaxKind,
-} from "@typescript/native-preview/ast";
-import type { Block, SourceFile, Statement } from "@typescript/native-preview/ast";
+} from "@typescript/native-preview/unstable/ast";
+import type { Block, SourceFile, Statement } from "@typescript/native-preview/unstable/ast";
 
 import { createSourceRule } from "#rule";
 import type { Rule, RuleContext } from "#rule";

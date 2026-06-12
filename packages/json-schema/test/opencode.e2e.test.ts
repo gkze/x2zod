@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, rmSync } from "node:fs";
-import { join, resolve } from "node:path";
+import nodePath from "node:path";
 import process from "node:process";
 
 import { z } from "zod/v4";
@@ -18,18 +18,21 @@ import {
 import type { JsonValue } from "../src";
 
 const testDirectory = import.meta.dirname;
-const packageRootDirectory = resolve(testDirectory, "..");
-const repositoryRootDirectory = resolve(packageRootDirectory, "../..");
-const tempRootDirectory = join(packageRootDirectory, "node_modules/.cache");
+const packageRootDirectory = nodePath.resolve(testDirectory, "..");
+const repositoryRootDirectory = nodePath.resolve(packageRootDirectory, "../..");
+const tempRootDirectory = nodePath.join(packageRootDirectory, "node_modules/.cache");
 const tempDirectoryPrefix = "x2zod-opencode-e2e-";
-const printerHelperEntryPoint = join(testDirectory, "opencode-print-helper.ts");
+const printerHelperEntryPoint = nodePath.join(testDirectory, "opencode-print-helper.ts");
 const bundledPrinterFileName = "opencode-print-helper.mjs";
 const generatedModuleFileName = "opencode.generated.ts";
 const generatedConfigFileName = "opencode.json";
 const homeDirectoryName = "home";
 const projectDirectoryName = "project";
-const openCodeConfigSchemaFixture = join(testDirectory, "fixtures/opencode/config.schema.json");
-const modelSchemaFixture = join(testDirectory, "fixtures/opencode/model-schema.json");
+const openCodeConfigSchemaFixture = nodePath.join(
+  testDirectory,
+  "fixtures/opencode/config.schema.json",
+);
+const modelSchemaFixture = nodePath.join(testDirectory, "fixtures/opencode/model-schema.json");
 const openCodeBinaryName = process.platform === "win32" ? "opencode.cmd" : "opencode";
 const openCodeConfigSchemaExport = "openCodeConfigSchema";
 const openCodeSchemaUrl = "https://opencode.ai/config.json";
@@ -96,8 +99,8 @@ const importGeneratedOpenCodeModule = async (
 const openCodeBinaryCandidates = (): readonly string[] => {
   const pathCandidate = Bun.which("opencode");
   return [
-    join(packageRootDirectory, "node_modules/.bin", openCodeBinaryName),
-    join(repositoryRootDirectory, "node_modules/.bin", openCodeBinaryName),
+    nodePath.join(packageRootDirectory, "node_modules/.bin", openCodeBinaryName),
+    nodePath.join(repositoryRootDirectory, "node_modules/.bin", openCodeBinaryName),
     ...(pathCandidate === null ? [] : [pathCandidate]),
   ];
 };
@@ -126,10 +129,10 @@ const openCodeEnvironment = (
   NO_COLOR: "1",
   OPENCODE_CONFIG: configFile,
   OPENCODE_CONFIG_DIR: configDirectory,
-  XDG_CACHE_HOME: join(homeDirectory, ".cache"),
-  XDG_CONFIG_HOME: join(homeDirectory, ".config"),
-  XDG_DATA_HOME: join(homeDirectory, ".local/share"),
-  XDG_STATE_HOME: join(homeDirectory, ".local/state"),
+  XDG_CACHE_HOME: nodePath.join(homeDirectory, ".cache"),
+  XDG_CONFIG_HOME: nodePath.join(homeDirectory, ".config"),
+  XDG_DATA_HOME: nodePath.join(homeDirectory, ".local/share"),
+  XDG_STATE_HOME: nodePath.join(homeDirectory, ".local/state"),
 });
 
 const parseOpenCodeDebugConfigOutput = (stdout: Uint8Array): OpenCodeDebugConfig =>
@@ -235,12 +238,12 @@ describe("OpenCode config JSON Schema E2E", () => {
       prefix: tempDirectoryPrefix,
       rootDirectory: tempRootDirectory,
     });
-    const bundleFile = join(directory, bundledPrinterFileName);
-    const generatedModuleFile = join(directory, generatedModuleFileName);
-    const projectDirectory = join(directory, projectDirectoryName);
-    const homeDirectory = join(directory, homeDirectoryName);
-    const configDirectory = join(homeDirectory, ".opencode");
-    const generatedConfigFile = join(projectDirectory, generatedConfigFileName);
+    const bundleFile = nodePath.join(directory, bundledPrinterFileName);
+    const generatedModuleFile = nodePath.join(directory, generatedModuleFileName);
+    const projectDirectory = nodePath.join(directory, projectDirectoryName);
+    const homeDirectory = nodePath.join(directory, homeDirectoryName);
+    const configDirectory = nodePath.join(homeDirectory, ".opencode");
+    const generatedConfigFile = nodePath.join(projectDirectory, generatedConfigFileName);
 
     try {
       mkdirSync(projectDirectory, { recursive: true });

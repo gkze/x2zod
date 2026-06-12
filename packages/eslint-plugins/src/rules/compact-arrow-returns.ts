@@ -4,8 +4,8 @@ import {
   isBlock,
   isReturnStatement,
   SyntaxKind,
-} from "@typescript/native-preview/ast";
-import type { Expression, SourceFile, Block } from "@typescript/native-preview/ast";
+} from "@typescript/native-preview/unstable/ast";
+import type { Expression, SourceFile, Block } from "@typescript/native-preview/unstable/ast";
 
 import { createSourceRule } from "#rule";
 import type { Rule, RuleContext } from "#rule";
