@@ -71,7 +71,8 @@
     },
     "//#format:toml": { "cache": false, "inputs": ["$TURBO_ROOT$/prek.toml"], "outputs": [] },
     "//#lint:actions": {
-      "passThroughEnv": ["ACTIONLINT_BIN"],
+      "dependsOn": ["//#lint:shell"],
+      "passThroughEnv": ["ACTIONLINT_BIN", "SHELLCHECK_BINARY"],
       "inputs": [
         "$TURBO_ROOT$/.github/workflows/**/*.yaml",
         "$TURBO_ROOT$/.github/workflows/**/*.yml",

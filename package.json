@@ -28,7 +28,7 @@
     "hooks:install": "prek install --hook-type pre-commit --hook-type commit-msg --hook-type pre-push --overwrite",
     "hooks:run": "prek run --all-files",
     "lint": "turbo run //#lint:actions //#lint:markdown //#lint:repo //#lint:shell //#lint:toml lint",
-    "lint:actions": "github-actionlint .github/workflows/*.yml",
+    "lint:actions": "${SHELLCHECK_BINARY:-shellcheck} --version >/dev/null 2>&1 && github-actionlint .github/workflows/*.yml",
     "lint:fix": "bun run oxlint --fix .",
     "lint:markdown": "markdownlint-cli2",
     "lint:repo": "bun run oxlint .markdownlint-cli2.mjs commitlint.config.ts scripts",
