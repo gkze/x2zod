@@ -24,7 +24,11 @@ type BuildNodeBundleRequest = Readonly<{
 
 type CreateTemporaryDirectoryRequest = Readonly<{ prefix: string; rootDirectory: string }>;
 
-type RunNodeRequest = Readonly<{ args: readonly string[]; cwd?: string }>;
+type RunNodeRequest = Readonly<{
+  allowedStderr?: ((stderr: string) => boolean) | undefined;
+  args: readonly string[];
+  cwd?: string;
+}>;
 
 export const outputText = (output: Uint8Array): string => textDecoder.decode(output);
 
@@ -64,7 +68,7 @@ export const createTemporaryDirectory = ({
   return mkdtempSync(join(rootDirectory, prefix));
 };
 
-export const runNode = ({ args, cwd }: RunNodeRequest): string => {
+export const runNode = ({ allowedStderr, args, cwd }: RunNodeRequest): string => {
   const result = Bun.spawnSync({
     cmd: ["node", "--no-warnings", ...args],
     ...(cwd === undefined ? {} : { cwd }),
@@ -72,7 +76,8 @@ export const runNode = ({ args, cwd }: RunNodeRequest): string => {
     stdout: "pipe",
   });
 
-  expect(outputText(result.stderr)).toBe("");
+  const stderr = outputText(result.stderr);
+  if (stderr !== "" && allowedStderr?.(stderr) !== true) expect(stderr).toBe("");
   expect(result.exitCode).toBe(0);
   return outputText(result.stdout);
 };
