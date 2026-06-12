@@ -2,7 +2,6 @@ import { describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, rmSync } from "node:fs";
 import { join, resolve } from "node:path";
 import process from "node:process";
-import { setTimeout as sleep } from "node:timers/promises";
 
 import { z } from "zod/v4";
 
@@ -38,7 +37,6 @@ const openCodeTestHostname = "127.0.0.1";
 const openCodeTestPort = 4099;
 const openCodeTestUsername = "x2zod-e2e";
 const openCodeSubprocessDeadlineMs = 4000;
-const openCodeSubprocessTerminationGraceMs = 500;
 const jsonSchemaNativePreviewExternals = [...nativePreviewExternals, "jsonc-parser"] as const;
 const sampleOpenCodeConfig = {
   $schema: openCodeSchemaUrl,
@@ -58,7 +56,6 @@ const openCodeDebugConfigSchema = z.looseObject({
 type GeneratedZodSchema = Readonly<{ parse: (value: unknown) => unknown }>;
 type GeneratedOpenCodeConfigModule = Readonly<{ openCodeConfigSchema: GeneratedZodSchema }>;
 type OpenCodeDebugConfig = z.infer<typeof openCodeDebugConfigSchema>;
-type OpenCodeSubprocessExit = Readonly<{ exitCode: number; timedOut: boolean }>;
 type AssertOpenCodeAcceptsConfigRequest = Readonly<{
   configDirectory: string;
   configFile: string;
@@ -186,51 +183,26 @@ const runOpenCodeSubprocess = async ({
   const subprocess = Bun.spawn([...cmd], {
     cwd,
     env,
+    killSignal: "SIGKILL",
     stdin: "ignore",
     stderr: "pipe",
     stdout: "pipe",
+    timeout: openCodeSubprocessDeadlineMs,
   });
   const stdout = readSubprocessOutput(subprocess.stdout);
   const stderr = readSubprocessOutput(subprocess.stderr);
-
-  const waitForExit = async (): Promise<OpenCodeSubprocessExit> => {
-    const waitForDeadline = async (): Promise<"deadline"> => {
-      await sleep(openCodeSubprocessDeadlineMs);
-      return "deadline";
-    };
-    const waitForSubprocessExit = async (timedOut: boolean): Promise<OpenCodeSubprocessExit> => ({
-      exitCode: await subprocess.exited,
-      timedOut,
-    });
-    const result = await Promise.race([waitForDeadline(), waitForSubprocessExit(false)]);
-
-    if (result !== "deadline") return result;
-
-    subprocess.kill("SIGTERM");
-
-    const waitForForceKill = async (): Promise<"force-kill"> => {
-      await sleep(openCodeSubprocessTerminationGraceMs);
-      return "force-kill";
-    };
-    const terminated = await Promise.race([waitForSubprocessExit(true), waitForForceKill()]);
-
-    if (terminated !== "force-kill") return terminated;
-
-    subprocess.kill("SIGKILL");
-    return { exitCode: await subprocess.exited, timedOut: true };
-  };
-
-  const exit = await waitForExit();
+  const exitCode = await subprocess.exited;
+  const timedOut = subprocess.killed && subprocess.signalCode === "SIGKILL";
   const [stdoutOutput, stderrOutput] = await Promise.all([stdout, stderr]);
 
-  if (exit.timedOut || exit.exitCode !== 0)
+  if (timedOut || exitCode !== 0)
     throw openCodeSubprocessError({
       cmd,
       deadlineMs: openCodeSubprocessDeadlineMs,
-      exitCode: exit.exitCode,
+      exitCode,
       stderr: stderrOutput,
       stdout: stdoutOutput,
-      timedOut: exit.timedOut,
+      timedOut,
     });
 
   return stdoutOutput;

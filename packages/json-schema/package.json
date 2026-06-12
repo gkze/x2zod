@@ -24,7 +24,7 @@
   "scripts": {
     "check": "turbo run lint typecheck test --filter=@x2zod/json-schema",
     "lint": "bun --cwd ../.. oxlint packages/json-schema",
-    "test": "bun test --pass-with-no-tests",
+    "test": "bun test --pass-with-no-tests --path-ignore-patterns test/opencode.e2e.test.ts && bun test --pass-with-no-tests test/opencode.e2e.test.ts",
     "typecheck": "tsgo --project tsconfig.json --noEmit"
   },
   "dependencies": {
