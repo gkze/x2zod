@@ -1,10 +1,11 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
-  "extends": "tsconfig/base.json",
+  "extends": "@x2zod/tsconfig/base.json",
   "files": [],
   "references": [
     { "path": "./apps/cli" },
     { "path": "./packages/core" },
+    { "path": "./packages/build-inputs" },
     { "path": "./packages/eslint-plugins" },
     { "path": "./packages/json-schema" },
     { "path": "./packages/tsconfig" },

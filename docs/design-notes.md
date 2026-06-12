@@ -29,5 +29,5 @@ mapping; core owns orchestration and TypeScript source construction.
 ## TypeScript Policy
 
 Shared compiler options live in `packages/tsconfig/base.json`. Package-local `tsconfig.json` files
-extend `tsconfig/base.json` through the installed workspace package instead of path-relative root
-inheritance.
+extend `@x2zod/tsconfig/base.json` through the installed workspace package instead of path-relative
+root inheritance.

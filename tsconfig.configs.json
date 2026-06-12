@@ -1,11 +1,11 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
-  "extends": "tsconfig/base.json",
+  "extends": "@x2zod/tsconfig/base.json",
   "compilerOptions": { "allowJs": true, "checkJs": true, "isolatedDeclarations": false },
   "files": [
     ".markdownlint-cli2.mjs",
     "commitlint.config.ts",
-    "scripts/publish-packages.ts",
+    "scripts/publish.ts",
     "scripts/shfmt.ts"
   ]
 }

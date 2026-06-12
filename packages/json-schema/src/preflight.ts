@@ -1,9 +1,9 @@
 import { createDiagnostic, err, jsonPointerSchema, ok } from "@x2zod/core";
 import type { Diagnostic, JsonPointer, Result, SourceLocationMap } from "@x2zod/core";
 import AjvDraft7 from "ajv";
-import type { ErrorObject, Options, Schema } from "ajv";
-import AjvDraft2019 from "ajv/dist/2019";
-import AjvDraft2020 from "ajv/dist/2020";
+import type { ErrorObject, Options } from "ajv";
+import AjvDraft2019 from "ajv/dist/2019.js";
+import AjvDraft2020 from "ajv/dist/2020.js";
 
 import { jsonSchemaDiagnosticLocation } from "./diagnostics";
 import { jsonPointerFromPath } from "./document";
@@ -55,7 +55,7 @@ export const preflightJsonSchema = ({
 
   const ajv = ajvForDialect(dialect);
   try {
-    const valid = ajv.validateSchema(schema as Schema);
+    const valid = ajv.validateSchema(schema);
     if (valid === true) return ok(schema);
 
     const diagnostics = (ajv.errors ?? []).map((error) => diagnosticForError(error, locations));

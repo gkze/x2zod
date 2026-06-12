@@ -35,11 +35,14 @@ This is a new standalone TypeScript project scaffolded from the `mcpsync` repo s
 
 - Use Bun and TypeScript 7 via `@typescript/native-preview` / `tsgo`.
 - Keep TypeScript config strict. Shared compiler policy lives in `packages/tsconfig/base.json`;
-  package-local `tsconfig.json` files should extend `tsconfig/base.json` and declare the `tsconfig`
-  workspace package.
+  package-local `tsconfig.json` files should extend `@x2zod/tsconfig/base.json` and declare the
+  `@x2zod/tsconfig` workspace package.
 - Prefer exported const arrow functions over `function` declarations.
 - Prefer compact expression returns where readable.
 - Keep callback-shaped interfaces as readonly function properties.
+- In Bun-run scripts, prefer Bun runtime APIs for file-content and process operations such as
+  `Bun.file`, `Bun.write`, `Bun.spawn`, `Bun.argv`, and `Bun.env`; use Node standard library APIs
+  for directory, path, symlink, stream, and other primitives Bun does not fully cover.
 - Use extensionless relative imports and exports for TypeScript and JavaScript modules. Do not write
   `.ts`, `.tsx`, `.js`, `.jsx`, `.mts`, `.cts`, `.mjs`, or `.cjs` in source import/export
   specifiers; Oxlint enforces this.

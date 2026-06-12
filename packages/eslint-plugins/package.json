@@ -1,14 +1,16 @@
 {
   "name": "@x2zod/eslint-plugins",
   "version": "0.0.0",
-  "private": true,
   "description": "ESLint-compatible Oxlint plugins for x2zod code quality.",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/gkze/x2zod.git",
+    "url": "git+https://github.com/gkze/x2zod.git",
     "directory": "packages/eslint-plugins"
   },
+  "files": [
+    "src"
+  ],
   "type": "module",
   "imports": {
     "#index": "./src/index.ts",
@@ -24,6 +26,9 @@
       "default": "./src/index.ts"
     }
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "check": "turbo run lint typecheck test --filter=@x2zod/eslint-plugins",
     "lint": "bun --cwd ../.. oxlint packages/eslint-plugins",
@@ -31,10 +36,11 @@
     "typecheck": "tsgo --project tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@typescript/native-preview": "7.0.0-dev.20260427.1"
+    "@typescript/native-preview": "7.0.0-dev.20260427.1",
+    "zod": "4.3.6"
   },
   "devDependencies": {
     "@types/bun": "1.3.13",
-    "tsconfig": "workspace:*"
+    "@x2zod/tsconfig": "workspace:*"
   }
 }

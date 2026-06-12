@@ -1,8 +1,8 @@
 import { NodeFlags, SyntaxKind } from "@typescript/native-preview/ast";
 import type {
   Expression,
+  ExportKeyword,
   ImportDeclaration,
-  ModifierLike,
   Path,
   PropertyAssignment,
   PropertyName,
@@ -25,7 +25,7 @@ import {
   createNumericLiteral,
   createObjectLiteralExpression,
   createPropertyAccessExpression,
-  createPropertyAssignment,
+  createPropertyAssignment as createNativePropertyAssignment,
   createQualifiedName,
   createSourceFile as createNativeSourceFile,
   createStringLiteral,
@@ -123,12 +123,9 @@ export const resolveZodSourceOutputOptions = (
       );
 };
 
-const createModifierToken = (kind: SyntaxKind.ExportKeyword): ModifierLike =>
-  createToken(kind) as ModifierLike;
+const createExportModifier = (): ExportKeyword => createToken(SyntaxKind.ExportKeyword);
 
 const toNativePath = (path: string): Path => path as Path;
-
-const createExportModifier = (): ModifierLike => createModifierToken(SyntaxKind.ExportKeyword);
 
 const createZodImport = (zodImportPath: string): ImportDeclaration =>
   createImportDeclaration(
@@ -145,8 +142,21 @@ const createPropertyName = (key: string): PropertyName =>
   isTypeScriptIdentifier(key) ? createIdentifier(key) : createStringLiteral(key, noTokenFlags);
 
 // Native preview currently types property-assignment annotations as required.
-// Ordinary object literal properties intentionally omit that node.
-const omittedTypeNode = (): TypeNode => undefined as unknown as TypeNode;
+// The implementation accepts undefined for ordinary object properties.
+const omittedNativePropertyType = undefined as never;
+
+const createPropertyAssignment = (
+  name: PropertyName,
+  initializer: Expression,
+  type?: TypeNode,
+): PropertyAssignment =>
+  createNativePropertyAssignment(
+    undefined,
+    name,
+    undefined,
+    type ?? omittedNativePropertyType,
+    initializer,
+  );
 
 const assertNever = (value: never): never => {
   throw new Error(`Unexpected Zod IR node: ${JSON.stringify(value)}`);
@@ -181,10 +191,7 @@ const createArgumentExpression = (
       return createObjectLiteralExpression(
         argument.properties.map((property) =>
           createPropertyAssignment(
-            undefined,
             createPropertyName(property.key),
-            undefined,
-            omittedTypeNode(),
             createZodExpression(property.expression, schemaConstNames),
           ),
         ),
@@ -212,10 +219,7 @@ const createRequiredKeysArgumentExpression = (argument: ZodArgument): Expression
     if (element.kind !== "literal" || typeof element.value !== "string") return undefined;
     properties.push(
       createPropertyAssignment(
-        undefined,
         createPropertyName(element.value),
-        undefined,
-        omittedTypeNode(),
         createKeywordExpression(SyntaxKind.TrueKeyword),
       ),
     );

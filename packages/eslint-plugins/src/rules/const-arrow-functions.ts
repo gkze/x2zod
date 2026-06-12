@@ -39,7 +39,7 @@ import {
   getTrailingCommentRanges,
 } from "@typescript/native-preview/ast/scanner";
 
-import { isOptionsRecord } from "#options";
+import { parseOptionsRecord } from "#options";
 import { createSourceRule } from "#rule";
 import type { Rule, RuleContext } from "#rule";
 import { collectNodes, containsCommentMarker, getNodeStart, isSameNode, textForNode } from "#text";
@@ -390,7 +390,7 @@ const buildFunctionExpressionReplacement = (
 
 const parseOptions = (context: RuleContext): ConstArrowFunctionsOptions => {
   const [rawOptions] = context.options;
-  const options = isOptionsRecord(rawOptions) ? rawOptions : {};
+  const options = parseOptionsRecord(rawOptions);
 
   return { includeExportedFunctions: options["includeExportedFunctions"] === true };
 };

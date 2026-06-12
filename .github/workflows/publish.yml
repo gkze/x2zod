@@ -8,7 +8,7 @@ on:
     inputs:
       dry_run:
         description: Run registry publish commands with --dry-run.
-        default: false
+        default: true
         required: false
         type: boolean
       ref:
@@ -17,85 +17,29 @@ on:
         type: string
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.inputs.ref || github.ref }}
+  group: ${{ github.workflow }}-${{ inputs.ref || github.ref }}
   cancel-in-progress: false
 
 permissions:
-  contents: read
+  contents: write
+  id-token: write
 
 env:
   BUN_VERSION: 1.3.14
   NODE_VERSION: 24
 
 jobs:
-  preflight:
-    name: Preflight
+  publish:
+    name: Publish Packages
     runs-on: ubuntu-latest
-    outputs:
-      publish_sha: ${{ steps.resolve-publish-ref.outputs.publish_sha }}
+    environment: publish
 
     steps:
       - name: Checkout
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
-          ref: ${{ github.event.inputs.ref || github.ref }}
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: ${{ env.BUN_VERSION }}
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Run checks
-        run: bun run check
-
-      - name: Resolve publish ref
-        id: resolve-publish-ref
-        run: echo "publish_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-
-      - name: Prepare publish workspace
-        run: |
-          rm -rf .publish-workspace publish-workspace.tgz
-          mkdir -p .publish-workspace/.publish-tools
-          rsync -a \
-            --exclude .git \
-            --exclude .publish-workspace \
-            --exclude .turbo \
-            --exclude node_modules \
-            ./ .publish-workspace/
-          jsr_version=$(bun -e "console.log(JSON.parse(await Bun.file('package.json').text()).devDependencies.jsr)")
-          printf '{"private":true,"type":"module","dependencies":{"jsr":"%s"}}\n' "$jsr_version" > .publish-workspace/.publish-tools/package.json
-          bun install --cwd .publish-workspace/.publish-tools
-          tar -czf publish-workspace.tgz -C .publish-workspace .
-
-      - name: Upload publish workspace
-        uses: actions/upload-artifact@v4
-        with:
-          name: publish-workspace-${{ steps.resolve-publish-ref.outputs.publish_sha }}
-          path: publish-workspace.tgz
-          if-no-files-found: error
-
-  publish-npm:
-    name: Publish npm
-    needs: preflight
-    runs-on: ubuntu-latest
-    environment: publish
-    permissions:
-      contents: read
-      id-token: write
-
-    steps:
-      - name: Download publish workspace
-        uses: actions/download-artifact@v4
-        with:
-          name: publish-workspace-${{ needs.preflight.outputs.publish_sha }}
-          path: .
-
-      - name: Extract publish workspace
-        run: tar -xzf publish-workspace.tgz
+          ref: ${{ inputs.ref || github.ref }}
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -109,52 +53,22 @@ jobs:
           package-manager-cache: false
           registry-url: https://registry.npmjs.org
 
-      - name: Publish to npm
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Run checks
+        run: bun run check
+
+      - name: Publish package adapters
         env:
-          DRY_RUN: ${{ github.event.inputs.dry_run }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
         run: |
           if [[ "$DRY_RUN" == "true" ]]; then
-            bun run publish:npm -- --dry-run
+            bun run publish:packages -- --dry-run
           else
-            bun run publish:npm
+            bun run publish:packages
           fi
 
-  publish-jsr:
-    name: Publish JSR
-    needs: preflight
-    runs-on: ubuntu-latest
-    environment: publish
-    permissions:
-      contents: read
-      id-token: write
-
-    steps:
-      - name: Download publish workspace
-        uses: actions/download-artifact@v4
-        with:
-          name: publish-workspace-${{ needs.preflight.outputs.publish_sha }}
-          path: .
-
-      - name: Extract publish workspace
-        run: tar -xzf publish-workspace.tgz
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: ${{ env.BUN_VERSION }}
-
-      - name: Setup Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          package-manager-cache: false
-
-      - name: Publish to JSR
-        env:
-          DRY_RUN: ${{ github.event.inputs.dry_run }}
-        run: |
-          if [[ "$DRY_RUN" == "true" ]]; then
-            bun run publish:jsr -- --dry-run
-          else
-            bun run publish:jsr
-          fi
+      - name: Push package tags
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry_run) }}
+        run: git push --follow-tags

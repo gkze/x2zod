@@ -6,7 +6,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/gkze/x2zod.git"
+    "url": "git+https://github.com/gkze/x2zod.git"
   },
   "workspaces": [
     "apps/*",
@@ -14,6 +14,7 @@
   ],
   "type": "module",
   "scripts": {
+    "changeset": "changeset",
     "check": "turbo run //#format:check:workspace //#format:check:shell //#format:check:toml //#lint:actions //#lint:markdown //#lint:repo //#lint:shell //#lint:toml gen:check lint typecheck test",
     "commitlint": "commitlint",
     "format": "turbo run //#format:workspace //#format:shell //#format:toml",
@@ -34,17 +35,25 @@
     "lint:shell": "${SHELLCHECK_BINARY:-shellcheck} .envrc",
     "lint:toml": "taplo lint prek.toml",
     "oxlint": "bunx oxlint",
-    "publish:jsr": "bun scripts/publish-packages.ts jsr",
-    "publish:npm": "bun scripts/publish-packages.ts npm",
+    "publish:jsr": "bun scripts/publish.ts jsr",
+    "publish:npm": "bun scripts/publish.ts npm",
+    "publish:packages": "bun scripts/publish.ts",
+    "release:version": "changeset version && bun scripts/publish.ts --sync-jsr-metadata && bun install",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
     "x2zod": "x2zod"
   },
   "devDependencies": {
+    "@changesets/cli": "2.31.0",
+    "@changesets/config": "3.1.4",
+    "@changesets/pre": "2.0.2",
+    "@changesets/should-skip-package": "0.1.2",
+    "@changesets/types": "6.1.0",
     "@commitlint/cli": "21.0.1",
     "@commitlint/config-conventional": "21.0.1",
     "@commitlint/types": "21.0.1",
     "@j178/prek": "0.4.2",
+    "@manypkg/get-packages": "1.1.3",
     "@optique/core": "1.0.2",
     "@optique/run": "1.0.2",
     "@taplo/cli": "0.7.0",
@@ -52,6 +61,7 @@
     "@typescript/native-preview": "7.0.0-dev.20260427.1",
     "@wasm-fmt/shfmt": "0.2.7",
     "@x2zod/cli": "workspace:*",
+    "@x2zod/tsconfig": "workspace:*",
     "github-actionlint": "1.7.12",
     "jsr": "0.14.3",
     "markdownlint": "0.40.0",
@@ -60,8 +70,8 @@
     "oxlint": "1.62.0",
     "oxlint-tsgolint": "0.22.1",
     "shellcheck": "4.1.0",
-    "tsconfig": "workspace:*",
-    "turbo": "2.9.6"
+    "turbo": "2.9.6",
+    "zod": "4.3.6"
   },
   "engines": {
     "bun": ">=1.3.14"

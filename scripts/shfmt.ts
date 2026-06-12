@@ -1,5 +1,3 @@
-import { readFile, writeFile } from "node:fs/promises";
-
 import { object } from "@optique/core/constructs";
 import { message } from "@optique/core/message";
 import { option } from "@optique/core/primitives";
@@ -40,7 +38,7 @@ const reportChanged = (changedFilePaths: readonly ShellPath[]): void => {
 const readFormattedSources = async (): Promise<readonly FormattedShellFile[]> => {
   const formattedSources = await Promise.all(
     paths.map(async (path) => {
-      const source = await readFile(path, "utf8");
+      const source = await Bun.file(path).text();
       return { path, source, formatted: format(source, path, options) };
     }),
   );
@@ -58,7 +56,7 @@ const write = async (): Promise<void> => {
   const formattedSources = await readFormattedSources();
   await Promise.all(
     formattedSources.map(async ({ path, formatted }) => {
-      await writeFile(path, formatted);
+      await Bun.write(path, formatted);
     }),
   );
 };

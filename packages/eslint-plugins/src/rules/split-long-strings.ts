@@ -18,7 +18,7 @@ import {
 } from "@typescript/native-preview/ast";
 import type { Node, SourceFile, StringLiteral } from "@typescript/native-preview/ast";
 
-import { isOptionsRecord } from "#options";
+import { parseOptionsRecord } from "#options";
 import { createSourceRule } from "#rule";
 import type { Rule, RuleContext } from "#rule";
 import { getNativeService } from "#source";
@@ -90,8 +90,7 @@ const getIndentText = (useTabs: unknown, tabWidth: unknown): string =>
   useTabs === true ? "	" : " ".repeat(isPositiveInteger(tabWidth) ? tabWidth : defaultIndentWidth);
 
 const parseOxfmtFormatting = (configText: string): StringFormatting => {
-  const parsed: unknown = JSON.parse(configText);
-  const config = isOptionsRecord(parsed) ? parsed : {};
+  const config = parseOptionsRecord(JSON.parse(configText));
 
   return {
     indentText: getIndentText(config["useTabs"], config["tabWidth"]),
@@ -334,7 +333,7 @@ const getSplitStringReplacement = (
 
 const parseOptions = (context: RuleContext): SplitLongStringsOptions => {
   const [rawOptions] = context.options;
-  const rawOptionsRecord = isOptionsRecord(rawOptions) ? rawOptions : {};
+  const rawOptionsRecord = parseOptionsRecord(rawOptions);
   const { lineWidth, oxfmtConfigPath } = rawOptionsRecord;
   const options: SplitLongStringsOptions = {};
 

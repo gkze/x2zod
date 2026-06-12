@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir } from "node:fs/promises";
 
 export type CliTextFileSystem = Readonly<{
   makeDirectory: (
@@ -9,16 +9,15 @@ export type CliTextFileSystem = Readonly<{
   writeTextFile: (filePath: string, text: string) => Promise<void>;
 }>;
 
-export const nodeTextFileSystem: CliTextFileSystem = {
+export const bunTextFileSystem: CliTextFileSystem = {
   makeDirectory: async (directoryPath, options) => {
     await mkdir(directoryPath, options);
   },
   readTextFile: async (filePath) => {
-    const text = await readFile(filePath, "utf8");
-
+    const text = await Bun.file(filePath).text();
     return text;
   },
   writeTextFile: async (filePath, text) => {
-    await writeFile(filePath, text, "utf8");
+    await Bun.write(filePath, text);
   },
 };

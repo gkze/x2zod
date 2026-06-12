@@ -1,0 +1,7 @@
+{
+  "name": "@x2zod/cli",
+  "version": "0.0.0",
+  "license": "MIT",
+  "exports": "./src/cli.ts",
+  "publish": { "exclude": ["test/**"], "include": ["package.json", "src/**/*.ts"] }
+}

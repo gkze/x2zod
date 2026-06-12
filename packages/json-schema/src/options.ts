@@ -46,6 +46,8 @@ export const jsonSchemaSourceProfileSchema: z.ZodType<
   JsonSchemaSourceProfile
 > = jsonSchemaSourceProfileSchemaValue;
 
+// Keep the public option input typed as JsonSchemaValue.
+// The document parser's schema intentionally accepts unknown raw input.
 const jsonSchemaInputValueSchema: z.ZodType<JsonSchemaValue, JsonSchemaValue> =
   z.custom<JsonSchemaValue>((value) => jsonSchemaValueSchema.safeParse(value).success);
 

@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir } from "node:fs/promises";
 import path from "node:path";
 
 import { z } from "zod/v4";
@@ -49,17 +49,11 @@ const parseGenerateBuildInputsSchemaArgs = (args: readonly string[]) => {
   throw new Error(`Unknown generate-build-inputs-schema argument: ${unknownArg}`);
 };
 
-const readTextFileIfPresent = async (filePath: string): Promise<string | undefined> => {
-  try {
-    return await readFile(filePath, "utf8");
-  } catch (error) {
-    if (error instanceof Error && "code" in error && error.code === "ENOENT") return undefined;
-    throw error;
-  }
-};
+const readTextFileIfPresent = async (filePath: string): Promise<string | undefined> =>
+  (await Bun.file(filePath).exists()) ? await Bun.file(filePath).text() : undefined;
 
 const main = async (): Promise<void> => {
-  const args = parseGenerateBuildInputsSchemaArgs(process.argv.slice(2));
+  const args = parseGenerateBuildInputsSchemaArgs(Bun.argv.slice(2));
   const content = renderBuildInputsJsonSchema();
 
   if (args.check) {
@@ -71,7 +65,7 @@ const main = async (): Promise<void> => {
   }
 
   await mkdir(path.dirname(buildInputsSchemaPath), { recursive: true });
-  await writeFile(buildInputsSchemaPath, content);
+  await Bun.write(buildInputsSchemaPath, content);
 };
 
 await main();

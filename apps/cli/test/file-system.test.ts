@@ -3,9 +3,9 @@ import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { nodeTextFileSystem } from "../src/file-system";
+import { bunTextFileSystem } from "../src/file-system";
 
-test("nodeTextFileSystem writes and reads UTF-8 text", async () => {
+test("bunTextFileSystem writes and reads UTF-8 text", async () => {
   const tempDirectory = await mkdtemp(path.join(os.tmpdir(), "x2zod-cli-"));
 
   try {
@@ -13,10 +13,10 @@ test("nodeTextFileSystem writes and reads UTF-8 text", async () => {
     const outputPath = path.join(outputDirectory, "schema.ts");
     const outputText = "export const value = 1;\n";
 
-    await nodeTextFileSystem.makeDirectory(outputDirectory, { recursive: true });
-    await nodeTextFileSystem.writeTextFile(outputPath, outputText);
+    await bunTextFileSystem.makeDirectory(outputDirectory, { recursive: true });
+    await bunTextFileSystem.writeTextFile(outputPath, outputText);
 
-    expect(await nodeTextFileSystem.readTextFile(outputPath)).toBe(outputText);
+    expect(await bunTextFileSystem.readTextFile(outputPath)).toBe(outputText);
   } finally {
     await rm(tempDirectory, { force: true, recursive: true });
   }

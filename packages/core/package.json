@@ -1,14 +1,16 @@
 {
   "name": "@x2zod/core",
   "version": "0.0.0",
-  "private": true,
   "description": "Core compiler contracts and TypeScript source construction for x2zod.",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/gkze/x2zod.git",
+    "url": "git+https://github.com/gkze/x2zod.git",
     "directory": "packages/core"
   },
+  "files": [
+    "src"
+  ],
   "type": "module",
   "exports": {
     ".": {
@@ -31,6 +33,6 @@
   },
   "devDependencies": {
     "@types/bun": "1.3.13",
-    "tsconfig": "workspace:*"
+    "@x2zod/tsconfig": "workspace:*"
   }
 }
