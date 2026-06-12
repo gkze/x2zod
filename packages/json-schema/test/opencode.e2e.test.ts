@@ -190,8 +190,6 @@ const runOpenCodeSubprocess = async ({
     stderr: "pipe",
     stdout: "pipe",
   });
-  const stdout = readSubprocessOutput(subprocess.stdout);
-  const stderr = readSubprocessOutput(subprocess.stderr);
 
   const waitForExit = async (): Promise<OpenCodeSubprocessExit> => {
     const waitForDeadline = async (): Promise<"deadline"> => {
@@ -221,7 +219,12 @@ const runOpenCodeSubprocess = async ({
   };
 
   const exit = await waitForExit();
-  const [stdoutOutput, stderrOutput] = await Promise.all([stdout, stderr]);
+  const [stdoutOutput, stderrOutput] = exit.timedOut
+    ? [new Uint8Array(), new Uint8Array()]
+    : await Promise.all([
+        readSubprocessOutput(subprocess.stdout),
+        readSubprocessOutput(subprocess.stderr),
+      ]);
 
   if (exit.timedOut || exit.exitCode !== 0)
     throw openCodeSubprocessError({
