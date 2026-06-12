@@ -10,6 +10,7 @@ import {
   buildNodeBundle,
   createTemporaryDirectory,
   importGeneratedExport,
+  isNativePreviewShutdownStderr,
   isRecord,
   nativePreviewExternals,
   outputText,
@@ -38,7 +39,6 @@ const openCodeTestPort = 4099;
 const openCodeTestUsername = "x2zod-e2e";
 const openCodeSubprocessDeadlineMs = 4000;
 const openCodeSubprocessTerminationGraceMs = 500;
-const nativePreviewShutdownStderr = "context canceled\n";
 const jsonSchemaNativePreviewExternals = [...nativePreviewExternals, "jsonc-parser"] as const;
 const sampleOpenCodeConfig = {
   $schema: openCodeSchemaUrl,
@@ -78,7 +78,7 @@ const buildPrinterBundle = (bundleFile: string): void => {
 
 const printGeneratedOpenCodeSource = (bundleFile: string): string =>
   runNode({
-    allowedStderr: (stderr) => stderr === nativePreviewShutdownStderr,
+    allowedStderr: isNativePreviewShutdownStderr,
     args: [bundleFile, openCodeConfigSchemaFixture, modelSchemaFixture],
     cwd: packageRootDirectory,
   });

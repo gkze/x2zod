@@ -9,6 +9,7 @@ import {
   buildNodeBundle,
   createTemporaryDirectory,
   importGeneratedExport,
+  isNativePreviewShutdownStderr,
   isRecord,
   nativePreviewExternals,
   runNode,
@@ -86,7 +87,11 @@ const printTargetSource = ({
   schemaFile,
   typeName,
 }: PrintTargetSourceRequest): string =>
-  runNode({ args: [bundleFile, schemaFile, typeName, optionsFile], cwd: packageRootDirectory });
+  runNode({
+    allowedStderr: isNativePreviewShutdownStderr,
+    args: [bundleFile, schemaFile, typeName, optionsFile],
+    cwd: packageRootDirectory,
+  });
 
 const targetDocument = (schemaFile: string): InputDocument => ({
   source: { kind: "file", path: schemaFile },

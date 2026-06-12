@@ -6,6 +6,7 @@ import {
   buildNodeBundle,
   createTemporaryDirectory,
   importGeneratedExport,
+  isNativePreviewShutdownStderr,
   isRecord,
   nativePreviewExternals,
   runNode,
@@ -54,6 +55,7 @@ const printRuntimeFixture = (
   externalSchemaFile?: string,
 ): string =>
   runNode({
+    allowedStderr: isNativePreviewShutdownStderr,
     args: [
       bundleFile,
       schemaFile,

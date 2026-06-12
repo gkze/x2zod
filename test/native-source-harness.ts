@@ -7,6 +7,7 @@ import { isRecord } from "./structural";
 export { isRecord } from "./structural";
 
 const textDecoder = new TextDecoder();
+export const nativePreviewShutdownStderr = "context canceled\n";
 
 export const nativePreviewExternals = [
   "@typescript/native-preview/ast",
@@ -31,6 +32,9 @@ type RunNodeRequest = Readonly<{
 }>;
 
 export const outputText = (output: Uint8Array): string => textDecoder.decode(output);
+
+export const isNativePreviewShutdownStderr = (stderr: string): boolean =>
+  stderr === nativePreviewShutdownStderr;
 
 export const buildNodeBundle = ({
   cwd,

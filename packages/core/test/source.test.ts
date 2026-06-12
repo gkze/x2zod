@@ -6,6 +6,7 @@ import {
   buildNodeBundle,
   createTemporaryDirectory,
   importGeneratedExport,
+  isNativePreviewShutdownStderr,
   isRecord,
   nativePreviewExternals,
   runNode,
@@ -99,7 +100,11 @@ const buildSourcePrinterBundle = (bundleFile: string): void => {
 };
 
 const printWithNativeEmitter = (printerBundleFile: string, coreBundleFile: string): string =>
-  runNode({ args: [printerBundleFile, coreBundleFile], cwd: corePackageRootDirectory });
+  runNode({
+    allowedStderr: isNativePreviewShutdownStderr,
+    args: [printerBundleFile, coreBundleFile],
+    cwd: corePackageRootDirectory,
+  });
 
 const isRuntimeZodSchema = (value: unknown): value is RuntimeZodSchema =>
   isRecord(value) && typeof value["safeParse"] === "function";
