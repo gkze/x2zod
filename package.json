@@ -34,7 +34,7 @@
     "lint:repo": "bun run oxlint .markdownlint-cli2.mjs commitlint.config.ts scripts",
     "lint:shell": "${SHELLCHECK_BINARY:-shellcheck} .envrc",
     "lint:toml": "taplo lint prek.toml",
-    "oxlint": "bunx oxlint --format default",
+    "oxlint": "bunx oxlint --format default --threads=1",
     "publish:jsr": "bun scripts/publish.ts jsr",
     "publish:npm": "bun scripts/publish.ts npm",
     "publish:packages": "bun scripts/publish.ts",

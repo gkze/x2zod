@@ -112,6 +112,7 @@
     "lint": {
       "inputs": [
         "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/package.json",
         "$TURBO_ROOT$/.oxlintrc.jsonc",
         "$TURBO_ROOT$/packages/eslint-plugins/package.json",
         "$TURBO_ROOT$/packages/eslint-plugins/src/**/*.ts",
