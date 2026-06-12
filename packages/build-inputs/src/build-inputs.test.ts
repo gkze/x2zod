@@ -113,7 +113,7 @@ describe("buildInputs", () => {
       expect(nestedOkJsonSchema.parse(JSON.parse(downloadedContent))).toEqual({
         nested: { ok: true },
       });
-      expect(downloadedContent).toBe('{ "nested": { "ok": true } }\n');
+      expect(downloadedContent).toBe('{\n  "nested": {\n    "ok": true\n  }\n}\n');
       expect(input.sha256).toBe(sha256Hex(downloadedContent));
     } finally {
       await rm(rootDir, { force: true, recursive: true });

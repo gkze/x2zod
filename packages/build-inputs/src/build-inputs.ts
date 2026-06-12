@@ -333,13 +333,19 @@ const getStructuredFormatPath = (
     .otherwise(() => input.absolutePath);
 };
 
+const parseJson = (content: string): JsonValue => jsonValueSchema.parse(JSON.parse(content));
+
+const formatDownloadedJsonContent = (content: string): string =>
+  `${JSON.stringify(parseJson(content), null, 2)}\n`;
+
 const formatDownloadedContent = (
   input: ResolvedBuildInputFile,
   content: string,
   format: Exclude<BuildInputFormat, "text">,
-): string => formatWithOxfmt(content, getStructuredFormatPath(input, format));
-
-const parseJson = (content: string): JsonValue => jsonValueSchema.parse(JSON.parse(content));
+): string =>
+  format === "json"
+    ? formatDownloadedJsonContent(content)
+    : formatWithOxfmt(content, getStructuredFormatPath(input, format));
 
 const readJsonFile = async (filePath: string): Promise<JsonValue> =>
   parseJson(await readFile(filePath, "utf8"));
