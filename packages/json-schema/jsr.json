@@ -1,6 +1,6 @@
 {
   "name": "@x2zod/json-schema",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "license": "MIT",
   "exports": "./src/index.ts",
   "publish": { "exclude": ["test/**"], "include": ["package.json", "src/**/*.ts"] }
