@@ -10,7 +10,14 @@
 
 /** @satisfies {MarkdownlintCli2Config} */
 const markdownlintCli2Config = {
-  globs: ["**/*.md", "!**/.direnv/**", "!**/coverage/**", "!**/dist/**", "!**/node_modules/**"],
+  globs: [
+    "**/*.md",
+    "!**/.changeset/**",
+    "!**/.direnv/**",
+    "!**/coverage/**",
+    "!**/dist/**",
+    "!**/node_modules/**",
+  ],
   config: { default: true, MD013: false, MD024: { siblings_only: true } },
 };
 
