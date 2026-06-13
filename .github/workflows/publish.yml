@@ -1,6 +1,14 @@
 name: Publish
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - apps/*/jsr.json
+      - apps/*/package.json
+      - packages/*/jsr.json
+      - packages/*/package.json
   release:
     types:
       - published
@@ -29,10 +37,85 @@ env:
   NODE_VERSION: 26.3.0
 
 jobs:
+  detect-version-changes:
+    name: Detect Version Changes
+    runs-on: ubuntu-24.04
+    outputs:
+      should_publish: ${{ steps.detect.outputs.should_publish }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.3
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Detect workspace version changes
+        id: detect
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" != "push" ]]; then
+            echo "should_publish=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          before="${{ github.event.before }}"
+          after="${{ github.sha }}"
+          if [[ "$before" =~ ^0+$ ]]; then
+            echo "should_publish=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          changed_files="$(
+            git diff --name-only "$before" "$after" -- \
+              'apps/*/jsr.json' \
+              'apps/*/package.json' \
+              'packages/*/jsr.json' \
+              'packages/*/package.json'
+          )"
+
+          version_for_ref() {
+            git show "$1:$2" 2>/dev/null | node -e '
+              let input = "";
+              process.stdin.on("data", (chunk) => { input += chunk; });
+              process.stdin.on("end", () => {
+                try {
+                  const manifest = JSON.parse(input);
+                  process.stdout.write(String(manifest.version ?? ""));
+                } catch {
+                  process.stdout.write("");
+                }
+              });
+            '
+          }
+
+          version_for_file() {
+            node -e '
+              const manifest = JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8"));
+              process.stdout.write(String(manifest.version ?? ""));
+            ' "$1"
+          }
+
+          while IFS= read -r file; do
+            [[ -z "$file" || ! -f "$file" ]] && continue
+            old_version="$(version_for_ref "$before" "$file")"
+            new_version="$(version_for_file "$file")"
+            if [[ "$old_version" != "$new_version" ]]; then
+              echo "Detected version change in $file: $old_version -> $new_version"
+              echo "should_publish=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          done <<< "$changed_files"
+
+          echo "No workspace package version changes detected."
+          echo "should_publish=false" >> "$GITHUB_OUTPUT"
+
   publish:
     name: Publish Packages
     runs-on: ubuntu-24.04
     environment: publish
+    needs: detect-version-changes
+    if: ${{ needs.detect-version-changes.outputs.should_publish == 'true' }}
 
     steps:
       - name: Checkout
@@ -71,4 +154,4 @@ jobs:
 
       - name: Push package tags
         if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry_run) }}
-        run: git push --follow-tags
+        run: git push --tags
