@@ -1,4 +1,4 @@
-import type { SourceFile } from "@typescript/native-preview/ast";
+import type { SourceFile } from "@typescript/native-preview/unstable/ast";
 import type { RuleTester } from "oxlint/plugins-dev";
 
 import { getNativeService } from "#source";

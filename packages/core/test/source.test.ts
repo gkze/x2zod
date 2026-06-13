@@ -1,11 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import { rmSync } from "node:fs";
-import { join, resolve } from "node:path";
+import nodePath from "node:path";
 
 import {
   buildNodeBundle,
   createTemporaryDirectory,
   importGeneratedExport,
+  isNativePreviewShutdownStderr,
   isRecord,
   nativePreviewExternals,
   runNode,
@@ -31,10 +32,10 @@ import {
 
 const rootSymbol = zodSymbol("root");
 const generatedFileName = "/__x2zod__/x2zod.generated.ts";
-const corePackageRootDirectory = resolve(import.meta.dirname, "..");
+const corePackageRootDirectory = nodePath.resolve(import.meta.dirname, "..");
 const coreEntrypoint = "src/index.ts";
-const sourcePrinterEntryPoint = join(import.meta.dirname, "source-print-helper.ts");
-const coreTestTempDirectory = join(corePackageRootDirectory, "node_modules/.cache");
+const sourcePrinterEntryPoint = nodePath.join(import.meta.dirname, "source-print-helper.ts");
+const coreTestTempDirectory = nodePath.join(corePackageRootDirectory, "node_modules/.cache");
 const coreTestTempPrefix = "x2zod-test-";
 const bundledCoreFileName = "index.mjs";
 const bundledSourcePrinterFileName = "source-print-helper.mjs";
@@ -99,7 +100,11 @@ const buildSourcePrinterBundle = (bundleFile: string): void => {
 };
 
 const printWithNativeEmitter = (printerBundleFile: string, coreBundleFile: string): string =>
-  runNode({ args: [printerBundleFile, coreBundleFile], cwd: corePackageRootDirectory });
+  runNode({
+    allowedStderr: isNativePreviewShutdownStderr,
+    args: [printerBundleFile, coreBundleFile],
+    cwd: corePackageRootDirectory,
+  });
 
 const isRuntimeZodSchema = (value: unknown): value is RuntimeZodSchema =>
   isRecord(value) && typeof value["safeParse"] === "function";
@@ -246,9 +251,9 @@ describe("buildZodSourceFile native printing", () => {
       prefix: coreTestTempPrefix,
       rootDirectory: coreTestTempDirectory,
     });
-    const coreBundleFile = join(directory, bundledCoreFileName);
-    const printerBundleFile = join(directory, bundledSourcePrinterFileName);
-    const generatedFile = join(directory, generatedRuntimeFileName);
+    const coreBundleFile = nodePath.join(directory, bundledCoreFileName);
+    const printerBundleFile = nodePath.join(directory, bundledSourcePrinterFileName);
+    const generatedFile = nodePath.join(directory, generatedRuntimeFileName);
 
     try {
       buildCoreBundle(coreBundleFile);

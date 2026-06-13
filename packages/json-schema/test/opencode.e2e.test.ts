@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, rmSync } from "node:fs";
-import { join, resolve } from "node:path";
+import nodePath from "node:path";
 import process from "node:process";
 
 import { z } from "zod/v4";
@@ -9,6 +9,7 @@ import {
   buildNodeBundle,
   createTemporaryDirectory,
   importGeneratedExport,
+  isNativePreviewShutdownStderr,
   isRecord,
   nativePreviewExternals,
   outputText,
@@ -17,25 +18,28 @@ import {
 import type { JsonValue } from "../src";
 
 const testDirectory = import.meta.dirname;
-const packageRootDirectory = resolve(testDirectory, "..");
-const repositoryRootDirectory = resolve(packageRootDirectory, "../..");
-const tempRootDirectory = join(packageRootDirectory, "node_modules/.cache");
+const packageRootDirectory = nodePath.resolve(testDirectory, "..");
+const repositoryRootDirectory = nodePath.resolve(packageRootDirectory, "../..");
+const tempRootDirectory = nodePath.join(packageRootDirectory, "node_modules/.cache");
 const tempDirectoryPrefix = "x2zod-opencode-e2e-";
-const printerHelperEntryPoint = join(testDirectory, "opencode-print-helper.ts");
+const printerHelperEntryPoint = nodePath.join(testDirectory, "opencode-print-helper.ts");
 const bundledPrinterFileName = "opencode-print-helper.mjs";
 const generatedModuleFileName = "opencode.generated.ts";
 const generatedConfigFileName = "opencode.json";
 const homeDirectoryName = "home";
 const projectDirectoryName = "project";
-const openCodeConfigSchemaFixture = join(testDirectory, "fixtures/opencode/config.schema.json");
-const modelSchemaFixture = join(testDirectory, "fixtures/opencode/model-schema.json");
+const openCodeConfigSchemaFixture = nodePath.join(
+  testDirectory,
+  "fixtures/opencode/config.schema.json",
+);
+const modelSchemaFixture = nodePath.join(testDirectory, "fixtures/opencode/model-schema.json");
 const openCodeBinaryName = process.platform === "win32" ? "opencode.cmd" : "opencode";
 const openCodeConfigSchemaExport = "openCodeConfigSchema";
 const openCodeSchemaUrl = "https://opencode.ai/config.json";
 const openCodeTestHostname = "127.0.0.1";
 const openCodeTestPort = 4099;
 const openCodeTestUsername = "x2zod-e2e";
-const nativePreviewShutdownStderr = "context canceled\n";
+const openCodeSubprocessDeadlineMs = 4000;
 const jsonSchemaNativePreviewExternals = [...nativePreviewExternals, "jsonc-parser"] as const;
 const sampleOpenCodeConfig = {
   $schema: openCodeSchemaUrl,
@@ -74,7 +78,7 @@ const buildPrinterBundle = (bundleFile: string): void => {
 
 const printGeneratedOpenCodeSource = (bundleFile: string): string =>
   runNode({
-    allowedStderr: (stderr) => stderr === nativePreviewShutdownStderr,
+    allowedStderr: isNativePreviewShutdownStderr,
     args: [bundleFile, openCodeConfigSchemaFixture, modelSchemaFixture],
     cwd: packageRootDirectory,
   });
@@ -95,8 +99,8 @@ const importGeneratedOpenCodeModule = async (
 const openCodeBinaryCandidates = (): readonly string[] => {
   const pathCandidate = Bun.which("opencode");
   return [
-    join(packageRootDirectory, "node_modules/.bin", openCodeBinaryName),
-    join(repositoryRootDirectory, "node_modules/.bin", openCodeBinaryName),
+    nodePath.join(packageRootDirectory, "node_modules/.bin", openCodeBinaryName),
+    nodePath.join(repositoryRootDirectory, "node_modules/.bin", openCodeBinaryName),
     ...(pathCandidate === null ? [] : [pathCandidate]),
   ];
 };
@@ -125,34 +129,102 @@ const openCodeEnvironment = (
   NO_COLOR: "1",
   OPENCODE_CONFIG: configFile,
   OPENCODE_CONFIG_DIR: configDirectory,
-  XDG_CACHE_HOME: join(homeDirectory, ".cache"),
-  XDG_CONFIG_HOME: join(homeDirectory, ".config"),
-  XDG_DATA_HOME: join(homeDirectory, ".local/share"),
-  XDG_STATE_HOME: join(homeDirectory, ".local/state"),
+  XDG_CACHE_HOME: nodePath.join(homeDirectory, ".cache"),
+  XDG_CONFIG_HOME: nodePath.join(homeDirectory, ".config"),
+  XDG_DATA_HOME: nodePath.join(homeDirectory, ".local/share"),
+  XDG_STATE_HOME: nodePath.join(homeDirectory, ".local/state"),
 });
 
 const parseOpenCodeDebugConfigOutput = (stdout: Uint8Array): OpenCodeDebugConfig =>
   openCodeDebugConfigSchema.parse(JSON.parse(outputText(stdout)));
 
-const assertOpenCodeAcceptsConfig = ({
+const readSubprocessOutput = async (
+  output: ReadableStream<Uint8Array> | null,
+): Promise<Uint8Array> =>
+  output === null ? new Uint8Array() : new Uint8Array(await new Response(output).arrayBuffer());
+
+const formatSubprocessOutput = (name: string, value: Uint8Array): string => {
+  const text = outputText(value);
+  return text.length === 0 ? `${name}: <empty>` : `${name}:\n${text}`;
+};
+
+const openCodeSubprocessError = ({
+  cmd,
+  deadlineMs,
+  exitCode,
+  stderr,
+  stdout,
+  timedOut,
+}: Readonly<{
+  cmd: readonly string[];
+  deadlineMs: number;
+  exitCode: number;
+  stderr: Uint8Array;
+  stdout: Uint8Array;
+  timedOut: boolean;
+}>): Error =>
+  new Error(
+    [
+      timedOut
+        ? `OpenCode subprocess did not exit before the ${deadlineMs.toString()}ms deadline.`
+        : `OpenCode subprocess exited with code ${exitCode.toString()}.`,
+      `Command: ${cmd.join(" ")}`,
+      formatSubprocessOutput("stdout", stdout),
+      formatSubprocessOutput("stderr", stderr),
+    ].join("\n"),
+  );
+
+const runOpenCodeSubprocess = async ({
+  cmd,
+  cwd,
+  env,
+}: Readonly<{
+  cmd: readonly [string, ...string[]];
+  cwd: string;
+  env: Record<string, string>;
+}>): Promise<Uint8Array> => {
+  const subprocess = Bun.spawn([...cmd], {
+    cwd,
+    env,
+    killSignal: "SIGKILL",
+    stdin: "ignore",
+    stderr: "pipe",
+    stdout: "pipe",
+    timeout: openCodeSubprocessDeadlineMs,
+  });
+  const stdout = readSubprocessOutput(subprocess.stdout);
+  const stderr = readSubprocessOutput(subprocess.stderr);
+  const exitCode = await subprocess.exited;
+  const timedOut = subprocess.killed && subprocess.signalCode === "SIGKILL";
+  const [stdoutOutput, stderrOutput] = await Promise.all([stdout, stderr]);
+
+  if (timedOut || exitCode !== 0)
+    throw openCodeSubprocessError({
+      cmd,
+      deadlineMs: openCodeSubprocessDeadlineMs,
+      exitCode,
+      stderr: stderrOutput,
+      stdout: stdoutOutput,
+      timedOut,
+    });
+
+  return stdoutOutput;
+};
+
+const assertOpenCodeAcceptsConfig = async ({
   configDirectory,
   configFile,
   executable,
   homeDirectory,
   projectDirectory,
-}: AssertOpenCodeAcceptsConfigRequest): void => {
-  const result = Bun.spawnSync({
+}: AssertOpenCodeAcceptsConfigRequest): Promise<void> => {
+  const stdout = await runOpenCodeSubprocess({
     cmd: [executable, "debug", "config", "--pure"],
     cwd: projectDirectory,
     env: openCodeEnvironment(homeDirectory, configFile, configDirectory),
-    stderr: "pipe",
-    stdout: "pipe",
   });
 
-  if (result.exitCode !== 0)
-    throw new Error([outputText(result.stdout), outputText(result.stderr)].join("\n"));
-
-  const config = parseOpenCodeDebugConfigOutput(result.stdout);
+  const config = parseOpenCodeDebugConfigOutput(stdout);
 
   expect(config.username).toBe(openCodeTestUsername);
   expect(config.logLevel).toBe(sampleOpenCodeConfig.logLevel);
@@ -166,12 +238,12 @@ describe("OpenCode config JSON Schema E2E", () => {
       prefix: tempDirectoryPrefix,
       rootDirectory: tempRootDirectory,
     });
-    const bundleFile = join(directory, bundledPrinterFileName);
-    const generatedModuleFile = join(directory, generatedModuleFileName);
-    const projectDirectory = join(directory, projectDirectoryName);
-    const homeDirectory = join(directory, homeDirectoryName);
-    const configDirectory = join(homeDirectory, ".opencode");
-    const generatedConfigFile = join(projectDirectory, generatedConfigFileName);
+    const bundleFile = nodePath.join(directory, bundledPrinterFileName);
+    const generatedModuleFile = nodePath.join(directory, generatedModuleFileName);
+    const projectDirectory = nodePath.join(directory, projectDirectoryName);
+    const homeDirectory = nodePath.join(directory, homeDirectoryName);
+    const configDirectory = nodePath.join(homeDirectory, ".opencode");
+    const generatedConfigFile = nodePath.join(projectDirectory, generatedConfigFileName);
 
     try {
       mkdirSync(projectDirectory, { recursive: true });
@@ -186,7 +258,7 @@ describe("OpenCode config JSON Schema E2E", () => {
       expect(parsedConfig).toEqual(sampleOpenCodeConfig);
 
       await Bun.write(generatedConfigFile, JSON.stringify(parsedConfig, null, 2));
-      assertOpenCodeAcceptsConfig({
+      await assertOpenCodeAcceptsConfig({
         configDirectory,
         configFile: generatedConfigFile,
         executable: openCodeExecutable(),

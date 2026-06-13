@@ -1,6 +1,6 @@
 import { cp, mkdtemp, realpath, rm, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, sep } from "node:path";
+import nodePath from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { read as readChangesetConfig } from "@changesets/config";
@@ -63,11 +63,11 @@ const writeLine = (message: string): void => {
   process.stdout.write(`${message}\n`);
 };
 
-const readJsonObject = async (path: string): Promise<JsonObject> =>
-  jsonObjectSchema.parse(await Bun.file(path).json());
+const readJsonObject = async (filePath: string): Promise<JsonObject> =>
+  jsonObjectSchema.parse(await Bun.file(filePath).json());
 
-const writeJsonObject = async (path: string, value: JsonObject): Promise<void> => {
-  await Bun.write(path, `${JSON.stringify(value, undefined, 2)}\n`);
+const writeJsonObject = async (filePath: string, value: JsonObject): Promise<void> => {
+  await Bun.write(filePath, `${JSON.stringify(value, undefined, 2)}\n`);
 };
 
 const runCommand = async (
@@ -104,19 +104,21 @@ const jsrPackageMetadataUrl = (packageName: string): string => {
     : `https://jsr.io/@${scope}/${name}/meta.json`;
 };
 
-const materializedPathIsIgnored = (path: string): boolean =>
-  path.endsWith(".tsbuildinfo") ||
-  path.split(sep).some((segment) => segment === "node_modules" || segment === ".turbo");
+const materializedPathIsIgnored = (filePath: string): boolean =>
+  filePath.endsWith(".tsbuildinfo") ||
+  filePath
+    .split(nodePath.sep)
+    .some((segment) => segment === "node_modules" || segment === ".turbo");
 
 const linkNodeModules = async (sourceDirectory: string, targetDirectory: string): Promise<void> => {
-  const sourceNodeModules = join(sourceDirectory, "node_modules");
+  const sourceNodeModules = nodePath.join(sourceDirectory, "node_modules");
   const realSource = await realpath(sourceNodeModules).catch((error: unknown) => {
     if (error instanceof Error && "code" in error && error.code === "ENOENT") return null;
     throw error;
   });
   if (realSource === null) return;
 
-  const targetNodeModules = join(targetDirectory, "node_modules");
+  const targetNodeModules = nodePath.join(targetDirectory, "node_modules");
   await rm(targetNodeModules, { force: true, recursive: true });
   await symlink(realSource, targetNodeModules, "dir");
 };
@@ -165,15 +167,15 @@ const materializePackage = async (
   if (workspacePackage.packageJson.publishConfig?.directory !== undefined)
     fail("publishConfig.directory is not supported by the x2zod registry publisher.");
 
-  const tempRoot = await mkdtemp(join(tmpdir(), "x2zod-publish-"));
-  const directory = join(tempRoot, encodeURIComponent(workspacePackage.packageJson.name));
+  const tempRoot = await mkdtemp(nodePath.join(tmpdir(), "x2zod-publish-"));
+  const directory = nodePath.join(tempRoot, encodeURIComponent(workspacePackage.packageJson.name));
   await cp(workspacePackage.dir, directory, {
     recursive: true,
     filter: (source) => !materializedPathIsIgnored(source),
   });
   await linkNodeModules(workspacePackage.dir, directory);
 
-  const manifestPath = join(directory, "package.json");
+  const manifestPath = nodePath.join(directory, "package.json");
   await writeJsonObject(
     manifestPath,
     rewriteWorkspaceDependencies(await readJsonObject(manifestPath), context.packageVersions),
@@ -195,7 +197,7 @@ const withMaterializedPackage = async (
 };
 
 const jsrConfigMatchesPackage = async (workspacePackage: Package): Promise<boolean> => {
-  const config = await readJsonObject(join(workspacePackage.dir, jsrConfigFile));
+  const config = await readJsonObject(nodePath.join(workspacePackage.dir, jsrConfigFile));
   return (
     config["name"] === workspacePackage.packageJson.name &&
     config["version"] === workspacePackage.packageJson.version
@@ -203,7 +205,7 @@ const jsrConfigMatchesPackage = async (workspacePackage: Package): Promise<boole
 };
 
 const syncPackageJsrConfig = async (workspacePackage: Package): Promise<boolean> => {
-  const configPath = join(workspacePackage.dir, jsrConfigFile);
+  const configPath = nodePath.join(workspacePackage.dir, jsrConfigFile);
   if (!(await Bun.file(configPath).exists())) return false;
 
   const config = await readJsonObject(configPath);
@@ -267,7 +269,7 @@ const npmPublisher = {
 
 const jsrPublisher = {
   isPackagePublishable: async (workspacePackage: Package): Promise<boolean> => {
-    const publishable = await Bun.file(join(workspacePackage.dir, jsrConfigFile)).exists();
+    const publishable = await Bun.file(nodePath.join(workspacePackage.dir, jsrConfigFile)).exists();
     return publishable;
   },
   isVersionPublished: async (workspacePackage: Package): Promise<boolean> => {
@@ -290,7 +292,7 @@ const jsrPublisher = {
       context,
       async ({ directory, manifestPath }) => {
         await publishJsr(directory, {
-          binFolder: join(rootDirectory, "node_modules", ".cache", "jsr"),
+          binFolder: nodePath.join(rootDirectory, "node_modules", ".cache", "jsr"),
           canary: false,
           pkgJsonPath: manifestPath,
           publishArgs,
@@ -416,7 +418,7 @@ const publishRegistries = async (
 
 const publishPackages = async (options: PublishOptions): Promise<void> => {
   const packages = await getPackages(rootDirectory);
-  const config = await readChangesetConfig(packages.root.dir, packages);
+  const config = await readChangesetConfig(packages.rootDir);
   const workspacePackages = sortByInternalDependencies(
     packages.packages.filter(
       (workspacePackage) =>
@@ -430,7 +432,7 @@ const publishPackages = async (options: PublishOptions): Promise<void> => {
     options.registry === undefined
       ? publishers
       : publishers.filter((publisher) => publisher.name === options.registry);
-  const preState = await readPreState(packages.root.dir);
+  const preState = await readPreState(packages.rootDir);
   const context: PublishContext = {
     dryRun: options.dryRun,
     npmAccess: config.access,
@@ -445,7 +447,7 @@ const publishPackages = async (options: PublishOptions): Promise<void> => {
   if (!options.dryRun && options.registry === undefined && published > 0)
     await runCommand(
       [Bun.argv[0] ?? "bun", "run", "changeset", "tag"],
-      packages.root.dir,
+      packages.rootDir,
       "changeset tag failed after registry publish.",
     );
 };

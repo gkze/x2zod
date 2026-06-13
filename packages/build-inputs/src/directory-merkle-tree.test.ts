@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { chmod, mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import path from "node:path";
 
 import type {
   DirectoryMerkleDirectoryNode,
@@ -10,25 +10,26 @@ import type {
 } from "./directory-merkle-tree";
 import { createDirectoryMerkleTree } from "./directory-merkle-tree";
 
-const makeTempDir = async (): Promise<string> => mkdtemp(join(tmpdir(), "directory-merkle-tree-"));
+const makeTempDir = async (): Promise<string> =>
+  mkdtemp(path.join(tmpdir(), "directory-merkle-tree-"));
 
 const writeFixtureTree = async (rootDir: string, reverseOrder: boolean): Promise<void> => {
   if (reverseOrder) {
-    await writeFile(join(rootDir, "a.txt"), "alpha\n");
-    await mkdir(join(rootDir, "src", "nested"), { recursive: true });
-    await mkdir(join(rootDir, "empty"), { recursive: true });
-    await writeFile(join(rootDir, "src", "nested", "b.txt"), "bravo\n");
-    await writeFile(join(rootDir, "src", "run.sh"), "#!/bin/sh\n");
-    await chmod(join(rootDir, "src", "run.sh"), 0o755);
+    await writeFile(path.join(rootDir, "a.txt"), "alpha\n");
+    await mkdir(path.join(rootDir, "src", "nested"), { recursive: true });
+    await mkdir(path.join(rootDir, "empty"), { recursive: true });
+    await writeFile(path.join(rootDir, "src", "nested", "b.txt"), "bravo\n");
+    await writeFile(path.join(rootDir, "src", "run.sh"), "#!/bin/sh\n");
+    await chmod(path.join(rootDir, "src", "run.sh"), 0o755);
     return;
   }
 
-  await mkdir(join(rootDir, "empty"), { recursive: true });
-  await mkdir(join(rootDir, "src", "nested"), { recursive: true });
-  await writeFile(join(rootDir, "src", "run.sh"), "#!/bin/sh\n");
-  await chmod(join(rootDir, "src", "run.sh"), 0o755);
-  await writeFile(join(rootDir, "src", "nested", "b.txt"), "bravo\n");
-  await writeFile(join(rootDir, "a.txt"), "alpha\n");
+  await mkdir(path.join(rootDir, "empty"), { recursive: true });
+  await mkdir(path.join(rootDir, "src", "nested"), { recursive: true });
+  await writeFile(path.join(rootDir, "src", "run.sh"), "#!/bin/sh\n");
+  await chmod(path.join(rootDir, "src", "run.sh"), 0o755);
+  await writeFile(path.join(rootDir, "src", "nested", "b.txt"), "bravo\n");
+  await writeFile(path.join(rootDir, "a.txt"), "alpha\n");
 };
 
 const findChild = (directory: DirectoryMerkleDirectoryNode, name: string): DirectoryMerkleNode => {
@@ -95,9 +96,9 @@ describe("createDirectoryMerkleTree", () => {
     const withoutEmptyDirectory = await makeTempDir();
 
     try {
-      await writeFile(join(withEmptyDirectory, "a.txt"), "alpha\n");
-      await mkdir(join(withEmptyDirectory, "empty"));
-      await writeFile(join(withoutEmptyDirectory, "a.txt"), "alpha\n");
+      await writeFile(path.join(withEmptyDirectory, "a.txt"), "alpha\n");
+      await mkdir(path.join(withEmptyDirectory, "empty"));
+      await writeFile(path.join(withoutEmptyDirectory, "a.txt"), "alpha\n");
 
       const treeWithEmptyDirectory = await createDirectoryMerkleTree(withEmptyDirectory);
       const treeWithoutEmptyDirectory = await createDirectoryMerkleTree(withoutEmptyDirectory);
@@ -116,10 +117,10 @@ describe("createDirectoryMerkleTree", () => {
     const plainRoot = await makeTempDir();
 
     try {
-      await writeFile(join(executableRoot, "tool"), "run\n");
-      await chmod(join(executableRoot, "tool"), 0o755);
-      await writeFile(join(plainRoot, "tool"), "run\n");
-      await chmod(join(plainRoot, "tool"), 0o644);
+      await writeFile(path.join(executableRoot, "tool"), "run\n");
+      await chmod(path.join(executableRoot, "tool"), 0o755);
+      await writeFile(path.join(plainRoot, "tool"), "run\n");
+      await chmod(path.join(plainRoot, "tool"), 0o644);
 
       const executableTree = await createDirectoryMerkleTree(executableRoot);
       const plainTree = await createDirectoryMerkleTree(plainRoot);
@@ -137,8 +138,8 @@ describe("createDirectoryMerkleTree", () => {
     const rootDir = await makeTempDir();
 
     try {
-      await writeFile(join(rootDir, "target.txt"), "target\n");
-      await symlink("target.txt", join(rootDir, "link.txt"));
+      await writeFile(path.join(rootDir, "target.txt"), "target\n");
+      await symlink("target.txt", path.join(rootDir, "link.txt"));
 
       await expect(createDirectoryMerkleTree(rootDir)).rejects.toThrow("does not support symlinks");
     } finally {

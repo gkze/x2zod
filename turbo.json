@@ -109,6 +109,10 @@
       "passThroughEnv": ["SHELLCHECK_BINARY"]
     },
     "//#lint:toml": { "inputs": ["$TURBO_ROOT$/prek.toml"], "outputs": [] },
+    "//#lint:hooks": {
+      "inputs": ["$TURBO_ROOT$/package.json", "$TURBO_ROOT$/prek.toml"],
+      "outputs": []
+    },
     "gen:check": { "inputs": ["$TURBO_DEFAULT$"], "outputs": [] },
     "lint": {
       "inputs": [

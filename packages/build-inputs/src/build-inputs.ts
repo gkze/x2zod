@@ -1,5 +1,3 @@
-/// <reference path="./tar-v6.d.ts" />
-
 import { createHash } from "node:crypto";
 import { createWriteStream, existsSync } from "node:fs";
 import { access, chmod, mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
@@ -9,8 +7,8 @@ import { MIMEType } from "node:util";
 
 import type { MinimatchOptions } from "minimatch";
 import { Minimatch } from "minimatch";
-import type { FileStat } from "tar-v6";
-import * as tar from "tar-v6";
+import type { ReadEntry } from "tar";
+import * as tar from "tar";
 import { match, P } from "ts-pattern";
 import type { JsonValue } from "type-fest";
 import type { Entry as ZipEntry, ZipFile } from "yauzl";
@@ -28,7 +26,7 @@ export const buildInputsModes = ["check", "materialize", "update-lock"] as const
 const defaultConfigPath = "build-inputs.json";
 const defaultLockfilePath = "build-inputs.lock.json";
 const jsonValueSchema: z.ZodType<JsonValue> = z.json();
-const buildInputIdPattern = /^[a-z0-9][a-z0-9-]*$/;
+const buildInputIdPattern = /^[a-z0-9][a-z0-9-]*$/u;
 
 const canParseSha256Hex = (value: string): boolean => {
   if (value.length !== 64 || value !== value.toLowerCase()) return false;
@@ -62,7 +60,7 @@ export const buildInputFileDeclarationSchema = z
     id: buildInputIdSchema,
     path: z.string().min(1),
     type: z.literal("file").optional(),
-    url: z.string().url(),
+    url: z.url(),
   })
   .strict();
 
@@ -81,7 +79,7 @@ export const buildInputArchiveDeclarationSchema = z
     id: buildInputIdSchema,
     type: z.literal("archive"),
     unpack: buildInputArchiveUnpackDeclarationSchema,
-    url: z.string().url(),
+    url: z.url(),
   })
   .strict();
 
@@ -113,7 +111,7 @@ export const buildInputArchiveLockEntrySchema = z
         totalSizeBytes: z.number().int().nonnegative(),
       })
       .strict(),
-    source: buildInputsLockEntrySchema.extend({ url: z.string().url() }),
+    source: buildInputsLockEntrySchema.extend({ url: z.url() }),
     type: z.literal("archive"),
   })
   .strict();
@@ -121,7 +119,7 @@ export const buildInputArchiveLockEntrySchema = z
 export const buildInputsLockSchema = z
   .object({
     inputs: z.record(buildInputIdSchema, buildInputArchiveLockEntrySchema).optional(),
-    urls: z.record(z.string().url(), buildInputsLockEntrySchema),
+    urls: z.record(z.url(), buildInputsLockEntrySchema),
     version: z.literal(1),
   })
   .strict();
@@ -160,7 +158,7 @@ export const buildInputFileResultSchema = z
     sha256: sha256HexSchema,
     sizeBytes: z.number().int().nonnegative(),
     type: z.literal("file").optional(),
-    url: z.string().url(),
+    url: z.url(),
   })
   .strict();
 
@@ -175,7 +173,7 @@ export const buildInputArchiveResultSchema = z
     sourceSizeBytes: z.number().int().nonnegative(),
     totalSizeBytes: z.number().int().nonnegative(),
     type: z.literal("archive"),
-    url: z.string().url(),
+    url: z.url(),
   })
   .strict();
 
@@ -269,7 +267,7 @@ const jsonExtensions = new Set(["json", "map"]);
 const markdownExtensions = new Set(["markdown", "md", "mkd"]);
 
 const parseMediaType = (contentType: string | null): string | undefined => {
-  if (!contentType) return undefined;
+  if (contentType === null || contentType.length === 0) return undefined;
 
   try {
     return new MIMEType(contentType).essence.toLowerCase();
@@ -280,19 +278,12 @@ const parseMediaType = (contentType: string | null): string | undefined => {
 
 const detectFormatFromContentType = (contentType: string | null): BuildInputFormat | undefined => {
   const mediaType = parseMediaType(contentType);
-  if (!mediaType) return undefined;
+  if (mediaType === undefined) return undefined;
 
-  return match(mediaType)
-    .with(
-      P.when((mt) => jsonMediaTypes.has(mt)),
-      () => "json" as const,
-    )
-    .with(
-      P.when((mt) => markdownMediaTypes.has(mt)),
-      () => "markdown" as const,
-    )
-    .with(P.string.endsWith("+json"), () => "json" as const)
-    .otherwise(() => undefined);
+  if (jsonMediaTypes.has(mediaType) || mediaType.endsWith("+json")) return "json";
+  if (markdownMediaTypes.has(mediaType)) return "markdown";
+
+  return undefined;
 };
 
 const detectFormatFromPath = (filePath: string): BuildInputFormat => {
@@ -340,21 +331,31 @@ const getStructuredFormatPath = (
     .otherwise(() => input.absolutePath);
 };
 
-const formatDownloadedContent = async (
+const parseJson = (content: string): JsonValue => jsonValueSchema.parse(JSON.parse(content));
+
+const formatDownloadedJsonContent = (content: string): string =>
+  `${JSON.stringify(parseJson(content), null, 2)}\n`;
+
+const formatDownloadedContent = (
   input: ResolvedBuildInputFile,
   content: string,
   format: Exclude<BuildInputFormat, "text">,
-): Promise<string> => formatWithOxfmt(content, getStructuredFormatPath(input, format));
-
-const parseJson = (content: string): JsonValue => jsonValueSchema.parse(JSON.parse(content));
+): string =>
+  format === "json"
+    ? formatWithOxfmt(formatDownloadedJsonContent(content), getStructuredFormatPath(input, format))
+    : formatWithOxfmt(content, getStructuredFormatPath(input, format));
 
 const readJsonFile = async (filePath: string): Promise<JsonValue> =>
   parseJson(await readFile(filePath, "utf8"));
 
-const pathExists = async (filePath: string): Promise<boolean> =>
-  access(filePath)
-    .then(() => true)
-    .catch(() => false);
+const pathExists = async (filePath: string): Promise<boolean> => {
+  try {
+    await access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+};
 
 const resolveBuildInputPath = (rootDir: string, filePath: string, mustExist: boolean): string => {
   const resolved = path.resolve(rootDir, filePath);
@@ -383,6 +384,13 @@ const readBuildInputsLock = async (lockfilePath: string): Promise<BuildInputsLoc
 
   return buildInputsLockSchema.parse(await readJsonFile(lockfilePath));
 };
+
+const readExistingBuildInputsLockOrDefault = async (
+  lockfilePath: string,
+): Promise<BuildInputsLock> =>
+  (await pathExists(lockfilePath))
+    ? buildInputsLockSchema.parse(await readJsonFile(lockfilePath))
+    : emptyBuildInputsLock;
 
 const resolveBuildInput = (rootDir: string, input: BuildInputDeclaration): ResolvedBuildInput =>
   match(input)
@@ -469,7 +477,7 @@ const readAndResolveBuildInputs = async (
   return inputs;
 };
 
-export const readDeclaredBuildInputs = async (
+export const readDeclaredBuildInputs = (
   rootDir = process.cwd(),
   configPath = defaultConfigPath,
 ): Promise<readonly ResolvedBuildInput[]> =>
@@ -479,7 +487,7 @@ const selectBuildInputs = (
   inputs: readonly ResolvedBuildInput[],
   ids: readonly BuildInputId[] | undefined,
 ): readonly ResolvedBuildInput[] => {
-  if (!ids || ids.length === 0) return inputs;
+  if (ids === undefined || ids.length === 0) return inputs;
 
   const requestedIds = new Set(ids);
   const selected = inputs.filter((input) => requestedIds.has(input.id));
@@ -671,7 +679,7 @@ const shouldMaterializeArchivePath = (
 const getArchiveOutputPath = (outputDir: string, relativePath: string): string =>
   resolveBuildInputPath(outputDir, relativePath, false);
 
-const readTarEntryType = (entry: FileStat): string | undefined => entry.header.type;
+const readTarEntryType = (entry: ReadEntry): string | undefined => entry.type;
 
 const materializableTarEntryTypes = new Set(["ContiguousFile", "Directory", "File", "OldFile"]);
 
@@ -684,19 +692,19 @@ const tarMetadataEntryTypes = new Set([
   "OldGnuLongPath",
 ]);
 
-const isTarMetadataEntry = (entry: FileStat): boolean => {
+const isTarMetadataEntry = (entry: ReadEntry): boolean => {
   const entryType = readTarEntryType(entry);
-  return entryType ? tarMetadataEntryTypes.has(entryType) : false;
+  return entryType === undefined ? false : tarMetadataEntryTypes.has(entryType);
 };
 
 const assertSupportedTarEntry = (
   input: ResolvedBuildInputArchive,
   entryPath: string,
-  entry: FileStat,
+  entry: ReadEntry,
 ): void => {
   const entryType = readTarEntryType(entry);
 
-  if (!entryType)
+  if (entryType === undefined)
     throw new Error(
       `Build input ${input.id} contains unsupported tar entry ${entryPath} with unknown type`,
     );
@@ -719,6 +727,9 @@ const extractTarArchive = async (
     cwd: outputDir,
     file: archivePath,
     filter: (entryPath, entry) => {
+      if (!("header" in entry))
+        throw new Error(`Build input ${input.id} received an unexpected tar entry shape`);
+
       const relativePath = normalizeArchivePath(entryPath, input.unpack.stripComponents);
 
       if (relativePath === undefined) return false;
@@ -823,7 +834,7 @@ const extractZipArchive = async (
       resolve();
     });
     zipFile.on("entry", (entry: ZipEntry) => {
-      void (async () => {
+      void (async (): Promise<void> => {
         if (entry.isEncrypted())
           throw new Error(`Build input ${input.id} contains encrypted zip entry ${entry.fileName}`);
 
@@ -1303,9 +1314,7 @@ export const buildInputs = async (options: BuildInputsOptions = {}): Promise<Bui
       : requestedInputs;
   const existingLock =
     mode === "update-lock"
-      ? (await pathExists(resolvedLockfilePath))
-        ? buildInputsLockSchema.parse(await readJsonFile(resolvedLockfilePath))
-        : emptyBuildInputsLock
+      ? await readExistingBuildInputsLockOrDefault(resolvedLockfilePath)
       : await readBuildInputsLock(resolvedLockfilePath);
 
   if (mode === "check")

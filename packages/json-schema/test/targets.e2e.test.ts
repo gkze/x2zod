@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync, rmSync } from "node:fs";
-import { join, resolve } from "node:path";
+import nodePath from "node:path";
 
 import { buildInputs } from "@x2zod/build-inputs";
 import type { Diagnostic, InputDocument } from "@x2zod/core";
@@ -9,6 +9,7 @@ import {
   buildNodeBundle,
   createTemporaryDirectory,
   importGeneratedExport,
+  isNativePreviewShutdownStderr,
   isRecord,
   nativePreviewExternals,
   runNode,
@@ -25,11 +26,11 @@ import type {
 } from "./target-matrix";
 
 const testDirectory = import.meta.dirname;
-const packageRootDirectory = resolve(testDirectory, "..");
-const tempRootDirectory = join(packageRootDirectory, "node_modules/.cache");
+const packageRootDirectory = nodePath.resolve(testDirectory, "..");
+const tempRootDirectory = nodePath.join(packageRootDirectory, "node_modules/.cache");
 const tempDirectoryPrefix = "x2zod-json-schema-targets-";
-const targetFixtureDirectory = join(testDirectory, "fixtures/targets");
-const printerHelperEntryPoint = join(testDirectory, "target-print-helper.ts");
+const targetFixtureDirectory = nodePath.join(testDirectory, "fixtures/targets");
+const printerHelperEntryPoint = nodePath.join(testDirectory, "target-print-helper.ts");
 const bundledPrinterFileName = "target-print-helper.mjs";
 const generatedModuleFileName = "target.generated.ts";
 const optionsFileName = "plugin-options.json";
@@ -52,7 +53,7 @@ type DiagnosticReport = Readonly<{
 
 type BuildInputProvenance = Readonly<{ id: string; path: string; url: string }>;
 
-const targetFixture = (fileName: string): string => join(targetFixtureDirectory, fileName);
+const targetFixture = (fileName: string): string => nodePath.join(targetFixtureDirectory, fileName);
 
 const isTargetZodSchema = (value: unknown): value is TargetZodSchema =>
   isRecord(value) && typeof value["safeParse"] === "function";
@@ -86,7 +87,11 @@ const printTargetSource = ({
   schemaFile,
   typeName,
 }: PrintTargetSourceRequest): string =>
-  runNode({ args: [bundleFile, schemaFile, typeName, optionsFile], cwd: packageRootDirectory });
+  runNode({
+    allowedStderr: isNativePreviewShutdownStderr,
+    args: [bundleFile, schemaFile, typeName, optionsFile],
+    cwd: packageRootDirectory,
+  });
 
 const targetDocument = (schemaFile: string): InputDocument => ({
   source: { kind: "file", path: schemaFile },
@@ -179,9 +184,9 @@ describe("JSON Schema public target E2E matrix", () => {
       prefix: tempDirectoryPrefix,
       rootDirectory: tempRootDirectory,
     });
-    const bundleFile = join(directory, bundledPrinterFileName);
-    const generatedFile = join(directory, generatedModuleFileName);
-    const optionsFile = join(directory, optionsFileName);
+    const bundleFile = nodePath.join(directory, bundledPrinterFileName);
+    const generatedFile = nodePath.join(directory, generatedModuleFileName);
+    const optionsFile = nodePath.join(directory, optionsFileName);
 
     try {
       await Bun.write(optionsFile, JSON.stringify(target.pluginOptions));

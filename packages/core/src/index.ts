@@ -142,4 +142,4 @@ export type {
   ZodReferenceExpressionInput,
   ZodSymbol,
 } from "./zod-plan";
-export * as ts from "@typescript/native-preview/ast";
+export * as ts from "@typescript/native-preview/unstable/ast";

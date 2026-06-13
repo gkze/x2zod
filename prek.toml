@@ -4,52 +4,13 @@
 repo = "local"
 
 [[repos.hooks]]
-id = "taplo"
-name = "taplo"
+id = "check"
+name = "check"
 language = "system"
-entry = "bun run format:check:toml"
+entry = "bun run check"
 pass_filenames = false
-stages = ["pre-commit"]
-
-[[repos.hooks]]
-id = "shfmt"
-name = "shfmt"
-language = "system"
-entry = "bun run format:check:shell"
-pass_filenames = false
-stages = ["pre-commit"]
-
-[[repos.hooks]]
-id = "shellcheck"
-name = "shellcheck"
-language = "system"
-entry = "bun run lint:shell"
-pass_filenames = false
-stages = ["pre-commit"]
-
-[[repos.hooks]]
-id = "markdownlint"
-name = "markdownlint"
-language = "system"
-entry = "bun run lint:markdown"
-pass_filenames = false
-stages = ["pre-commit"]
-
-[[repos.hooks]]
-id = "oxfmt"
-name = "oxfmt"
-language = "system"
-entry = "bun run format:check"
-pass_filenames = false
-stages = ["pre-commit"]
-
-[[repos.hooks]]
-id = "lint"
-name = "lint"
-language = "system"
-entry = "bun run lint"
-pass_filenames = false
-stages = ["pre-commit"]
+always_run = true
+stages = ["pre-commit", "pre-push"]
 
 [[repos.hooks]]
 id = "commitlint"
@@ -59,12 +20,3 @@ entry = "bun run commitlint --edit"
 pass_filenames = true
 always_run = true
 stages = ["commit-msg"]
-
-[[repos.hooks]]
-id = "check"
-name = "check"
-language = "system"
-entry = "bun run check"
-pass_filenames = false
-always_run = true
-stages = ["pre-push"]

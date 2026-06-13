@@ -15,7 +15,9 @@ const generateBuildInputsSchemaArgsSchema = z
   .array(z.literal("--check"))
   .transform((args) => ({ check: args.includes("--check") }));
 
-const createBuildInputsJsonSchema = () => {
+type GenerateBuildInputsSchemaArgs = z.infer<typeof generateBuildInputsSchemaArgsSchema>;
+
+const createBuildInputsJsonSchema = (): Readonly<Record<string, unknown>> => {
   const generatedSchema = z.toJSONSchema(buildInputsDeclarationSchema, {
     io: "input",
     reused: "inline",
@@ -39,7 +41,9 @@ const renderBuildInputsJsonSchema = (): string =>
     buildInputsSchemaPath,
   );
 
-const parseGenerateBuildInputsSchemaArgs = (args: readonly string[]) => {
+const parseGenerateBuildInputsSchemaArgs = (
+  args: readonly string[],
+): GenerateBuildInputsSchemaArgs => {
   const parsed = generateBuildInputsSchemaArgsSchema.safeParse(args);
 
   if (parsed.success) return parsed.data;
@@ -49,8 +53,11 @@ const parseGenerateBuildInputsSchemaArgs = (args: readonly string[]) => {
   throw new Error(`Unknown generate-build-inputs-schema argument: ${unknownArg}`);
 };
 
-const readTextFileIfPresent = async (filePath: string): Promise<string | undefined> =>
-  (await Bun.file(filePath).exists()) ? await Bun.file(filePath).text() : undefined;
+const readTextFileIfPresent = async (filePath: string): Promise<string | undefined> => {
+  if (!(await Bun.file(filePath).exists())) return undefined;
+
+  return Bun.file(filePath).text();
+};
 
 const main = async (): Promise<void> => {
   const args = parseGenerateBuildInputsSchemaArgs(Bun.argv.slice(2));

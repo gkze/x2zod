@@ -1,4 +1,4 @@
-import type { SourceFile } from "@typescript/native-preview/ast";
+import type { SourceFile } from "@typescript/native-preview/unstable/ast";
 
 import { createDiagnostic, formatZodError } from "./diagnostics";
 import type { InputDocumentInput, InputPlugin, PluginOptionsSchema, PreparedInput } from "./input";

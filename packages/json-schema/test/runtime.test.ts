@@ -1,21 +1,22 @@
 import { describe, expect, test } from "bun:test";
 import { rmSync } from "node:fs";
-import { join, resolve } from "node:path";
+import nodePath from "node:path";
 
 import {
   buildNodeBundle,
   createTemporaryDirectory,
   importGeneratedExport,
+  isNativePreviewShutdownStderr,
   isRecord,
   nativePreviewExternals,
   runNode,
 } from "../../../test/native-source-harness";
 import type { JsonObject, JsonSchemaValue } from "../src";
 
-const packageRootDirectory = resolve(import.meta.dirname, "..");
-const tempRootDirectory = join(packageRootDirectory, "node_modules/.cache");
+const packageRootDirectory = nodePath.resolve(import.meta.dirname, "..");
+const tempRootDirectory = nodePath.join(packageRootDirectory, "node_modules/.cache");
 const tempDirectoryPrefix = "x2zod-json-schema-runtime-";
-const printerHelperEntryPoint = join(import.meta.dirname, "runtime-print-helper.ts");
+const printerHelperEntryPoint = nodePath.join(import.meta.dirname, "runtime-print-helper.ts");
 const bundledPrinterFileName = "runtime-print-helper.mjs";
 const schemaFileName = "schema.json";
 const externalSchemaFileName = "external-schema.json";
@@ -54,6 +55,7 @@ const printRuntimeFixture = (
   externalSchemaFile?: string,
 ): string =>
   runNode({
+    allowedStderr: isNativePreviewShutdownStderr,
     args: [
       bundleFile,
       schemaFile,
@@ -114,9 +116,9 @@ describe("JSON Schema generated runtime source", () => {
       prefix: tempDirectoryPrefix,
       rootDirectory: tempRootDirectory,
     });
-    const bundleFile = join(directory, bundledPrinterFileName);
-    const schemaFile = join(directory, schemaFileName);
-    const generatedFile = join(directory, generatedModuleFileName);
+    const bundleFile = nodePath.join(directory, bundledPrinterFileName);
+    const schemaFile = nodePath.join(directory, schemaFileName);
+    const generatedFile = nodePath.join(directory, generatedModuleFileName);
 
     try {
       await writeRuntimeFixtureSchema(schemaFile);
@@ -160,10 +162,10 @@ describe("JSON Schema generated runtime source", () => {
       prefix: tempDirectoryPrefix,
       rootDirectory: tempRootDirectory,
     });
-    const bundleFile = join(directory, bundledPrinterFileName);
-    const schemaFile = join(directory, schemaFileName);
-    const externalSchemaFile = join(directory, externalSchemaFileName);
-    const generatedFile = join(directory, generatedModuleFileName);
+    const bundleFile = nodePath.join(directory, bundledPrinterFileName);
+    const schemaFile = nodePath.join(directory, schemaFileName);
+    const externalSchemaFile = nodePath.join(directory, externalSchemaFileName);
+    const generatedFile = nodePath.join(directory, generatedModuleFileName);
 
     try {
       await writeExternalReferenceFixture(schemaFile, externalSchemaFile);

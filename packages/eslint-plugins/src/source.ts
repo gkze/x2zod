@@ -2,17 +2,17 @@ import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import path from "node:path";
 
-import { getTokenAtPosition, isStringLiteral } from "@typescript/native-preview/ast";
-import type { SourceFile } from "@typescript/native-preview/ast";
-import { createVirtualFileSystem } from "@typescript/native-preview/fs";
-import type { FileSystem } from "@typescript/native-preview/fs";
-import { API, TypeFlags } from "@typescript/native-preview/sync";
+import { getTokenAtPosition, isStringLiteral } from "@typescript/native-preview/unstable/ast";
+import type { SourceFile } from "@typescript/native-preview/unstable/ast";
+import { createVirtualFileSystem } from "@typescript/native-preview/unstable/fs";
+import type { FileSystem } from "@typescript/native-preview/unstable/fs";
+import { API, TypeFlags } from "@typescript/native-preview/unstable/sync";
 import type {
   Project,
   Snapshot,
   Type,
   UnionOrIntersectionType,
-} from "@typescript/native-preview/sync";
+} from "@typescript/native-preview/unstable/sync";
 
 import type { RuleContext } from "#rule";
 

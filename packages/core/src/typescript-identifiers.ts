@@ -1,7 +1,7 @@
 import {
   isIdentifierPart,
   isIdentifierText as isTypeScriptIdentifierText,
-} from "@typescript/native-preview/ast";
+} from "@typescript/native-preview/unstable/ast";
 import { z } from "zod/v4";
 
 export type TypeScriptIdentifier = string & z.$brand<"TypeScriptIdentifier">;

@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-import type { NonEmptyString, OptionName } from "@optique/core";
+import type { NonEmptyString, OptionName, Parser } from "@optique/core";
 import {
   ensureNonEmptyString,
   flag,
@@ -27,6 +27,13 @@ const directoryMetavar = nonEmptyString("DIR");
 const idMetavar = nonEmptyString("ID");
 const pathMetavar = nonEmptyString("PATH");
 
+interface StringOptionConfig {
+  descriptionText: string;
+  longName: OptionName;
+  metavar: NonEmptyString;
+  shortName: OptionName;
+}
+
 const modeParser = map(
   optional(
     or(
@@ -47,12 +54,12 @@ const modeParser = map(
   (mode): BuildInputsMode => mode ?? "materialize",
 );
 
-const optionalStringOption = (
-  shortName: OptionName,
-  longName: OptionName,
-  metavar: NonEmptyString,
-  descriptionText: string,
-) =>
+const optionalStringOption = ({
+  descriptionText,
+  longName,
+  metavar,
+  shortName,
+}: StringOptionConfig): Parser<"sync", string | undefined> =>
   optional(
     option(shortName, longName, string({ metavar }), {
       description: message`${text(descriptionText)}`,
@@ -61,12 +68,12 @@ const optionalStringOption = (
 
 const cliParser = map(
   object({
-    configPath: optionalStringOption(
-      "-c",
-      "--config",
-      pathMetavar,
-      "Declaration path relative to root. Defaults to build-inputs.json.",
-    ),
+    configPath: optionalStringOption({
+      descriptionText: "Declaration path relative to root. Defaults to build-inputs.json.",
+      longName: "--config",
+      metavar: pathMetavar,
+      shortName: "-c",
+    }),
     ids: multiple(
       map(
         option("-i", "--id", string({ metavar: idMetavar }), {
@@ -75,47 +82,50 @@ const cliParser = map(
         (id) => buildInputIdSchema.parse(id),
       ),
     ),
-    lockfilePath: optionalStringOption(
-      "-l",
-      "--lockfile",
-      pathMetavar,
-      "Lockfile path relative to root. Defaults to build-inputs.lock.json.",
-    ),
+    lockfilePath: optionalStringOption({
+      descriptionText: "Lockfile path relative to root. Defaults to build-inputs.lock.json.",
+      longName: "--lockfile",
+      metavar: pathMetavar,
+      shortName: "-l",
+    }),
     mode: modeParser,
-    rootDir: optionalStringOption(
-      "-r",
-      "--root",
-      directoryMetavar,
-      "Directory containing build-inputs.json and " + "build-inputs.lock.json. Defaults to cwd.",
-    ),
+    rootDir: optionalStringOption({
+      descriptionText:
+        "Directory containing build-inputs.json and build-inputs.lock.json. Defaults to cwd.",
+      longName: "--root",
+      metavar: directoryMetavar,
+      shortName: "-r",
+    }),
   }),
   (args): BuildInputsOptions => ({
     ids: [...args.ids],
     mode: args.mode,
-    ...(args.configPath ? { configPath: args.configPath } : {}),
-    ...(args.lockfilePath ? { lockfilePath: args.lockfilePath } : {}),
-    ...(args.rootDir ? { rootDir: args.rootDir } : {}),
+    ...(args.configPath === undefined ? {} : { configPath: args.configPath }),
+    ...(args.lockfilePath === undefined ? {} : { lockfilePath: args.lockfilePath }),
+    ...(args.rootDir === undefined ? {} : { rootDir: args.rootDir }),
   }),
 );
 
-const buildInputsOptions = runParser(cliParser, programName, process.argv.slice(2), {
-  aboveError: "usage",
-  brief: message`Materialize declared URL build inputs into filesystem paths with a checked lockfile.`,
-  colors: process.stdout.isTTY,
-  description: message`By default, ${programName} downloads each declared URL and verifies the content hash against build-inputs.lock.json before writing the target file or unpacked archive directory.`,
-  help: {
-    option: true,
-    onShow: (exitCode = 0): never => {
+export const main = async (): Promise<void> => {
+  const buildInputsOptions = runParser(cliParser, programName, process.argv.slice(2), {
+    aboveError: "usage",
+    brief: message`Materialize declared URL build inputs into filesystem paths with a checked lockfile.`,
+    colors: process.stdout.isTTY,
+    description: message`By default, ${programName} downloads each declared URL and verifies the content hash against build-inputs.lock.json before writing the target file or unpacked archive directory.`,
+    help: {
+      option: true,
+      onShow: (exitCode): never => {
+        process.exit(exitCode);
+      },
+    },
+    maxWidth: process.stdout.columns,
+    onError: (exitCode): never => {
       process.exit(exitCode);
     },
-  },
-  maxWidth: process.stdout.columns,
-  onError: (exitCode = 1): never => {
-    process.exit(exitCode);
-  },
-  showDefault: true,
-});
+    showDefault: true,
+  });
 
-const result = await buildInputs(buildInputsOptions);
+  const result = await buildInputs(buildInputsOptions);
 
-process.stdout.write(`${result.mode} ${result.inputs.length.toString()} build input(s)\n`);
+  process.stdout.write(`${result.mode} ${result.inputs.length.toString()} build input(s)\n`);
+};

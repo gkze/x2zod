@@ -1,17 +1,19 @@
 import { expect } from "bun:test";
 import { mkdirSync, mkdtempSync } from "node:fs";
-import { join } from "node:path";
+import nodePath from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { isRecord } from "./structural";
+
 export { isRecord } from "./structural";
 
 const textDecoder = new TextDecoder();
+export const nativePreviewShutdownStderr = "context canceled\n";
 
 export const nativePreviewExternals = [
-  "@typescript/native-preview/ast",
-  "@typescript/native-preview/ast/factory",
-  "@typescript/native-preview/sync",
+  "@typescript/native-preview/unstable/ast",
+  "@typescript/native-preview/unstable/ast/factory",
+  "@typescript/native-preview/unstable/sync",
   "zod/v4",
 ] as const;
 
@@ -31,6 +33,9 @@ type RunNodeRequest = Readonly<{
 }>;
 
 export const outputText = (output: Uint8Array): string => textDecoder.decode(output);
+
+export const isNativePreviewShutdownStderr = (stderr: string): boolean =>
+  stderr === nativePreviewShutdownStderr;
 
 export const buildNodeBundle = ({
   cwd,
@@ -65,7 +70,7 @@ export const createTemporaryDirectory = ({
   rootDirectory,
 }: CreateTemporaryDirectoryRequest): string => {
   mkdirSync(rootDirectory, { recursive: true });
-  return mkdtempSync(join(rootDirectory, prefix));
+  return mkdtempSync(nodePath.join(rootDirectory, prefix));
 };
 
 export const runNode = ({ allowedStderr, args, cwd }: RunNodeRequest): string => {

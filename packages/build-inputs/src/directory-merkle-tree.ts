@@ -256,9 +256,7 @@ const hashFileContent = async (absolutePath: string): Promise<FileContentHash> =
   const hash = createHash("sha256");
   let sizeBytes = 0;
 
-  for await (const chunk of createReadStream(absolutePath)) {
-    const buffer = typeof chunk === "string" ? Buffer.from(chunk, "utf8") : chunk;
-
+  for await (const buffer of createReadStream(absolutePath) as AsyncIterable<Buffer>) {
     sizeBytes += buffer.byteLength;
     hash.update(buffer);
   }
