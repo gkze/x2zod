@@ -1,5 +1,11 @@
 # @x2zod/tsconfig
 
+## 0.1.1
+
+### Patch Changes
+
+- Patch release after initial registry bootstrap.
+
 ## 0.0.1
 
 ### Patch Changes

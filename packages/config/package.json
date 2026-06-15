@@ -1,6 +1,6 @@
 {
   "name": "@x2zod/config",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Project configuration loading and resolution for x2zod.",
   "license": "MIT",
   "repository": {
