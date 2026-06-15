@@ -1,6 +1,6 @@
 {
   "name": "@x2zod/eslint-plugins",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "ESLint-compatible Oxlint plugins for x2zod code quality.",
   "license": "MIT",
   "repository": {

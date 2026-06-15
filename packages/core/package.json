@@ -1,6 +1,6 @@
 {
   "name": "@x2zod/core",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Core compiler contracts and TypeScript source construction for x2zod.",
   "license": "MIT",
   "repository": {
