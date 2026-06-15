@@ -15,7 +15,7 @@
   "type": "module",
   "scripts": {
     "changeset": "changeset",
-    "check": "turbo run //#format:check:workspace //#format:check:shell //#format:check:toml //#lint:actions //#lint:hooks //#lint:markdown //#lint:repo //#lint:shell //#lint:toml gen:check lint typecheck test",
+    "check": "turbo run //#format:check:workspace //#format:check:shell //#format:check:toml //#lint:actions //#lint:hooks //#lint:markdown //#lint:repo //#lint:shell //#lint:toml //#test:repo gen:check lint typecheck test",
     "commitlint": "commitlint",
     "format": "turbo run //#format:workspace //#format:shell //#format:toml",
     "format:check": "turbo run //#format:check:workspace //#format:check:shell //#format:check:toml",
@@ -41,6 +41,7 @@
     "publish:packages": "bun scripts/publish.ts",
     "release:version": "changeset version && bun scripts/publish.ts --sync-jsr-metadata && bun install",
     "test": "turbo run test",
+    "test:repo": "bun test ./scripts",
     "typecheck": "turbo run typecheck",
     "x2zod": "x2zod"
   },
@@ -58,7 +59,7 @@
     "@optique/core": "1.0.2",
     "@optique/run": "1.0.2",
     "@taplo/cli": "0.7.0",
-    "@types/bun": "1.3.14",
+    "@types/node": "25.6.1",
     "@typescript/native-preview": "7.0.0-dev.20260612.1",
     "@wasm-fmt/shfmt": "0.2.7",
     "@x2zod/cli": "workspace:*",

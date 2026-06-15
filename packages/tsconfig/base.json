@@ -39,7 +39,7 @@
     "strictPropertyInitialization": true,
     "stripInternal": true,
     "target": "ESNext",
-    "types": ["bun"],
+    "types": ["node"],
     "useUnknownInCatchVariables": true,
     "verbatimModuleSyntax": true
   }

@@ -1,4 +1,5 @@
-import { expect } from "bun:test";
+import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync } from "node:fs";
 import nodePath from "node:path";
 import { pathToFileURL } from "node:url";
@@ -9,10 +10,12 @@ export { isRecord } from "./structural";
 
 const textDecoder = new TextDecoder();
 export const nativePreviewShutdownStderr = "context canceled\n";
+const bunExecutable = process.execPath;
 
 export const nativePreviewExternals = [
   "@typescript/native-preview/unstable/ast",
   "@typescript/native-preview/unstable/ast/factory",
+  "@typescript/native-preview/unstable/async",
   "@typescript/native-preview/unstable/sync",
   "zod/v4",
 ] as const;
@@ -43,9 +46,9 @@ export const buildNodeBundle = ({
   externals,
   outfile,
 }: BuildNodeBundleRequest): void => {
-  const result = Bun.spawnSync({
-    cmd: [
-      "bun",
+  const result = spawnSync(
+    bunExecutable,
+    [
       "build",
       entryPoint,
       "--outfile",
@@ -56,13 +59,11 @@ export const buildNodeBundle = ({
       "esm",
       ...externals.flatMap((external) => ["--external", external]),
     ],
-    cwd,
-    stderr: "pipe",
-    stdout: "pipe",
-  });
+    { cwd, stdio: ["ignore", "pipe", "pipe"] },
+  );
 
-  expect(outputText(result.stderr)).toBe("");
-  expect(result.exitCode).toBe(0);
+  assert.equal(outputText(result.stderr), "");
+  assert.equal(result.status, 0);
 };
 
 export const createTemporaryDirectory = ({
@@ -74,16 +75,14 @@ export const createTemporaryDirectory = ({
 };
 
 export const runNode = ({ allowedStderr, args, cwd }: RunNodeRequest): string => {
-  const result = Bun.spawnSync({
-    cmd: ["node", "--no-warnings", ...args],
+  const result = spawnSync("node", ["--no-warnings", ...args], {
     ...(cwd === undefined ? {} : { cwd }),
-    stderr: "pipe",
-    stdout: "pipe",
+    stdio: ["ignore", "pipe", "pipe"],
   });
 
   const stderr = outputText(result.stderr);
-  if (stderr !== "" && allowedStderr?.(stderr) !== true) expect(stderr).toBe("");
-  expect(result.exitCode).toBe(0);
+  if (stderr !== "" && allowedStderr?.(stderr) !== true) assert.equal(stderr, "");
+  assert.equal(result.status, 0);
   return outputText(result.stdout);
 };
 

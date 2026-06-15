@@ -5,6 +5,15 @@ import type { JsonSchemaValue } from "./document";
 import { jsonSchemaDialects, jsonSchemaSourceProfiles, jsonSchemaValidators } from "./metadata";
 import type { JsonSchemaDialect, JsonSchemaSourceProfile, JsonSchemaValidator } from "./metadata";
 
+type UnknownRecord = Readonly<Record<string, unknown>>;
+type JsonSchemaCLIOptionMetadata = Readonly<{
+  description: string;
+  long?: string | undefined;
+  short: string;
+  valueMode?: "json-file-map" | "string-array" | undefined;
+  valueName?: string | undefined;
+}>;
+
 export { jsonSchemaInputPluginKind } from "./metadata";
 export type {
   JsonSchemaDialect,
@@ -26,6 +35,14 @@ type JsonSchemaInputPluginOptionsInputValue = Readonly<{
   sourceProfile?: JsonSchemaSourceProfile | undefined;
   validator?: JsonSchemaValidator | undefined;
 }>;
+
+const withCLI = <TSchema extends z.ZodType>(
+  schema: TSchema,
+  metadata: JsonSchemaCLIOptionMetadata,
+): TSchema => {
+  const existingMetadata = schema.meta() as UnknownRecord | undefined;
+  return schema.meta({ ...existingMetadata, x2zodCLI: metadata } as never);
+};
 
 const jsonSchemaDialectSchemaValue: z.ZodType<JsonSchemaDialect, JsonSchemaDialect> =
   z.enum(jsonSchemaDialects);
@@ -61,10 +78,28 @@ const jsonSchemaInputPluginOptionsSchemaValue: z.ZodType<
   JsonSchemaInputPluginOptionsInputValue
 > = z
   .strictObject({
-    dialect: jsonSchemaDialectSchema.default("draft-2020-12"),
-    externalSchemas: externalSchemasSchemaValue.default({}),
-    sourceProfile: jsonSchemaSourceProfileSchema.default("none"),
-    validator: jsonSchemaValidatorSchema.default("ajv"),
+    dialect: withCLI(jsonSchemaDialectSchema.default("draft-2020-12"), {
+      description: "JSON Schema dialect.",
+      short: "-d",
+      valueName: "DIALECT",
+    }),
+    externalSchemas: withCLI(externalSchemasSchemaValue.default({}), {
+      description: "External JSON Schema resource mapping.",
+      long: "--external-schema",
+      short: "-E",
+      valueMode: "json-file-map",
+      valueName: "ID=FILE",
+    }),
+    sourceProfile: withCLI(jsonSchemaSourceProfileSchema.default("none"), {
+      description: "JSON Schema source compatibility profile.",
+      short: "-p",
+      valueName: "PROFILE",
+    }),
+    validator: withCLI(jsonSchemaValidatorSchema.default("ajv"), {
+      description: "JSON Schema validator policy.",
+      short: "-v",
+      valueName: "VALIDATOR",
+    }),
   })
   .readonly();
 export const jsonSchemaInputPluginOptionsSchema: z.ZodType<

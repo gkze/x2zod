@@ -1,4 +1,5 @@
-import { describe, expect, test } from "bun:test";
+import assert from "node:assert/strict";
+import { describe, test } from "node:test";
 
 import { z } from "zod/v4";
 
@@ -80,8 +81,8 @@ const defaultedOptionsPlugin = (receivedOptions: FactoryOptions[]): FactoryPlugi
   },
 });
 
-describe("compileToZodSource", () => {
-  test("orchestrates a plugin and returns a finalized source file", async () => {
+void describe("compileToZodSource", () => {
+  void test("orchestrates a plugin and returns a finalized source file", async () => {
     const result = await compileToZodSource({
       document,
       output: { typeName: "User" },
@@ -91,15 +92,15 @@ describe("compileToZodSource", () => {
     const { sourceFile } = unwrap(result);
     const expectedStatementCount = 3;
 
-    expect(sourceFile.fileName).toBe(generatedFileName);
-    expect(sourceFile.text).toBe("");
-    expect(sourceFile.statements.length).toBe(expectedStatementCount);
-    expect(importPath(sourceFile)).toBe("zod/v4");
-    expect(firstVariableDeclaration(sourceFile).name.text).toBe("userSchema");
-    expect(zodCallName(firstVariableDeclaration(sourceFile).initializer)).toBe("string");
+    assert.equal(sourceFile.fileName, generatedFileName);
+    assert.equal(sourceFile.text, "");
+    assert.equal(sourceFile.statements.length, expectedStatementCount);
+    assert.equal(importPath(sourceFile), "zod/v4");
+    assert.equal(firstVariableDeclaration(sourceFile).name.text, "userSchema");
+    assert.equal(zodCallName(firstVariableDeclaration(sourceFile).initializer), "string");
   });
 
-  test("uses the configured Zod import path", async () => {
+  void test("uses the configured Zod import path", async () => {
     const result = await compileToZodSource({
       document,
       output: { typeName: "User", zodImportPath: "zod" },
@@ -107,10 +108,10 @@ describe("compileToZodSource", () => {
       pluginOptions: {},
     });
 
-    expect(importPath(unwrap(result).sourceFile)).toBe("zod");
+    assert.equal(importPath(unwrap(result).sourceFile), "zod");
   });
 
-  test("validates plugin options and passes parsed defaults to plugin steps", async () => {
+  void test("validates plugin options and passes parsed defaults to plugin steps", async () => {
     const receivedOptions: FactoryOptions[] = [];
 
     const result = await compileToZodSource({
@@ -121,12 +122,12 @@ describe("compileToZodSource", () => {
     });
 
     const { sourceFile } = unwrap(result);
-    expect(firstVariableDeclaration(sourceFile).name.text).toBe("metricSchema");
-    expect(zodCallName(firstVariableDeclaration(sourceFile).initializer)).toBe("number");
-    expect(receivedOptions).toEqual([{ factory: "number" }, { factory: "number" }]);
+    assert.equal(firstVariableDeclaration(sourceFile).name.text, "metricSchema");
+    assert.equal(zodCallName(firstVariableDeclaration(sourceFile).initializer), "number");
+    assert.deepEqual(receivedOptions, [{ factory: "number" }, { factory: "number" }]);
   });
 
-  test("returns plugin prepare diagnostics without lowering", async () => {
+  void test("returns plugin prepare diagnostics without lowering", async () => {
     const diagnostic = createDiagnostic({
       code: "invalid_schema_document",
       message: "Input was not usable.",
@@ -151,10 +152,10 @@ describe("compileToZodSource", () => {
       pluginOptions: {},
     });
 
-    expect(result).toEqual({ diagnostics: [diagnostic], ok: false });
+    assert.deepEqual(result, { diagnostics: [diagnostic], ok: false });
   });
 
-  test("rejects invalid output type names", async () => {
+  void test("rejects invalid output type names", async () => {
     const result = await compileToZodSource({
       document,
       output: { typeName: "not valid" },
@@ -162,8 +163,7 @@ describe("compileToZodSource", () => {
       pluginOptions: {},
     });
 
-    expect(result.ok).toBe(false);
-    if (result.ok) throw new Error("Expected invalid output type name to fail.");
-    expect(result.diagnostics[0].code).toBe("invalid_output_type_name");
+    assert.equal(result.ok, false);
+    assert.equal(result.diagnostics[0].code, "invalid_output_type_name");
   });
 });

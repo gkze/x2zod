@@ -21,6 +21,9 @@ start:
 - `@x2zod/json-schema`: JSON Schema input plugin plus its typed option schema. This package owns
   JSON Schema dialect selection, schema-document validation policy, ref resolution, and JSON
   Schema-to-Zod lowering. Validator and resolver bridge code is internal to this package.
+- `@x2zod/config`: project configuration contracts, `defineConfig`, config file loading, plugin
+  registry validation, target option resolution, and target output resolution. This package lets
+  library callers share the same config surface as the CLI without importing the CLI binary module.
 - `@x2zod/cli`: CLI package, located at `apps/cli` and exposing the `x2zod` binary.
 
 There should not be standalone validator packages in v1. The core plugin interface does not expose a
@@ -166,7 +169,7 @@ The CLI path is:
 
 ```text
 plugin Zod option schema
-  -> core Zod-to-Optique adapter
+  -> config Zod-to-Optique adapter
   -> Optique token parsing, help, and shell completion
   -> Zod parse for defaults, refinements, transforms, and final TOptions
 ```
@@ -175,26 +178,20 @@ Unsupported option-schema shapes should fail plugin registration with clear diag
 include nested objects, broad unions, records, and transforms that change the option object shape in
 ways the CLI adapter cannot model.
 
-Plugins with no options should declare `z.object({})`; core should not need a separate "no options"
-path.
+Plugins with no options should declare `z.object({})`; the CLI may use an empty parser internally
+for configured-target invocations that do not select a plugin kind.
 
-The generated Optique compile parser should use the plugin kind as a discriminator and attach the
-generated option parser as the branch:
+The CLI builds the compile parser from the configured plugin registry. No plugin is implicitly
+available: JSON Schema must be declared in `config.plugins` like every other input plugin. A
+lightweight bootstrap scan reads enough of `compile` and completion invocations to find `--config`,
+loads the configured plugin registry when present, and builds a conditional `--kind` parser with one
+branch per plugin. `--kind` stays optional in the final parsed command so configured-target
+compilation can rely on the target's resolved kind; anonymous compilation requires an explicit
+configured `--kind` at execution time.
 
-```ts
-const kind = option("-k", "--kind", choice(pluginKinds), {
-  description: message`Input plugin kind.`,
-});
-
-const pluginOptions = conditional(kind, {
-  "json-schema": zodObjectToOptique(jsonSchemaInputPlugin.optionsSchema),
-});
-```
-
-For exact per-kind help, the CLI can add a small pre-help router: when argv contains `compile`,
-`--help`, and a valid `--kind`, it builds a one-branch compile parser for that plugin and lets
-Optique render help for only that branch. This preserves Optique's help formatting while avoiding
-manual plugin-specific CLI wiring.
+Per-kind help and shell completion use the same conditional parser. Shell completion scripts
+delegate back into the JavaScript runtime through Optique's completion command, so dynamic plugin
+options are completed from the user's current config rather than from static shell script logic.
 
 After option parsing, core treats options as opaque `TOptions`. It does not inspect fields such as
 `validator`, `dialect`, `allowRemoteRefs`, or any future plugin-specific setting.
@@ -396,30 +393,37 @@ configured through `jsonSchemaOptions`, not through core.
 
 ## CLI
 
-The first CLI surface is a direct compile command with explicit flags only:
+The CLI supports anonymous one-shot compilation and reusable configured targets:
 
 ```sh
-x2zod compile --kind json-schema --input <input> --output <output> --name <TypeName>
+x2zod compile -k json-schema -i <input> -o <output> -n <TypeName>
+x2zod compile -g <target>
+x2zod run
 ```
+
+Both anonymous and named-target compilation use the configured plugin registry. The CLI does not
+implicitly install or select JSON Schema; projects must declare every input plugin in config.
 
 The CLI should:
 
-- read input files as text and pass an `InputDocument` envelope to the selected plugin;
-- require `-k` / `--kind`, selecting the input plugin;
-- require `-i` / `--input`, selecting the input schema file;
-- require `-o` / `--output`, selecting the generated TypeScript file;
-- require `-n` / `--name`, interpreted as the generated root TypeScript type name;
-- expose JSON Schema plugin options such as `--dialect draft-2020-12|draft-07`;
-- expose JSON Schema plugin validation options such as `--validator ajv|none`, defaulting to `ajv`;
-- expose source compatibility profiles such as `--source-profile opencode`;
-- support a configurable Zod import path, defaulting to `zod/v4`;
-- support `--export-declarations root|all`, defaulting to `root`;
-- support explicit registry entries for external URI refs;
-- require an explicit opt-in flag before fetching remote URI refs;
-- print and format generated TypeScript before writing it.
+- read input documents as text and pass an `InputDocument` envelope to the selected plugin;
+- accept anonymous compile flags for `-k` / `--kind`, `-i` / `--input`, `-r` / `--uri`, `-x` /
+  `--text`, `-o` / `--output`, and `-n` / `--type-name`;
+- load `x2zod.config.ts` and related c12-supported config file formats for named targets;
+- run every configured target when invoked with no arguments or with `x2zod run`;
+- run one configured target with `-g` / `--target`;
+- treat compile flags as ephemeral overrides over target file defaults;
+- expose JSON Schema plugin options such as `-d` / `--dialect draft-2020-12|draft-2019-09|draft-7`;
+- expose JSON Schema plugin validation options such as `-v` / `--validator ajv|none`, defaulting to
+  `ajv`;
+- expose source compatibility profiles such as `-p` / `--source-profile opencode`;
+- support a configurable Zod import path through `-z` / `--zod-import-path`, defaulting to `zod/v4`;
+- support `-e` / `--declaration-export-mode root|all`, defaulting to `root`;
+- support explicit external schemas through repeatable `-E` / `--external-schema ID=FILE`;
+- print generated TypeScript before writing it.
 
 The generated root schema const name is derived from the required type name. For example,
-`--name UserConfig` emits `userConfigSchema` and
+`--type-name UserConfig` emits `userConfigSchema` and
 `export type UserConfig = z.infer<typeof userConfigSchema>`.
 
 ## Declaration Naming
@@ -569,7 +573,7 @@ The compiler should preserve JSON Schema semantics for supported constructs. Whe
 require runtime checks that TypeScript cannot represent, generated `z.infer` types should remain the
 best honest structural type and helper/refinement code should enforce runtime-only behavior.
 
-Locked v1 behavior:
+V1 semantic target:
 
 - Boolean schemas are supported anywhere.
 - Absent or `true` `additionalProperties` emits loose object behavior.
@@ -594,13 +598,15 @@ Locked v1 behavior:
 Unsupported or unlowerable semantics should fail with diagnostics instead of silently degrading to
 `z.any()`.
 
-V1 implementation should be staged separately from V1 semantic scope. The first implementation slice
-should cover document parsing, source-location mapping, Ajv preflight, dialect detection, unknown
+Current implementation is narrower than the V1 semantic target. The implemented slice covers
+document parsing, JSON Pointer source-location mapping, Ajv preflight, dialect detection, unknown
 keyword policy, primitives, `const` / `enum`, arrays, objects, required and optional properties,
-`additionalProperties`, metadata-only `default` / `format`, and local refs. Draft 2020-12
-vocabularies, required format assertions, Draft 7 support, dynamic refs, composition keywords,
-`patternProperties`, and `unevaluated*` stay in V1 scope but should land only with dependency-backed
-preparation, explicit lowering tests, and targeted runtime comparisons against JSON Schema tooling.
+`additionalProperties`, metadata-only `default` / `format`, local/external refs supplied through the
+explicit registry, selected composition lowering, and targeted OpenCode source-profile
+compatibility. Draft 2020-12 vocabularies, required format assertions, dynamic refs,
+`patternProperties`, full composition semantics, conditionals, and `unevaluated*` remain V1 target
+work and should land only with dependency-backed preparation, explicit lowering tests, and targeted
+runtime comparisons against JSON Schema tooling.
 
 ## Diagnostics
 
@@ -700,7 +706,7 @@ Emitter tests:
 Runtime smoke tests:
 
 - write generated source to temp modules;
-- import with Bun;
+- import through the configured test/runtime command;
 - validate behavior through Zod `safeParse`;
 - verify representative runtime-only helper semantics where TypeScript inference cannot encode
   constraints;

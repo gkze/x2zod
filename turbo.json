@@ -113,6 +113,14 @@
       "inputs": ["$TURBO_ROOT$/package.json", "$TURBO_ROOT$/prek.toml"],
       "outputs": []
     },
+    "//#test:repo": {
+      "inputs": [
+        "$TURBO_ROOT$/package.json",
+        "$TURBO_ROOT$/scripts/**/*.test.ts",
+        "$TURBO_ROOT$/scripts/**/*.ts"
+      ],
+      "outputs": []
+    },
     "gen:check": { "inputs": ["$TURBO_DEFAULT$"], "outputs": [] },
     "lint": {
       "inputs": [

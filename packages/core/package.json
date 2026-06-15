@@ -1,6 +1,6 @@
 {
   "name": "@x2zod/core",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Core compiler contracts and TypeScript source construction for x2zod.",
   "license": "MIT",
   "repository": {
@@ -24,7 +24,7 @@
   "scripts": {
     "check": "turbo run lint typecheck test --filter=@x2zod/core",
     "lint": "bun --cwd ../.. oxlint packages/core",
-    "test": "bun test --pass-with-no-tests",
+    "test": "bun test ./test",
     "typecheck": "tsgo --project tsconfig.json --noEmit"
   },
   "dependencies": {
@@ -32,7 +32,6 @@
     "zod": "4.4.3"
   },
   "devDependencies": {
-    "@types/bun": "1.3.14",
     "@x2zod/tsconfig": "workspace:*"
   }
 }

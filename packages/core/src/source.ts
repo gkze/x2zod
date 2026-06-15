@@ -15,6 +15,7 @@ import type {
 import {
   createArrayLiteralExpression,
   createCallExpression,
+  createComputedPropertyName,
   createIdentifier,
   createImportClause,
   createImportDeclaration,
@@ -68,6 +69,7 @@ const nonEmptyStringLength = 1;
 const noTokenFlags = 0;
 const syntheticSourceText = "";
 const typeNameField = "typeName";
+const prototypeSetterKey = "__proto__";
 
 export type DeclarationExportMode = "all" | "root";
 export type ZodSourceOutputOptions = Readonly<{
@@ -139,8 +141,12 @@ const createZodImport = (zodImportPath: string): ImportDeclaration =>
     createStringLiteral(zodImportPath, noTokenFlags),
   );
 
-const createPropertyName = (key: string): PropertyName =>
-  isTypeScriptIdentifier(key) ? createIdentifier(key) : createStringLiteral(key, noTokenFlags);
+const createPropertyName = (key: string): PropertyName => {
+  if (key === prototypeSetterKey)
+    return createComputedPropertyName(createStringLiteral(key, noTokenFlags));
+  if (isTypeScriptIdentifier(key)) return createIdentifier(key);
+  return createStringLiteral(key, noTokenFlags);
+};
 
 // Native preview currently types property-assignment annotations as required.
 // The implementation accepts undefined for ordinary object properties.

@@ -1,5 +1,5 @@
 {
   "extends": "@x2zod/tsconfig/base.json",
-  "include": ["bin/**/*.ts", "src/**/*.ts", "test/**/*.ts"],
+  "include": ["bin/**/*.ts", "src/**/*.ts", "test/**/*.ts", "../../test/**/*.ts"],
   "exclude": ["dist", "node_modules"]
 }

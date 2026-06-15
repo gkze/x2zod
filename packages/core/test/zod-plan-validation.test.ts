@@ -1,4 +1,5 @@
-import { describe, expect, test } from "bun:test";
+import assert from "node:assert/strict";
+import { describe, test } from "node:test";
 
 import { parseZodEmissionModule, zodPlan, zodSymbol } from "../src/index";
 import type { DiagnosticCode, ZodEmissionModuleInput, ZodExpressionInput } from "../src/index";
@@ -10,9 +11,8 @@ const rootModule = (expression: ZodExpressionInput): ZodEmissionModuleInput => (
 
 const expectInvalidModule = (module: ZodEmissionModuleInput, code: DiagnosticCode): void => {
   const result = parseZodEmissionModule(module);
-  expect(result.ok).toBe(false);
-  if (result.ok) throw new Error("Expected module parsing to fail.");
-  expect(result.diagnostics[0].code).toBe(code);
+  assert.equal(result.ok, false);
+  assert.equal(result.diagnostics[0].code, code);
 };
 
 const expectInvalidRoot = (
@@ -22,8 +22,8 @@ const expectInvalidRoot = (
   expectInvalidModule(rootModule(expression), code);
 };
 
-describe("parseZodEmissionModule", () => {
-  test("rejects missing roots, duplicate symbols, unresolved refs, invalid factory args, and cycles", () => {
+void describe("parseZodEmissionModule", () => {
+  void test("rejects missing roots, duplicate symbols, unresolved refs, invalid factory args, and cycles", () => {
     expectInvalidModule({ declarations: [], root: "root" }, "invalid_zod_emission_module");
     expectInvalidModule(
       {
@@ -41,8 +41,8 @@ describe("parseZodEmissionModule", () => {
   });
 });
 
-describe("parseZodEmissionModule method validation", () => {
-  test("rejects unsupported and malformed method calls", () => {
+void describe("parseZodEmissionModule method validation", () => {
+  void test("rejects unsupported and malformed method calls", () => {
     expectInvalidRoot({ calls: [{ method: "trim" }], factory: "string", kind: "factory" });
     expectInvalidRoot({
       calls: [{ args: [{ kind: "literal", value: true }], method: "optional" }],
@@ -62,7 +62,7 @@ describe("parseZodEmissionModule method validation", () => {
     });
   });
 
-  test("rejects invalid required keys and duplicate object keys", () => {
+  void test("rejects invalid required keys and duplicate object keys", () => {
     expectInvalidRoot({
       args: [{ kind: "object", properties: [] }],
       calls: [{ args: [{ elements: [], kind: "array" }], method: "required" }],
@@ -85,8 +85,8 @@ describe("parseZodEmissionModule method validation", () => {
   });
 });
 
-describe("parseZodEmissionModule receiver validation", () => {
-  test("rejects invalid enum and tuple factory arguments", () => {
+void describe("parseZodEmissionModule receiver validation", () => {
+  void test("rejects invalid enum and tuple factory arguments", () => {
     expectInvalidModule(
       {
         declarations: [
@@ -138,8 +138,8 @@ describe("parseZodEmissionModule receiver validation", () => {
   });
 });
 
-describe("parseZodEmissionModule method receiver validation", () => {
-  test("rejects invalid method receiver and required-key combinations", () => {
+void describe("parseZodEmissionModule method receiver validation", () => {
+  void test("rejects invalid method receiver and required-key combinations", () => {
     expectInvalidRoot(zodPlan.regex(zodPlan.number(), "x"));
     expectInvalidRoot(zodPlan.gt(zodPlan.string(), 1));
     expectInvalidRoot(zodPlan.strict(zodPlan.string()));

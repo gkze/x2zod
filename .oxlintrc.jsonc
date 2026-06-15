@@ -15,6 +15,7 @@
     "coverage/**",
     "dist/**",
     "node_modules/**",
+    "**/.tmp-x2zod-*/**",
     "packages/*/src/generated/**",
     "packages/core/src/targets/**/generated/**",
     "src/targets/**/generated/**",
@@ -145,7 +146,12 @@
       },
     },
     {
-      "files": ["packages/build-inputs/src/build-inputs.ts"],
+      "files": [
+        "packages/build-inputs/src/archive-materialization.ts",
+        "packages/build-inputs/src/build-inputs.ts",
+        "packages/build-inputs/src/lockfile.ts",
+        "packages/build-inputs/src/schemas.ts",
+      ],
       "rules": {
         // This package is intentionally a filesystem/archive state machine; the remaining rules are
         // noisy around ordered writes, archive mode bits, byte signatures, and callback-only libraries.
@@ -169,6 +175,13 @@
         "promise-function-async": "off",
         "typescript/promise-function-async": "off",
         "typescript/triple-slash-reference": "off",
+      },
+    },
+    {
+      "files": ["**/*.test.ts"],
+      "rules": {
+        // node:test registration returns promises; test files use void to mark those registrations as intentional.
+        "no-void": "off",
       },
     },
     {

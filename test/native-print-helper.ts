@@ -32,7 +32,8 @@ export const printNativeSourceFile = (sourceFile: SourceFile): string => {
   const emitter = new Emitter(api.client);
 
   try {
-    return emitter.printNode(sourceFile);
+    const sourceText = emitter.printNode(sourceFile);
+    return sourceText;
   } finally {
     api.close();
   }
