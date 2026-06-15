@@ -9,6 +9,7 @@
   "ignorePatterns": [
     "coverage/**",
     "dist/**",
+    "**/.tmp-x2zod-*/**",
     "node_modules/**",
     "packages/*/src/generated/**",
     "packages/core/src/targets/**/generated/**",

@@ -21,9 +21,12 @@ type SiblingAssertionRequest = Readonly<{
   schema: JsonObject;
 }>;
 
+const integerTypeName = "integer";
+const numberTypeName = "number";
+
 const jsonSchemaTypeForLiteral = (value: boolean | null | number | string): string => {
   if (value === null) return "null";
-  if (typeof value === "number") return "number";
+  if (typeof value === "number") return numberTypeName;
   return typeof value;
 };
 
@@ -33,8 +36,14 @@ const schemaTypeNames = (schema: JsonObject): readonly string[] => {
   return isJsonArray(type) ? jsonStringValues(type) : [];
 };
 
+const typeAllowsNumberLiteralValue = (types: readonly string[], value: number): boolean =>
+  types.includes(numberTypeName) || (Number.isInteger(value) && types.includes(integerTypeName));
+
 const typeAllowsLiteralValue = (types: readonly string[], value: JsonValue): boolean =>
-  isJsonPrimitive(value) && types.includes(jsonSchemaTypeForLiteral(value));
+  isJsonPrimitive(value) &&
+  (typeof value === "number"
+    ? typeAllowsNumberLiteralValue(types, value)
+    : types.includes(jsonSchemaTypeForLiteral(value)));
 
 const isRedundantTypeForEnum = (schema: JsonObject): boolean => {
   const types = schemaTypeNames(schema);

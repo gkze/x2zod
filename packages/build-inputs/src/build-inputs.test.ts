@@ -1,8 +1,9 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { afterEach, describe, test } from "node:test";
 
 import * as tar from "tar";
 import { z } from "zod/v4";
@@ -26,6 +27,27 @@ const writeJsonFile = async (filePath: string, value: object): Promise<void> => 
   await writeFile(filePath, `${JSON.stringify(value, null, 2)}\n`);
 };
 
+const readRootText = async (rootDir: string, relativePath: string): Promise<string> => {
+  const content = await readFile(path.join(rootDir, relativePath), "utf8");
+  return content;
+};
+
+const assertRootText = async (
+  rootDir: string,
+  relativePath: string,
+  expected: string,
+): Promise<void> => {
+  assert.equal(await readRootText(rootDir, relativePath), expected);
+};
+
+const assertRootTextContains = async (
+  rootDir: string,
+  relativePath: string,
+  expected: string,
+): Promise<void> => {
+  assert.ok((await readRootText(rootDir, relativePath)).includes(expected));
+};
+
 const writeBuildInputsConfig = async (rootDir: string): Promise<void> => {
   await writeFile(
     path.join(rootDir, "build-inputs.json"),
@@ -37,19 +59,30 @@ const writeBuildInputsConfig = async (rootDir: string): Promise<void> => {
   );
 };
 
+const withTempRoot = async (
+  prefix: string,
+  run: (rootDir: string) => Promise<void>,
+): Promise<void> => {
+  const rootDir = await mkdtemp(path.join(tmpdir(), prefix));
+
+  try {
+    await run(rootDir);
+  } finally {
+    await rm(rootDir, { force: true, recursive: true });
+  }
+};
+
 const stubFetch = (fetchImplementation: FetchImplementation): void => {
-  globalThis.fetch = Object.assign(fetchImplementation, { preconnect: originalFetch.preconnect });
+  globalThis.fetch = fetchImplementation;
 };
 
 afterEach(() => {
   globalThis.fetch = originalFetch;
 });
 
-describe("buildInputs", () => {
-  test("writes normalized content and a deterministic lockfile", async () => {
-    const rootDir = await mkdtemp(path.join(tmpdir(), "build-inputs-"));
-
-    try {
+void describe("buildInputs", () => {
+  void test("writes normalized content and a deterministic lockfile", async () => {
+    await withTempRoot("build-inputs-", async (rootDir) => {
       await writeBuildInputsConfig(rootDir);
       stubFetch(
         async () =>
@@ -60,16 +93,14 @@ describe("buildInputs", () => {
       );
 
       const result = await buildInputs({ mode: "update-lock", rootDir });
-      const downloadedContent = await readFile(
-        path.join(rootDir, "artifacts", "source.json"),
-        "utf8",
-      );
+      const downloadedContent = await readRootText(rootDir, "artifacts/source.json");
       const expectedSha256 = sha256Hex(downloadedContent);
       const expectedSizeBytes = Buffer.byteLength(downloadedContent, "utf8");
 
-      expect(downloadedContent.endsWith("\n")).toBe(true);
-      expect(okJsonSchema.parse(JSON.parse(downloadedContent))).toEqual({ ok: true });
-      await expect(readFile(path.join(rootDir, "build-inputs.lock.json"), "utf8")).resolves.toBe(
+      assert.equal(downloadedContent.endsWith("\n"), true);
+      assert.deepEqual(okJsonSchema.parse(JSON.parse(downloadedContent)), { ok: true });
+      assert.equal(
+        await readRootText(rootDir, "build-inputs.lock.json"),
         `${JSON.stringify(
           {
             urls: { [testUrl]: { sha256: expectedSha256, sizeBytes: expectedSizeBytes } },
@@ -79,8 +110,8 @@ describe("buildInputs", () => {
           2,
         )}\n`,
       );
-      expect(result.lockfileUpdated).toBe(true);
-      expect(result.inputs).toEqual([
+      assert.equal(result.lockfileUpdated, true);
+      assert.deepEqual(result.inputs, [
         {
           id: buildInputId("source-json"),
           path: "artifacts/source.json",
@@ -89,15 +120,11 @@ describe("buildInputs", () => {
           url: testUrl,
         },
       ]);
-    } finally {
-      await rm(rootDir, { force: true, recursive: true });
-    }
+    });
   });
 
-  test("normalizes JSON content before hashing and writing", async () => {
-    const rootDir = await mkdtemp(path.join(tmpdir(), "build-inputs-normalize-"));
-
-    try {
+  void test("normalizes JSON content before hashing and writing", async () => {
+    await withTempRoot("build-inputs-normalize-", async (rootDir) => {
       await writeBuildInputsConfig(rootDir);
       stubFetch(
         async () =>
@@ -108,29 +135,23 @@ describe("buildInputs", () => {
       );
 
       const result = await buildInputs({ mode: "update-lock", rootDir });
-      const downloadedContent = await readFile(
-        path.join(rootDir, "artifacts", "source.json"),
-        "utf8",
-      );
+      const downloadedContent = await readRootText(rootDir, "artifacts/source.json");
       const [input] = result.inputs;
 
       if (!input) throw new Error("Expected a build input result");
 
-      expect(nestedOkJsonSchema.parse(JSON.parse(downloadedContent))).toEqual({
+      assert.deepEqual(nestedOkJsonSchema.parse(JSON.parse(downloadedContent)), {
         nested: { ok: true },
       });
-      expect(downloadedContent).toBe('{ "nested": { "ok": true } }\n');
-      expect(input.sha256).toBe(sha256Hex(downloadedContent));
-    } finally {
-      await rm(rootDir, { force: true, recursive: true });
-    }
+      assert.equal(downloadedContent, '{ "nested": { "ok": true } }\n');
+      assert.equal(input.sha256, sha256Hex(downloadedContent));
+    });
   });
 
-  test("rejects remote content that does not match the lock", async () => {
-    const rootDir = await mkdtemp(path.join(tmpdir(), "build-inputs-lock-"));
-    const lockedContent = `${JSON.stringify({ ok: true }, null, 2)}\n`;
+  void test("rejects remote content that does not match the lock", async () => {
+    await withTempRoot("build-inputs-lock-", async (rootDir) => {
+      const lockedContent = `${JSON.stringify({ ok: true }, null, 2)}\n`;
 
-    try {
       await writeBuildInputsConfig(rootDir);
       await writeFile(
         path.join(rootDir, "build-inputs.lock.json"),
@@ -156,16 +177,15 @@ describe("buildInputs", () => {
           }),
       );
 
-      await expect(buildInputs({ mode: "materialize", rootDir })).rejects.toThrow("changed");
-    } finally {
-      await rm(rootDir, { force: true, recursive: true });
-    }
+      await assert.rejects(
+        buildInputs({ mode: "materialize", rootDir }),
+        (error: unknown): boolean => String(error).includes("changed"),
+      );
+    });
   });
 
-  test("defaults the public API mode to materialize", async () => {
-    const rootDir = await mkdtemp(path.join(tmpdir(), "build-inputs-default-"));
-
-    try {
+  void test("defaults the public API mode to materialize", async () => {
+    await withTempRoot("build-inputs-default-", async (rootDir) => {
       await writeBuildInputsConfig(rootDir);
       stubFetch(
         async () =>
@@ -175,24 +195,18 @@ describe("buildInputs", () => {
           }),
       );
       await buildInputs({ mode: "update-lock", rootDir });
-      const lockfileContent = await readFile(path.join(rootDir, "build-inputs.lock.json"), "utf8");
+      const lockfileContent = await readRootText(rootDir, "build-inputs.lock.json");
 
       const result = await buildInputs({ rootDir });
 
-      expect(result.mode).toBe("materialize");
-      expect(result.lockfileUpdated).toBe(false);
-      await expect(readFile(path.join(rootDir, "build-inputs.lock.json"), "utf8")).resolves.toBe(
-        lockfileContent,
-      );
-    } finally {
-      await rm(rootDir, { force: true, recursive: true });
-    }
+      assert.equal(result.mode, "materialize");
+      assert.equal(result.lockfileUpdated, false);
+      assert.equal(await readRootText(rootDir, "build-inputs.lock.json"), lockfileContent);
+    });
   });
 
-  test("rejects duplicate URLs with different inferred formats", async () => {
-    const rootDir = await mkdtemp(path.join(tmpdir(), "build-inputs-format-"));
-
-    try {
+  void test("rejects duplicate URLs with different inferred formats", async () => {
+    await withTempRoot("build-inputs-format-", async (rootDir) => {
       await writeFile(
         path.join(rootDir, "build-inputs.json"),
         `${JSON.stringify(
@@ -208,18 +222,16 @@ describe("buildInputs", () => {
         )}\n`,
       );
 
-      await expect(buildInputs({ mode: "update-lock", rootDir })).rejects.toThrow(
-        "declared with both 'json' and 'text' formats",
+      await assert.rejects(
+        buildInputs({ mode: "update-lock", rootDir }),
+        (error: unknown): boolean =>
+          String(error).includes("declared with both 'json' and 'text' formats"),
       );
-    } finally {
-      await rm(rootDir, { force: true, recursive: true });
-    }
+    });
   });
 
-  test("rejects overlapping output paths", async () => {
-    const rootDir = await mkdtemp(path.join(tmpdir(), "build-inputs-overlap-"));
-
-    try {
+  void test("rejects overlapping output paths", async () => {
+    await withTempRoot("build-inputs-overlap-", async (rootDir) => {
       await writeJsonFile(path.join(rootDir, "build-inputs.json"), {
         inputs: [
           { id: "source-json", path: "artifacts/source.json", url: testUrl },
@@ -234,13 +246,14 @@ describe("buildInputs", () => {
         version: 1,
       });
 
-      await expect(buildInputs({ mode: "update-lock", rootDir })).rejects.toThrow("overlaps");
-    } finally {
-      await rm(rootDir, { force: true, recursive: true });
-    }
+      await assert.rejects(
+        buildInputs({ mode: "update-lock", rootDir }),
+        (error: unknown): boolean => String(error).includes("overlaps"),
+      );
+    });
   });
 
-  test("updates all file outputs sharing a selected URL", async () => {
+  void test("updates all file outputs sharing a selected URL", async () => {
     const rootDir = await mkdtemp(path.join(tmpdir(), "build-inputs-shared-url-"));
     let responseVersion = 1;
 
@@ -269,19 +282,18 @@ describe("buildInputs", () => {
         rootDir,
       });
 
-      expect(result.inputs.map((input) => String(input.id))).toEqual(["source-a", "source-b"]);
-      await expect(
-        readFile(path.join(rootDir, "artifacts", "source-a.json"), "utf8"),
-      ).resolves.toContain('"version": 2');
-      await expect(
-        readFile(path.join(rootDir, "artifacts", "source-b.json"), "utf8"),
-      ).resolves.toContain('"version": 2');
+      assert.deepEqual(
+        result.inputs.map((input) => String(input.id)),
+        ["source-a", "source-b"],
+      );
+      await assertRootTextContains(rootDir, "artifacts/source-a.json", '"version": 2');
+      await assertRootTextContains(rootDir, "artifacts/source-b.json", '"version": 2');
     } finally {
       await rm(rootDir, { force: true, recursive: true });
     }
   });
 
-  test("validates the rendered lock before materializing selected outputs", async () => {
+  void test("validates the rendered lock before materializing selected outputs", async () => {
     const rootDir = await mkdtemp(path.join(tmpdir(), "build-inputs-preflight-"));
 
     try {
@@ -300,18 +312,17 @@ describe("buildInputs", () => {
           }),
       );
 
-      await expect(
+      await assert.rejects(
         buildInputs({ ids: [buildInputId("source-json")], mode: "update-lock", rootDir }),
-      ).rejects.toThrow("No lock entry exists");
-      await expect(
-        readFile(path.join(rootDir, "artifacts", "source.json"), "utf8"),
-      ).rejects.toThrow();
+        (error: unknown): boolean => String(error).includes("No lock entry exists"),
+      );
+      await assert.rejects(readRootText(rootDir, "artifacts/source.json"));
     } finally {
       await rm(rootDir, { force: true, recursive: true });
     }
   });
 
-  test(
+  void test(
     "materializes a tar.gz archive with strip/include/exclude policy " +
       "and locks the output tree",
     async () => {
@@ -371,52 +382,43 @@ describe("buildInputs", () => {
         if (!archiveResult) throw new Error("Expected an archive input result");
         if (archiveResult.type !== "archive") throw new Error("Expected an archive input result");
 
-        await expect(
-          readFile(path.join(rootDir, "artifacts", "render-cli-source", "cmd", "root.go"), "utf8"),
-        ).resolves.toBe("package cmd\n");
-        await expect(
-          readFile(
-            path.join(rootDir, "artifacts", "render-cli-source", "cmd", longArchiveFileName),
-            "utf8",
-          ),
-        ).resolves.toBe("package cmd\n");
-        await expect(
-          readFile(
-            path.join(rootDir, "artifacts", "render-cli-source", "pkg", "auth", "auth.go"),
-            "utf8",
-          ),
-        ).resolves.toBe("package auth\n");
-        await expect(
-          readFile(
-            path.join(rootDir, "artifacts", "render-cli-source", "pkg", "auth", "ignored_test.go"),
-            "utf8",
-          ),
-        ).rejects.toThrow();
-        await expect(
-          readFile(path.join(rootDir, "artifacts", "render-cli-source", "README.md"), "utf8"),
-        ).rejects.toThrow();
+        await assertRootText(rootDir, "artifacts/render-cli-source/cmd/root.go", "package cmd\n");
+        await assertRootText(
+          rootDir,
+          path.join("artifacts/render-cli-source/cmd", longArchiveFileName),
+          "package cmd\n",
+        );
+        await assertRootText(
+          rootDir,
+          "artifacts/render-cli-source/pkg/auth/auth.go",
+          "package auth\n",
+        );
+        await assert.rejects(
+          readRootText(rootDir, "artifacts/render-cli-source/pkg/auth/ignored_test.go"),
+        );
+        await assert.rejects(readRootText(rootDir, "artifacts/render-cli-source/README.md"));
 
-        expect(archiveResult).toMatchObject({
+        assert.partialDeepStrictEqual(archiveResult, {
           id: "render-cli-source",
           path: "artifacts/render-cli-source",
           sourceSizeBytes: (await readFile(archivePath)).byteLength,
           type: "archive",
           url: archiveTestUrl,
         });
-        expect(archiveResult.materializationSha256).toMatch(/^[0-9a-f]{64}$/u);
-        expect(archiveResult.sourceSha256).toMatch(/^[0-9a-f]{64}$/u);
-        expect(archiveResult.sha256).toMatch(/^[0-9a-f]{64}$/u);
+        assert.match(String(archiveResult.materializationSha256), /^[0-9a-f]{64}$/u);
+        assert.match(String(archiveResult.sourceSha256), /^[0-9a-f]{64}$/u);
+        assert.match(String(archiveResult.sha256), /^[0-9a-f]{64}$/u);
 
         const checkResult = await buildInputs({ mode: "check", rootDir });
 
-        expect(checkResult.inputs).toEqual(updateResult.inputs);
+        assert.deepEqual(checkResult.inputs, updateResult.inputs);
       } finally {
         await rm(rootDir, { force: true, recursive: true });
       }
     },
   );
 
-  test("updates all archive outputs sharing a selected URL", async () => {
+  void test("updates all archive outputs sharing a selected URL", async () => {
     const rootDir = await mkdtemp(path.join(tmpdir(), "build-inputs-archives-"));
     const archiveFixtureRoot = path.join(rootDir, "fixture");
     const archiveSourceRoot = path.join(archiveFixtureRoot, "render-oss-cli-v2.16.0");
@@ -475,16 +477,20 @@ describe("buildInputs", () => {
         rootDir,
       });
 
-      expect(result.inputs.map((input) => String(input.id))).toEqual([
-        "render-cli-source",
-        "render-cli-copy",
-      ]);
-      await expect(
-        readFile(path.join(rootDir, "artifacts", "render-cli-source", "cmd", "root.go"), "utf8"),
-      ).resolves.toContain('version = "two"');
-      await expect(
-        readFile(path.join(rootDir, "artifacts", "render-cli-copy", "cmd", "root.go"), "utf8"),
-      ).resolves.toContain('version = "two"');
+      assert.deepEqual(
+        result.inputs.map((input) => String(input.id)),
+        ["render-cli-source", "render-cli-copy"],
+      );
+      await assertRootTextContains(
+        rootDir,
+        "artifacts/render-cli-source/cmd/root.go",
+        'version = "two"',
+      );
+      await assertRootTextContains(
+        rootDir,
+        "artifacts/render-cli-copy/cmd/root.go",
+        'version = "two"',
+      );
     } finally {
       await rm(rootDir, { force: true, recursive: true });
     }

@@ -1,6 +1,6 @@
 {
   "name": "@x2zod/tsconfig",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Shared TypeScript compiler configuration for x2zod packages.",
   "license": "MIT",
   "repository": {

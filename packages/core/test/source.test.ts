@@ -1,6 +1,8 @@
-import { describe, expect, test } from "bun:test";
+import assert from "node:assert/strict";
 import { rmSync } from "node:fs";
+import { writeFile } from "node:fs/promises";
 import nodePath from "node:path";
+import { describe, test } from "node:test";
 
 import {
   buildNodeBundle,
@@ -48,6 +50,7 @@ const defaultOutputOptions = { typeName: "User" } satisfies Parameters<
 type RuntimeParseResult = Readonly<{ success: boolean }>;
 type RuntimeZodSchema = Readonly<{ safeParse: (value: unknown) => RuntimeParseResult }>;
 type RuntimeUser = Readonly<{
+  __proto__: string;
   count: number;
   pair: readonly [string, number];
   payload: Readonly<{ value: string }>;
@@ -114,37 +117,48 @@ const importGeneratedUserSchema = async (generatedFile: string): Promise<Runtime
   return schema;
 };
 
-const validRuntimeUser = (): RuntimeUser => ({
-  count: 1,
-  pair: ["left", 2],
-  payload: { value: "present" },
-  slug: "abc",
-  status: "open",
-  tags: ["tag"],
-});
+const validRuntimeUser = (): RuntimeUser => {
+  const value = {
+    count: 1,
+    pair: ["left", 2],
+    payload: { value: "present" },
+    slug: "abc",
+    status: "open",
+    tags: ["tag"],
+  } as Record<string, unknown>;
+  Object.defineProperty(value, "__proto__", {
+    configurable: true,
+    enumerable: true,
+    value: "own-proto-key",
+  });
+  return value as RuntimeUser;
+};
 
-describe("buildZodSourceFile", () => {
-  test("emits primitive root declarations", () => {
+void describe("buildZodSourceFile", () => {
+  void test("emits primitive root declarations", () => {
     const sourceFile = sourceFileFor(rootOnlyModule(zodPlan.string()));
     const [schemaStatement] = variableStatements(sourceFile);
     if (schemaStatement === undefined) throw new Error("Missing schema statement.");
 
     const schemaDeclaration = variableDeclaration(schemaStatement);
 
-    expect(sourceFile.fileName).toBe(generatedFileName);
-    expect(sourceFile.text).toBe("");
-    expect(sourceFile.statements.map((statement) => statement.kind)).toEqual([
-      ts.SyntaxKind.ImportDeclaration,
-      ts.SyntaxKind.VariableStatement,
-      ts.SyntaxKind.TypeAliasDeclaration,
-    ]);
-    expect(importPath(sourceFile)).toBe("zod/v4");
-    expect(variableNames(sourceFile)).toEqual(["userSchema"]);
-    expect(exportedVariableNames(sourceFile)).toEqual(["userSchema"]);
-    expect(zodCallName(schemaDeclaration.initializer)).toBe("string");
+    assert.equal(sourceFile.fileName, generatedFileName);
+    assert.equal(sourceFile.text, "");
+    assert.deepEqual(
+      sourceFile.statements.map((statement) => statement.kind),
+      [
+        ts.SyntaxKind.ImportDeclaration,
+        ts.SyntaxKind.VariableStatement,
+        ts.SyntaxKind.TypeAliasDeclaration,
+      ],
+    );
+    assert.equal(importPath(sourceFile), "zod/v4");
+    assert.deepEqual(variableNames(sourceFile), ["userSchema"]);
+    assert.deepEqual(exportedVariableNames(sourceFile), ["userSchema"]);
+    assert.equal(zodCallName(schemaDeclaration.initializer), "string");
   });
 
-  test("emits objects, arrays, literals, unions, chained calls, and references", () => {
+  void test("emits objects, arrays, literals, unions, chained calls, and references", () => {
     const addressSymbol = zodSymbol("address");
     const module = zodModule(rootSymbol, [
       zodDeclaration(addressSymbol, zodPlan.object({ street: zodPlan.string() }), [
@@ -181,32 +195,33 @@ describe("buildZodSourceFile", () => {
     );
     if (rootDeclaration === undefined) throw new Error("Missing root declaration.");
 
-    expect(declarations.map((declaration) => declaration.name.text)).toEqual([
-      "addressSchema",
-      "userSchema",
-    ]);
-    expect(zodCallName(rootDeclaration.initializer)).toBe("object");
-    expect(zodCallName(propertyInitializer(rootDeclaration, "name"))).toBe("string");
-    expect(zodCallName(propertyInitializer(rootDeclaration, "tags"))).toBe("array");
-    expect(zodCallName(propertyInitializer(rootDeclaration, "mode"))).toBe("union");
-    expect(zodCallName(propertyInitializer(rootDeclaration, "status"))).toBe("enum");
-    expect(zodCallName(propertyInitializer(rootDeclaration, "boundedTags"))).toBe("max");
-    expect(zodCallName(propertyInitializer(rootDeclaration, "slug"))).toBe("regex");
-    expect(zodCallName(propertyInitializer(rootDeclaration, "pair"))).toBe("tuple");
-    expect(zodCallName(propertyInitializer(rootDeclaration, "payload"))).toBe("required");
-    expect(zodCallName(propertyInitializer(rootDeclaration, "dash-key"))).toBe("literal");
-    expect(zodCallName(propertyInitializer(rootDeclaration, "count"))).toBe("lte");
-    expect(zodCallName(propertyInitializer(rootDeclaration, "extra"))).toBe("catchall");
-    expect(zodCallName(propertyInitializer(rootDeclaration, "nested"))).toBe("strict");
-    expect(zodCallName(propertyInitializer(rootDeclaration, "age"))).toBe("optional");
-    expect(
+    assert.deepEqual(
+      declarations.map((declaration) => declaration.name.text),
+      ["addressSchema", "userSchema"],
+    );
+    assert.equal(zodCallName(rootDeclaration.initializer), "object");
+    assert.equal(zodCallName(propertyInitializer(rootDeclaration, "name")), "string");
+    assert.equal(zodCallName(propertyInitializer(rootDeclaration, "tags")), "array");
+    assert.equal(zodCallName(propertyInitializer(rootDeclaration, "mode")), "union");
+    assert.equal(zodCallName(propertyInitializer(rootDeclaration, "status")), "enum");
+    assert.equal(zodCallName(propertyInitializer(rootDeclaration, "boundedTags")), "max");
+    assert.equal(zodCallName(propertyInitializer(rootDeclaration, "slug")), "regex");
+    assert.equal(zodCallName(propertyInitializer(rootDeclaration, "pair")), "tuple");
+    assert.equal(zodCallName(propertyInitializer(rootDeclaration, "payload")), "required");
+    assert.equal(zodCallName(propertyInitializer(rootDeclaration, "dash-key")), "literal");
+    assert.equal(zodCallName(propertyInitializer(rootDeclaration, "count")), "lte");
+    assert.equal(zodCallName(propertyInitializer(rootDeclaration, "extra")), "catchall");
+    assert.equal(zodCallName(propertyInitializer(rootDeclaration, "nested")), "strict");
+    assert.equal(zodCallName(propertyInitializer(rootDeclaration, "age")), "optional");
+    assert.equal(
       zodCallName(zodCallReceiverExpression(propertyInitializer(rootDeclaration, "age"))),
-    ).toBe("number");
+      "number",
+    );
   });
 });
 
-describe("buildZodSourceFile declaration ordering and exports", () => {
-  test("orders declarations before their reference sites", () => {
+void describe("buildZodSourceFile declaration ordering and exports", () => {
+  void test("orders declarations before their reference sites", () => {
     const middleSymbol = zodSymbol("middle");
     const leafSymbol = zodSymbol("leaf");
     const sourceFile = sourceFileFor(
@@ -219,34 +234,34 @@ describe("buildZodSourceFile declaration ordering and exports", () => {
       ]),
     );
 
-    expect(variableNames(sourceFile)).toEqual(["leafSchema", "middleSchema", "userSchema"]);
+    assert.deepEqual(variableNames(sourceFile), ["leafSchema", "middleSchema", "userSchema"]);
   });
 
-  test("exports named declarations only when requested", () => {
+  void test("exports named declarations only when requested", () => {
     const addressSymbol = zodSymbol("address");
     const module = zodModule(rootSymbol, [
       zodDeclaration(addressSymbol, zodPlan.string(), [zodDeclarationNameHint("Address")]),
       zodDeclaration(rootSymbol, zodPlan.reference(addressSymbol)),
     ]);
 
-    expect(exportedVariableNames(sourceFileFor(module))).toEqual(["userSchema"]);
-    expect(
+    assert.deepEqual(exportedVariableNames(sourceFileFor(module)), ["userSchema"]);
+    assert.deepEqual(
       exportedVariableNames(
         sourceFileFor(module, { declarationExportMode: "all", typeName: "User" }),
       ),
-    ).toEqual(["addressSchema", "userSchema"]);
+      ["addressSchema", "userSchema"],
+    );
   });
 
-  test("returns diagnostics for invalid modules before emitting source", () => {
+  void test("returns diagnostics for invalid modules before emitting source", () => {
     const result = buildZodSourceFile(zodModule(zodSymbol("missing"), []), { typeName: "User" });
-    expect(result.ok).toBe(false);
-    if (result.ok) throw new Error("Expected source emission to fail.");
-    expect(result.diagnostics[0].code).toBe("invalid_zod_emission_module");
+    assert.equal(result.ok, false);
+    assert.equal(result.diagnostics[0].code, "invalid_zod_emission_module");
   });
 });
 
-describe("buildZodSourceFile native printing", () => {
-  test("returns source files printable by the aligned native TypeScript emitter", async () => {
+void describe("buildZodSourceFile native printing", () => {
+  void test("returns source files printable by the aligned native TypeScript emitter", async () => {
     const directory = createTemporaryDirectory({
       prefix: coreTestTempPrefix,
       rootDirectory: coreTestTempDirectory,
@@ -260,24 +275,37 @@ describe("buildZodSourceFile native printing", () => {
       buildSourcePrinterBundle(printerBundleFile);
       const printedSource = printWithNativeEmitter(printerBundleFile, coreBundleFile);
 
-      expect(printedSource).toContain("export const userSchema");
-      expect(printedSource).toContain("export type User");
-      expect(printedSource).toContain("z.enum");
-      expect(printedSource).toContain("new RegExp");
-      expect(printedSource).toContain("z.tuple");
-      expect(printedSource).toContain(".int().gt(0).lte(10)");
-      expect(printedSource).toContain(".required({ value: true })");
-      expect(printedSource).toContain(".min(1).max(2)");
+      assert.ok(printedSource.includes("export const userSchema"));
+      assert.ok(printedSource.includes("export type User"));
+      assert.ok(printedSource.includes("z.enum"));
+      assert.ok(printedSource.includes("new RegExp"));
+      assert.ok(printedSource.includes("z.tuple"));
+      assert.ok(printedSource.includes(".int().gt(0).lte(10)"));
+      assert.ok(printedSource.includes('["__proto__"]: z.string()'));
+      assert.ok(printedSource.includes(".required({ value: true })"));
+      assert.ok(printedSource.includes(".min(1).max(2)"));
 
-      await Bun.write(generatedFile, printedSource);
+      await writeFile(generatedFile, printedSource);
       const userSchema = await importGeneratedUserSchema(generatedFile);
 
-      expect(userSchema.safeParse(validRuntimeUser()).success).toBe(true);
-      expect(userSchema.safeParse({ ...validRuntimeUser(), count: 0 }).success).toBe(false);
-      expect(userSchema.safeParse({ ...validRuntimeUser(), payload: {} }).success).toBe(false);
-      expect(userSchema.safeParse({ ...validRuntimeUser(), slug: "ABC" }).success).toBe(false);
-      expect(userSchema.safeParse({ ...validRuntimeUser(), tags: [] }).success).toBe(false);
-      expect(userSchema.safeParse({ ...validRuntimeUser(), tags: ["a", "b", "c"] }).success).toBe(
+      assert.equal(userSchema.safeParse(validRuntimeUser()).success, true);
+      assert.equal(
+        userSchema.safeParse({
+          count: 1,
+          pair: ["left", 2],
+          payload: { value: "present" },
+          slug: "abc",
+          status: "open",
+          tags: ["tag"],
+        }).success,
+        false,
+      );
+      assert.equal(userSchema.safeParse({ ...validRuntimeUser(), count: 0 }).success, false);
+      assert.equal(userSchema.safeParse({ ...validRuntimeUser(), payload: {} }).success, false);
+      assert.equal(userSchema.safeParse({ ...validRuntimeUser(), slug: "ABC" }).success, false);
+      assert.equal(userSchema.safeParse({ ...validRuntimeUser(), tags: [] }).success, false);
+      assert.equal(
+        userSchema.safeParse({ ...validRuntimeUser(), tags: ["a", "b", "c"] }).success,
         false,
       );
     } finally {
@@ -286,28 +314,28 @@ describe("buildZodSourceFile native printing", () => {
   });
 });
 
-describe("buildZodSourceFile declaration naming", () => {
-  test("preserves readable camel casing from declaration hints", () => {
+void describe("buildZodSourceFile declaration naming", () => {
+  void test("preserves readable camel casing from declaration hints", () => {
     const configSymbol = zodSymbol("config");
     const module = zodModule(rootSymbol, [
       zodDeclaration(configSymbol, zodPlan.string(), [zodDeclarationNameHint("UserConfig")]),
       zodDeclaration(rootSymbol, zodPlan.reference(configSymbol)),
     ]);
 
-    expect(variableNames(sourceFileFor(module))).toEqual(["userConfigSchema", "userSchema"]);
+    assert.deepEqual(variableNames(sourceFileFor(module)), ["userConfigSchema", "userSchema"]);
   });
 
-  test("uses TypeScript identifier rules for declaration names", () => {
+  void test("uses TypeScript identifier rules for declaration names", () => {
     const configSymbol = zodSymbol("config");
     const module = zodModule(rootSymbol, [
       zodDeclaration(configSymbol, zodPlan.string(), [zodDeclarationNameHint("CaféConfig")]),
       zodDeclaration(rootSymbol, zodPlan.reference(configSymbol)),
     ]);
 
-    expect(variableNames(sourceFileFor(module))).toEqual(["caféConfigSchema", "userSchema"]);
+    assert.deepEqual(variableNames(sourceFileFor(module)), ["caféConfigSchema", "userSchema"]);
   });
 
-  test("deduplicates declaration names from stable symbol identity", () => {
+  void test("deduplicates declaration names from stable symbol identity", () => {
     const firstSymbol = zodSymbol("first");
     const secondSymbol = zodSymbol("second");
     const module = zodModule(rootSymbol, [
@@ -321,17 +349,18 @@ describe("buildZodSourceFile declaration naming", () => {
       zodDeclaration(firstSymbol, zodPlan.string(), [zodDeclarationNameHint("User")]),
     ]);
 
-    expect(variableNames(sourceFileFor(module))).toEqual([
+    assert.deepEqual(variableNames(sourceFileFor(module)), [
       "userSchemaForFirst",
       "userSchemaForSecond",
       "userSchema",
     ]);
-    expect(variableNames(sourceFileFor(module))).toEqual(
+    assert.deepEqual(
+      variableNames(sourceFileFor(module)),
       variableNames(sourceFileFor(reorderedModule)),
     );
   });
 
-  test("keeps encoded fallback declaration names unique", () => {
+  void test("keeps encoded fallback declaration names unique", () => {
     const betaSchemaEncodedSuffix = ["2q2t382p", "2b2r2w2t312p"].join("");
     const fallbackName = ["alphaSchemaForBetaSchemaX", betaSchemaEncodedSuffix].join("");
     const forcedFallbackSymbol = zodSymbol(["-betaSchemaX", betaSchemaEncodedSuffix].join(""));
@@ -347,8 +376,8 @@ describe("buildZodSourceFile declaration naming", () => {
     ]);
     const names = variableNames(sourceFileFor(module));
 
-    expect(new Set(names).size).toBe(names.length);
-    expect(names).toContain(fallbackName);
-    expect(names).toContain([fallbackName, betaSchemaEncodedSuffix].join("X"));
+    assert.equal(new Set(names).size, names.length);
+    assert.ok(names.includes(fallbackName));
+    assert.ok(names.includes([fallbackName, betaSchemaEncodedSuffix].join("X")));
   });
 });

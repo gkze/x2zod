@@ -5,7 +5,12 @@
   "files": [
     ".markdownlint-cli2.mjs",
     "commitlint.config.ts",
+    "scripts/publish-materialize.ts",
+    "scripts/publish-registries.ts",
+    "scripts/publish-runtime.ts",
+    "scripts/publish.test.ts",
     "scripts/publish.ts",
+    "scripts/publish-types.ts",
     "scripts/shfmt.ts"
   ]
 }

@@ -360,8 +360,9 @@ The design discussion after this landscape pass resolved the initial open questi
   metadata. The default profile is strict; the first named profile is `opencode`.
 - Refs emit named schema declarations and use those declarations at reference sites; plugins supply
   ordered name hints, while core owns final TypeScript identifier selection.
-- `patternProperties`, exact `oneOf`, `anyOf`, `allOf`, `not`, conditionals, and `unevaluated*` are
-  supported through direct Zod constructs where possible and generated runtime helpers where needed.
+- `patternProperties`, exact `oneOf`, `anyOf`, `allOf`, `not`, conditionals, and `unevaluated*`
+  remain V1 semantic targets. They should be treated as unsupported until each feature has
+  dependency-backed preparation, lowering tests, and targeted runtime comparisons.
 - The acceptance corpus is OpenCode plus targeted synthetic fixtures.
 
 ## First Real-World Corpus

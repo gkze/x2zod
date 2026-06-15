@@ -1,0 +1,11 @@
+{
+  "name": "@x2zod/config",
+  "version": "0.1.0",
+  "license": "MIT",
+  "exports": {
+    ".": "./src/index.ts",
+    "./zod-cli-option-overrides": "./src/zod-cli-option-overrides.ts",
+    "./zod-to-optique": "./src/zod-to-optique.ts"
+  },
+  "publish": { "exclude": ["test/**"], "include": ["package.json", "src/**/*.ts"] }
+}

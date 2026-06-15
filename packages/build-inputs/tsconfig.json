@@ -1,11 +1,6 @@
 {
   "extends": "@x2zod/tsconfig/base.json",
-  "compilerOptions": {
-    "composite": false,
-    "declaration": false,
-    "isolatedDeclarations": false,
-    "rootDir": "."
-  },
+  "compilerOptions": { "composite": false, "declaration": false, "isolatedDeclarations": false },
   "include": ["bin/**/*.ts", "src/**/*"],
   "exclude": ["node_modules", "dist"]
 }

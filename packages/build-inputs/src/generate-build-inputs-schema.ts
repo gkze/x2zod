@@ -1,4 +1,4 @@
-import { mkdir } from "node:fs/promises";
+import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { z } from "zod/v4";
@@ -54,13 +54,17 @@ const parseGenerateBuildInputsSchemaArgs = (
 };
 
 const readTextFileIfPresent = async (filePath: string): Promise<string | undefined> => {
-  if (!(await Bun.file(filePath).exists())) return undefined;
+  try {
+    await access(filePath);
+  } catch {
+    return undefined;
+  }
 
-  return Bun.file(filePath).text();
+  return readFile(filePath, "utf8");
 };
 
 const main = async (): Promise<void> => {
-  const args = parseGenerateBuildInputsSchemaArgs(Bun.argv.slice(2));
+  const args = parseGenerateBuildInputsSchemaArgs(process.argv.slice(2));
   const content = renderBuildInputsJsonSchema();
 
   if (args.check) {
@@ -72,7 +76,7 @@ const main = async (): Promise<void> => {
   }
 
   await mkdir(path.dirname(buildInputsSchemaPath), { recursive: true });
-  await Bun.write(buildInputsSchemaPath, content);
+  await writeFile(buildInputsSchemaPath, content);
 };
 
 await main();

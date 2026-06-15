@@ -4,6 +4,7 @@
   "files": [],
   "references": [
     { "path": "./apps/cli" },
+    { "path": "./packages/config" },
     { "path": "./packages/core" },
     { "path": "./packages/build-inputs" },
     { "path": "./packages/eslint-plugins" },

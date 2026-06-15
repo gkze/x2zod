@@ -1,0 +1,49 @@
+{
+  "name": "@x2zod/config",
+  "version": "0.1.0",
+  "description": "Project configuration loading and resolution for x2zod.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gkze/x2zod.git",
+    "directory": "packages/config"
+  },
+  "files": [
+    "src"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    },
+    "./zod-cli-option-overrides": {
+      "types": "./src/zod-cli-option-overrides.ts",
+      "import": "./src/zod-cli-option-overrides.ts"
+    },
+    "./zod-to-optique": {
+      "types": "./src/zod-to-optique.ts",
+      "import": "./src/zod-to-optique.ts"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "check": "turbo run lint typecheck test --filter=@x2zod/config",
+    "lint": "bun --cwd ../.. oxlint packages/config",
+    "test": "bun test ./test",
+    "typecheck": "tsgo --project tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@optique/core": "1.0.2",
+    "@x2zod/core": "workspace:*",
+    "c12": "4.0.0-beta.5",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@typescript/native-preview": "7.0.0-dev.20260612.1",
+    "@x2zod/json-schema": "workspace:*",
+    "@x2zod/tsconfig": "workspace:*"
+  }
+}

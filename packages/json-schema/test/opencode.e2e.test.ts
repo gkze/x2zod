@@ -1,7 +1,10 @@
-import { describe, expect, test } from "bun:test";
+import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, rmSync } from "node:fs";
+import { writeFile } from "node:fs/promises";
 import nodePath from "node:path";
 import process from "node:process";
+import { describe, test } from "node:test";
 
 import { z } from "zod/v4";
 
@@ -96,12 +99,18 @@ const importGeneratedOpenCodeModule = async (
   ),
 });
 
+const pathExecutable = (binaryName: string): string | undefined =>
+  process.env["PATH"]
+    ?.split(nodePath.delimiter)
+    .map((directory) => nodePath.join(directory, binaryName))
+    .find((candidate) => existsSync(candidate));
+
 const openCodeBinaryCandidates = (): readonly string[] => {
-  const pathCandidate = Bun.which("opencode");
+  const pathCandidate = pathExecutable(openCodeBinaryName);
   return [
     nodePath.join(packageRootDirectory, "node_modules/.bin", openCodeBinaryName),
     nodePath.join(repositoryRootDirectory, "node_modules/.bin", openCodeBinaryName),
-    ...(pathCandidate === null ? [] : [pathCandidate]),
+    ...(pathCandidate === undefined ? [] : [pathCandidate]),
   ];
 };
 
@@ -138,11 +147,6 @@ const openCodeEnvironment = (
 const parseOpenCodeDebugConfigOutput = (stdout: Uint8Array): OpenCodeDebugConfig =>
   openCodeDebugConfigSchema.parse(JSON.parse(outputText(stdout)));
 
-const readSubprocessOutput = async (
-  output: ReadableStream<Uint8Array> | null,
-): Promise<Uint8Array> =>
-  output === null ? new Uint8Array() : new Uint8Array(await new Response(output).arrayBuffer());
-
 const formatSubprocessOutput = (name: string, value: Uint8Array): string => {
   const text = outputText(value);
   return text.length === 0 ? `${name}: <empty>` : `${name}:\n${text}`;
@@ -174,7 +178,7 @@ const openCodeSubprocessError = ({
     ].join("\n"),
   );
 
-const runOpenCodeSubprocess = async ({
+const runOpenCodeSubprocess = ({
   cmd,
   cwd,
   env,
@@ -182,21 +186,20 @@ const runOpenCodeSubprocess = async ({
   cmd: readonly [string, ...string[]];
   cwd: string;
   env: Record<string, string>;
-}>): Promise<Uint8Array> => {
-  const subprocess = Bun.spawn([...cmd], {
+}>): Uint8Array => {
+  const subprocess = spawnSync(cmd[0], cmd.slice(1), {
     cwd,
     env,
     killSignal: "SIGKILL",
-    stdin: "ignore",
-    stderr: "pipe",
-    stdout: "pipe",
+    stdio: ["ignore", "pipe", "pipe"],
     timeout: openCodeSubprocessDeadlineMs,
   });
-  const stdout = readSubprocessOutput(subprocess.stdout);
-  const stderr = readSubprocessOutput(subprocess.stderr);
-  const exitCode = await subprocess.exited;
-  const timedOut = subprocess.killed && subprocess.signalCode === "SIGKILL";
-  const [stdoutOutput, stderrOutput] = await Promise.all([stdout, stderr]);
+  if (subprocess.error !== undefined && subprocess.error.name !== "Error") throw subprocess.error;
+
+  const exitCode = subprocess.status ?? 1;
+  const timedOut = subprocess.signal === "SIGKILL";
+  const stdoutOutput = subprocess.stdout;
+  const stderrOutput = subprocess.stderr;
 
   if (timedOut || exitCode !== 0)
     throw openCodeSubprocessError({
@@ -211,14 +214,14 @@ const runOpenCodeSubprocess = async ({
   return stdoutOutput;
 };
 
-const assertOpenCodeAcceptsConfig = async ({
+const assertOpenCodeAcceptsConfig = ({
   configDirectory,
   configFile,
   executable,
   homeDirectory,
   projectDirectory,
-}: AssertOpenCodeAcceptsConfigRequest): Promise<void> => {
-  const stdout = await runOpenCodeSubprocess({
+}: AssertOpenCodeAcceptsConfigRequest): void => {
+  const stdout = runOpenCodeSubprocess({
     cmd: [executable, "debug", "config", "--pure"],
     cwd: projectDirectory,
     env: openCodeEnvironment(homeDirectory, configFile, configDirectory),
@@ -226,14 +229,14 @@ const assertOpenCodeAcceptsConfig = async ({
 
   const config = parseOpenCodeDebugConfigOutput(stdout);
 
-  expect(config.username).toBe(openCodeTestUsername);
-  expect(config.logLevel).toBe(sampleOpenCodeConfig.logLevel);
-  expect(config.server.hostname).toBe(openCodeTestHostname);
-  expect(config.server.port).toBe(openCodeTestPort);
+  assert.equal(config.username, openCodeTestUsername);
+  assert.equal(config.logLevel, sampleOpenCodeConfig.logLevel);
+  assert.equal(config.server.hostname, openCodeTestHostname);
+  assert.equal(config.server.port, openCodeTestPort);
 };
 
-describe("OpenCode config JSON Schema E2E", () => {
-  test("emits importable Zod source that OpenCode accepts as config", async () => {
+void describe("OpenCode config JSON Schema E2E", () => {
+  void test("emits importable Zod source that OpenCode accepts as config", async () => {
     const directory = createTemporaryDirectory({
       prefix: tempDirectoryPrefix,
       rootDirectory: tempRootDirectory,
@@ -251,14 +254,14 @@ describe("OpenCode config JSON Schema E2E", () => {
       mkdirSync(homeDirectory, { recursive: true });
       buildPrinterBundle(bundleFile);
 
-      await Bun.write(generatedModuleFile, printGeneratedOpenCodeSource(bundleFile));
+      await writeFile(generatedModuleFile, printGeneratedOpenCodeSource(bundleFile));
       const generated = await importGeneratedOpenCodeModule(generatedModuleFile);
       const parsedConfig = generated.openCodeConfigSchema.parse(sampleOpenCodeConfig);
 
-      expect(parsedConfig).toEqual(sampleOpenCodeConfig);
+      assert.deepEqual(parsedConfig, sampleOpenCodeConfig);
 
-      await Bun.write(generatedConfigFile, JSON.stringify(parsedConfig, null, 2));
-      await assertOpenCodeAcceptsConfig({
+      await writeFile(generatedConfigFile, JSON.stringify(parsedConfig, null, 2));
+      assertOpenCodeAcceptsConfig({
         configDirectory,
         configFile: generatedConfigFile,
         executable: openCodeExecutable(),

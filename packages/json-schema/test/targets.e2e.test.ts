@@ -1,6 +1,8 @@
-import { describe, expect, test } from "bun:test";
+import assert from "node:assert/strict";
 import { readFileSync, rmSync } from "node:fs";
+import { writeFile } from "node:fs/promises";
 import nodePath from "node:path";
+import { describe, test } from "node:test";
 
 import { buildInputs } from "@x2zod/build-inputs";
 import type { Diagnostic, InputDocument } from "@x2zod/core";
@@ -156,7 +158,7 @@ const targetBuildInputs = (): readonly BuildInputProvenance[] =>
 
 const resultBuildInputs = async (): Promise<readonly BuildInputProvenance[]> => {
   const result = await buildInputs({ mode: "check", rootDir: targetFixtureDirectory });
-  expect(result.lockfileUpdated).toBe(false);
+  assert.equal(result.lockfileUpdated, false);
   return result.inputs
     .map(
       (input): BuildInputProvenance => ({ id: String(input.id), path: input.path, url: input.url }),
@@ -172,86 +174,99 @@ const assertInvalidSamplesFail = (target: GeneratedZodTarget, schema: TargetZodS
   }
 };
 
-describe("JSON Schema public target E2E matrix", () => {
-  test("locks fixture provenance with build-inputs", async () => {
-    expect(await resultBuildInputs()).toEqual(targetBuildInputs());
+void describe("JSON Schema public target E2E matrix", () => {
+  void test("locks fixture provenance with build-inputs", async () => {
+    assert.deepEqual(await resultBuildInputs(), targetBuildInputs());
   });
 
-  test.each(
-    targetMatrix.filter((target): target is GeneratedZodTarget => isGeneratedZodTarget(target)),
-  )("$name emits importable Zod source for a valid fixture", async (target) => {
-    const directory = createTemporaryDirectory({
-      prefix: tempDirectoryPrefix,
-      rootDirectory: tempRootDirectory,
-    });
-    const bundleFile = nodePath.join(directory, bundledPrinterFileName);
-    const generatedFile = nodePath.join(directory, generatedModuleFileName);
-    const optionsFile = nodePath.join(directory, optionsFileName);
+  for (const target of targetMatrix.filter((candidate): candidate is GeneratedZodTarget =>
+    isGeneratedZodTarget(candidate),
+  ))
+    void test(
+      [target.name, "emits importable Zod source for a valid fixture"].join(" "),
+      async () => {
+        const directory = createTemporaryDirectory({
+          prefix: tempDirectoryPrefix,
+          rootDirectory: tempRootDirectory,
+        });
+        const bundleFile = nodePath.join(directory, bundledPrinterFileName);
+        const generatedFile = nodePath.join(directory, generatedModuleFileName);
+        const optionsFile = nodePath.join(directory, optionsFileName);
 
-    try {
-      await Bun.write(optionsFile, JSON.stringify(target.pluginOptions));
-      buildPrinterBundle(bundleFile);
-      await Bun.write(
-        generatedFile,
-        printTargetSource({
-          bundleFile,
-          optionsFile,
-          schemaFile: targetSchemaFile(target),
-          typeName: target.typeName,
-        }),
-      );
+        try {
+          await writeFile(optionsFile, JSON.stringify(target.pluginOptions));
+          buildPrinterBundle(bundleFile);
+          await writeFile(
+            generatedFile,
+            printTargetSource({
+              bundleFile,
+              optionsFile,
+              schemaFile: targetSchemaFile(target),
+              typeName: target.typeName,
+            }),
+          );
 
-      const schema = await importGeneratedExport(
-        generatedFile,
-        target.exportName,
-        isTargetZodSchema,
-      );
-      expect(schema.safeParse(target.validSample.value).success).toBe(true);
-      assertInvalidSamplesFail(target, schema);
-    } finally {
-      rmSync(directory, { force: true, recursive: true });
-    }
-  });
+          const schema = await importGeneratedExport(
+            generatedFile,
+            target.exportName,
+            isTargetZodSchema,
+          );
+          assert.equal(schema.safeParse(target.validSample.value).success, true);
+          assertInvalidSamplesFail(target, schema);
+        } finally {
+          rmSync(directory, { force: true, recursive: true });
+        }
+      },
+    );
 
-  test.each(targetMatrix.filter((target): target is BlockedTarget => isBlockedTarget(target)))(
-    "$name reports its current exact blocking schema features",
-    async (target) => {
-      const report = await diagnosticReportFor(target);
+  for (const target of targetMatrix.filter((candidate): candidate is BlockedTarget =>
+    isBlockedTarget(candidate),
+  ))
+    void test(
+      [target.name, "reports its current exact blocking schema features"].join(" "),
+      async () => {
+        const report = await diagnosticReportFor(target);
 
-      expect(report.phase).toBe(target.expectedPhase);
-      expect(diagnosticCodes(report.diagnostics)).toEqual(
-        uniqueSortedStrings(target.expectedCodes),
-      );
-      expect(diagnosticKeywords(report.diagnostics)).toEqual(
-        uniqueSortedStrings(target.expectedKeywords),
-      );
-    },
-  );
+        assert.equal(report.phase, target.expectedPhase);
+        assert.deepEqual(
+          diagnosticCodes(report.diagnostics),
+          uniqueSortedStrings(target.expectedCodes),
+        );
+        assert.deepEqual(
+          diagnosticKeywords(report.diagnostics),
+          uniqueSortedStrings(target.expectedKeywords),
+        );
+      },
+    );
 
-  test("tracks discussed targets without stable public schema fixtures", () => {
+  void test("tracks discussed targets without stable public schema fixtures", () => {
     const schemaUnavailableTargets = targetMatrix.filter(
       (target): target is SchemaUnavailableTarget => isSchemaUnavailableTarget(target),
     );
 
-    expect(schemaUnavailableTargets.map((target) => target.name)).toEqual([
-      "Visual Studio Code settings",
-      "Zed settings",
-    ]);
-    expect(schemaUnavailableTargets.every((target) => target.reason.length > 0)).toBe(true);
+    assert.deepEqual(
+      schemaUnavailableTargets.map((target) => target.name),
+      ["Visual Studio Code settings", "Zed settings"],
+    );
+    assert.equal(
+      schemaUnavailableTargets.every((target) => target.reason.length > 0),
+      true,
+    );
   });
 
-  test("records the current round-trip level for every discussed target", () => {
-    expect(
+  void test("records the current round-trip level for every discussed target", () => {
+    assert.deepEqual(
       targetMatrix.map((target) => ({ name: target.name, roundTripLevel: target.roundTripLevel })),
-    ).toEqual([
-      { name: "OpenCode config", roundTripLevel: "dedicated-product-e2e" },
-      { name: "Conductor user settings", roundTripLevel: "generated-zod" },
-      { name: "Conductor repo settings", roundTripLevel: "generated-zod" },
-      { name: "Codex config", roundTripLevel: "generated-zod" },
-      { name: "Claude Code settings", roundTripLevel: "blocked-schema-features" },
-      { name: "Cursor environment", roundTripLevel: "generated-zod" },
-      { name: "Visual Studio Code settings", roundTripLevel: "schema-unavailable" },
-      { name: "Zed settings", roundTripLevel: "schema-unavailable" },
-    ]);
+      [
+        { name: "OpenCode config", roundTripLevel: "dedicated-product-e2e" },
+        { name: "Conductor user settings", roundTripLevel: "generated-zod" },
+        { name: "Conductor repo settings", roundTripLevel: "generated-zod" },
+        { name: "Codex config", roundTripLevel: "generated-zod" },
+        { name: "Claude Code settings", roundTripLevel: "blocked-schema-features" },
+        { name: "Cursor environment", roundTripLevel: "generated-zod" },
+        { name: "Visual Studio Code settings", roundTripLevel: "schema-unavailable" },
+        { name: "Zed settings", roundTripLevel: "schema-unavailable" },
+      ],
+    );
   });
 });

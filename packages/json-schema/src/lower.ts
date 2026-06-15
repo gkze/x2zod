@@ -116,7 +116,14 @@ const lowerEnum = (
   pointer: JsonPointer,
   context: LoweringContext,
 ): ZodExpression => {
-  if (!isJsonArray(values)) return zodPlan.unknown();
+  if (!isJsonArray(values)) {
+    addDiagnostic(context, {
+      code: "invalid_schema_document",
+      message: "JSON Schema enum must be an array.",
+      pointer,
+    });
+    return zodPlan.unknown();
+  }
 
   const stringValues = jsonStringValues(values);
   const [firstStringValue, ...remainingStringValues] = stringValues;
@@ -377,6 +384,14 @@ const lowerSchema = (
       schema,
       typeValuePointer: jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.type),
     });
+  if (typeValue !== undefined) {
+    addDiagnostic(context, {
+      code: "invalid_schema_document",
+      message: "JSON Schema type must be a string or an array of strings.",
+      pointer: jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.type),
+    });
+    return zodPlan.unknown();
+  }
   if (hasJsonSchemaObjectKeywords(schema)) return lowerObjectSchema(schema, pointer, context);
   if (hasJsonSchemaArrayKeywords(schema)) return lowerArraySchema(schema, pointer, context);
   const untypedConstraint = lowerUntypedConstraintSchema(schema, pointer, context);

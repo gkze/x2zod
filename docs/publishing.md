@@ -6,6 +6,7 @@ Public npm packages:
 
 - `@x2zod/build-inputs`
 - `@x2zod/cli`
+- `@x2zod/config`
 - `@x2zod/core`
 - `@x2zod/eslint-plugins`
 - `@x2zod/json-schema`

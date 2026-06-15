@@ -1,7 +1,7 @@
 {
   "name": "@x2zod/cli",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "license": "MIT",
-  "exports": "./src/cli.ts",
-  "publish": { "exclude": ["test/**"], "include": ["package.json", "src/**/*.ts"] }
+  "exports": { ".": "./src/cli.ts", "./zod-to-optique": "./src/zod-to-optique.ts" },
+  "publish": { "exclude": ["test/**"], "include": ["bin/**/*.ts", "package.json", "src/**/*.ts"] }
 }

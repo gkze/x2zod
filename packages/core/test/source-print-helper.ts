@@ -1,14 +1,11 @@
 import { pathToFileURL } from "node:url";
 
-import {
-  diagnosticText,
-  requiredArgument,
-  writeNativeSourceFile,
-} from "../../../test/native-print-helper";
+import { diagnosticText, requiredArgument } from "../../../test/native-print-helper";
 import { isRecord } from "../../../test/structural";
 import type { UnknownRecord } from "../../../test/structural";
 import type {
   buildZodSourceFile,
+  printSourceFileSync,
   zodDeclaration,
   zodModule,
   zodPlan,
@@ -17,6 +14,7 @@ import type {
 
 type CoreModule = Readonly<{
   buildZodSourceFile: typeof buildZodSourceFile;
+  printSourceFileSync: typeof printSourceFileSync;
   zodDeclaration: typeof zodDeclaration;
   zodModule: typeof zodModule;
   zodPlan: typeof zodPlan;
@@ -27,6 +25,7 @@ const coreBundlePathArgumentIndex = 2;
 const maximumCount = 10;
 const coreModuleFunctionKeys = [
   "buildZodSourceFile",
+  "printSourceFileSync",
   "zodDeclaration",
   "zodModule",
   "zodSymbol",
@@ -72,6 +71,7 @@ const module = core.zodModule(root, [
   core.zodDeclaration(
     root,
     core.zodPlan.object({
+      ["__proto__"]: core.zodPlan.string(),
       count: core.zodPlan.lte(core.zodPlan.gt(core.zodPlan.integer(), 0), maximumCount),
       pair: core.zodPlan.tuple([core.zodPlan.string(), core.zodPlan.number()]),
       payload: core.zodPlan.required(core.zodPlan.object({ value: core.zodPlan.unknown() }), [
@@ -87,4 +87,4 @@ const result = core.buildZodSourceFile(module, { typeName: "User" });
 
 if (!result.ok) throw new Error(diagnosticText(result.diagnostics));
 
-writeNativeSourceFile(result.value.sourceFile);
+process.stdout.write(core.printSourceFileSync(result.value.sourceFile, { cwd: process.cwd() }));

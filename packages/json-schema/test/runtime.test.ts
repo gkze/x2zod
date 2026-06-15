@@ -1,6 +1,8 @@
-import { describe, expect, test } from "bun:test";
+import assert from "node:assert/strict";
 import { rmSync } from "node:fs";
+import { writeFile } from "node:fs/promises";
 import nodePath from "node:path";
+import { describe, test } from "node:test";
 
 import {
   buildNodeBundle,
@@ -81,14 +83,14 @@ const runtimeFixtureSchema = (): JsonSchemaValue => ({
 });
 
 const writeRuntimeFixtureSchema = async (schemaFile: string): Promise<void> => {
-  await Bun.write(schemaFile, JSON.stringify(runtimeFixtureSchema()));
+  await writeFile(schemaFile, JSON.stringify(runtimeFixtureSchema()));
 };
 
 const writeExternalReferenceFixture = async (
   schemaFile: string,
   externalSchemaFile: string,
 ): Promise<void> => {
-  await Bun.write(
+  await writeFile(
     schemaFile,
     JSON.stringify({
       properties: { model: { $ref: externalSchemaRef } },
@@ -96,7 +98,7 @@ const writeExternalReferenceFixture = async (
       type: "object",
     }),
   );
-  await Bun.write(
+  await writeFile(
     externalSchemaFile,
     JSON.stringify({ $defs: { model: { enum: ["alpha/model", "beta/model"] } } }),
   );
@@ -110,8 +112,8 @@ const validRuntimeValue = (): JsonObject => ({
   value: "required-unknown",
 });
 
-describe("JSON Schema generated runtime source", () => {
-  test("preserves required unknown keys, array bounds, patterns, and fixed tuples", async () => {
+void describe("JSON Schema generated runtime source", () => {
+  void test("preserves required unknown keys, array bounds, patterns, and fixed tuples", async () => {
     const directory = createTemporaryDirectory({
       prefix: tempDirectoryPrefix,
       rootDirectory: tempRootDirectory,
@@ -124,40 +126,44 @@ describe("JSON Schema generated runtime source", () => {
       await writeRuntimeFixtureSchema(schemaFile);
       buildPrinterBundle(bundleFile);
       const printedSource = printRuntimeFixture(bundleFile, schemaFile);
-      expect(printedSource).toContain(".required({ value: true, metadata: true })");
-      expect(printedSource).toContain(".min(1).max(3)");
-      expect(printedSource).toContain("new RegExp");
-      expect(printedSource).toContain("z.tuple");
+      assert.ok(printedSource.includes(".required({ value: true, metadata: true })"));
+      assert.ok(printedSource.includes(".min(1).max(3)"));
+      assert.ok(printedSource.includes("new RegExp"));
+      assert.ok(printedSource.includes("z.tuple"));
 
-      await Bun.write(generatedFile, printedSource);
+      await writeFile(generatedFile, printedSource);
       const schema = await importGeneratedSchema(generatedFile);
 
-      expect(schema.safeParse(validRuntimeValue()).success).toBe(true);
-      expect(schema.safeParse({ ...validRuntimeValue(), slug: "ABC" }).success).toBe(false);
-      expect(schema.safeParse({ ...validRuntimeValue(), tags: [] }).success).toBe(false);
-      expect(schema.safeParse({ ...validRuntimeValue(), tags: ["a", "b", "c", "d"] }).success).toBe(
+      assert.equal(schema.safeParse(validRuntimeValue()).success, true);
+      assert.equal(schema.safeParse({ ...validRuntimeValue(), slug: "ABC" }).success, false);
+      assert.equal(schema.safeParse({ ...validRuntimeValue(), tags: [] }).success, false);
+      assert.equal(
+        schema.safeParse({ ...validRuntimeValue(), tags: ["a", "b", "c", "d"] }).success,
         false,
       );
-      expect(schema.safeParse({ ...validRuntimeValue(), pair: ["left"] }).success).toBe(false);
-      expect(schema.safeParse({ ...validRuntimeValue(), pair: ["left", 2, true] }).success).toBe(
+      assert.equal(schema.safeParse({ ...validRuntimeValue(), pair: ["left"] }).success, false);
+      assert.equal(
+        schema.safeParse({ ...validRuntimeValue(), pair: ["left", 2, true] }).success,
         false,
       );
-      expect(
+      assert.equal(
         schema.safeParse({
           metadata: validRuntimeValue()["metadata"],
           tags: validRuntimeValue()["tags"],
         }).success,
-      ).toBe(false);
-      expect(
+        false,
+      );
+      assert.equal(
         schema.safeParse({ tags: validRuntimeValue()["tags"], value: validRuntimeValue()["value"] })
           .success,
-      ).toBe(false);
+        false,
+      );
     } finally {
       rmSync(directory, { force: true, recursive: true });
     }
   });
 
-  test("preserves referenced external schema declarations at runtime", async () => {
+  void test("preserves referenced external schema declarations at runtime", async () => {
     const directory = createTemporaryDirectory({
       prefix: tempDirectoryPrefix,
       rootDirectory: tempRootDirectory,
@@ -172,15 +178,15 @@ describe("JSON Schema generated runtime source", () => {
       buildPrinterBundle(bundleFile);
       const printedSource = printRuntimeFixture(bundleFile, schemaFile, externalSchemaFile);
 
-      expect(printedSource).toContain("z.enum");
-      expect(printedSource).toContain("modelSchema");
+      assert.ok(printedSource.includes("z.enum"));
+      assert.ok(printedSource.includes("modelSchema"));
 
-      await Bun.write(generatedFile, printedSource);
+      await writeFile(generatedFile, printedSource);
       const schema = await importGeneratedSchema(generatedFile);
 
-      expect(schema.safeParse({ model: "alpha/model" }).success).toBe(true);
-      expect(schema.safeParse({ model: "gamma/model" }).success).toBe(false);
-      expect(schema.safeParse({}).success).toBe(false);
+      assert.equal(schema.safeParse({ model: "alpha/model" }).success, true);
+      assert.equal(schema.safeParse({ model: "gamma/model" }).success, false);
+      assert.equal(schema.safeParse({}).success, false);
     } finally {
       rmSync(directory, { force: true, recursive: true });
     }

@@ -1,4 +1,5 @@
-import { describe, expect, test } from "bun:test";
+import assert from "node:assert/strict";
+import { describe, test } from "node:test";
 
 import { jsonPointerSchema, parseZodEmissionModule } from "@x2zod/core";
 import type {
@@ -23,8 +24,7 @@ const options = (input: JsonSchemaInputPluginOptionsInput = {}): JsonSchemaInput
   jsonSchemaInputPluginOptionsSchema.parse(input);
 
 const expectOk = <TValue>(result: { ok: true; value: TValue } | { ok: false }): TValue => {
-  expect(result.ok).toBe(true);
-  if (!result.ok) throw new Error("Expected result to be ok.");
+  assert.equal(result.ok, true);
   return result.value;
 };
 
@@ -32,9 +32,18 @@ const expectErrCode = (
   result: { diagnostics?: readonly { code: string }[]; ok: boolean },
   code: string,
 ): void => {
-  expect(result.ok).toBe(false);
-  expect(result.diagnostics?.map((diagnostic) => diagnostic.code)).toContain(code);
+  assert.equal(result.ok, false);
+  assert.ok(diagnosticCodes(result).includes(code));
 };
+
+const diagnosticCodes = (result: {
+  diagnostics?: readonly { code: string }[] | undefined;
+}): readonly string[] => result.diagnostics?.map((diagnostic) => diagnostic.code) ?? [];
+
+const diagnosticPointers = (result: {
+  diagnostics?: readonly { location?: { pointer?: unknown } | undefined }[] | undefined;
+}): readonly string[] =>
+  result.diagnostics?.map((diagnostic) => String(diagnostic.location?.pointer)) ?? [];
 
 const parseEmissionModule = (module: ZodEmissionModuleInput): ZodEmissionModule =>
   expectOk(parseZodEmissionModule(module));
@@ -75,8 +84,8 @@ const stringLiteralArrayArgumentValues = (
   });
 };
 
-describe("jsonSchemaInputPlugin prepare", () => {
-  test("parses strict JSON and records JSON Pointer source locations", async () => {
+void describe("jsonSchemaInputPlugin prepare", () => {
+  void test("parses strict JSON and records JSON Pointer source locations", async () => {
     const prepared = expectOk(
       await jsonSchemaInputPlugin.prepare(
         fileDocument(
@@ -92,24 +101,24 @@ describe("jsonSchemaInputPlugin prepare", () => {
       ),
     );
 
-    expect(prepared.value.dialect).toBe("draft-2020-12");
-    expect(prepared.locations?.get(jsonPointerSchema.parse("/properties/name"))?.start).toEqual({
+    assert.equal(prepared.value.dialect, "draft-2020-12");
+    assert.deepEqual(prepared.locations?.get(jsonPointerSchema.parse("/properties/name"))?.start, {
       column: 27,
       line: 4,
     });
   });
 
-  test("normalizes Ajv schema-document failures into diagnostics", async () => {
+  void test("normalizes Ajv schema-document failures into diagnostics", async () => {
     const result = await jsonSchemaInputPlugin.prepare(
       fileDocument('{ "type": "wat" }'),
       options(),
     );
 
     expectErrCode(result, "invalid_schema_document");
-    expect(String(result.diagnostics?.at(0)?.location?.pointer)).toBe("/type");
+    assert.equal(String(result.diagnostics?.at(0)?.location?.pointer), "/type");
   });
 
-  test("fails when declared and requested dialects conflict", async () => {
+  void test("fails when declared and requested dialects conflict", async () => {
     const result = await jsonSchemaInputPlugin.prepare(
       fileDocument('{ "$schema": "http://json-schema.org/draft-07/schema#", "type": "string" }'),
       options({ dialect: "draft-2020-12", validator: "none" }),
@@ -119,8 +128,8 @@ describe("jsonSchemaInputPlugin prepare", () => {
   });
 });
 
-describe("jsonSchemaInputPlugin lower", () => {
-  test("lowers primitives, enums, objects, arrays, local refs, and additionalProperties", async () => {
+void describe("jsonSchemaInputPlugin lower", () => {
+  void test("lowers primitives, enums, objects, arrays, local refs, and additionalProperties", async () => {
     const prepared = expectOk(
       await jsonSchemaInputPlugin.prepare(
         fileDocument(
@@ -144,16 +153,18 @@ describe("jsonSchemaInputPlugin lower", () => {
     const lowered = expectOk(
       await jsonSchemaInputPlugin.lower(prepared, options({ validator: "none" })),
     );
-    const root = lowered.declarations.find((declaration) => declaration.symbol === "root");
+    const root = rootExpression(parseEmissionModule(lowered));
 
-    expect(lowered.declarations.map((declaration): string => declaration.symbol)).toContain(
-      "schema:/$defs/tag",
+    assert.ok(
+      lowered.declarations
+        .map((declaration): string => declaration.symbol)
+        .includes("schema:/$defs/tag"),
     );
-    expect(root?.expression.kind).toBe("factory");
-    expect(root?.expression.calls?.at(-finalCallOffset)?.method).toBe("strict");
+    assert.equal(root.kind, "factory");
+    assert.equal(root.calls.at(-finalCallOffset)?.method, "strict");
   });
 
-  test("fails loudly for known unsupported and unknown keywords", async () => {
+  void test("fails loudly for known unsupported and unknown keywords", async () => {
     const unsupported = expectOk(
       await jsonSchemaInputPlugin.prepare(
         fileDocument('{ "type": "array", "uniqueItems": true }'),
@@ -177,7 +188,7 @@ describe("jsonSchemaInputPlugin lower", () => {
     );
   });
 
-  test("treats OpenCode ref metadata as inert profile data", async () => {
+  void test("treats OpenCode ref metadata as inert profile data", async () => {
     const prepared = expectOk(
       await jsonSchemaInputPlugin.prepare(
         fileDocument('{ "type": "object", "ref": "Config" }'),
@@ -190,14 +201,12 @@ describe("jsonSchemaInputPlugin lower", () => {
     );
     expectOk(lowered);
 
-    expect(lowered.diagnostics?.map((diagnostic) => String(diagnostic.code))).toContain(
-      "json-schema/ignored-keyword",
-    );
+    assert.ok(diagnosticCodes(lowered).includes("json-schema/ignored-keyword"));
   });
 });
 
-describe("jsonSchemaInputPlugin advanced lower", () => {
-  test("lowers external refs, numeric bounds, and anyOf branches", async () => {
+void describe("jsonSchemaInputPlugin advanced lower", () => {
+  void test("lowers external refs, numeric bounds, and anyOf branches", async () => {
     const pluginOptions = options({
       externalSchemas: {
         [externalSchemaUri]: { $defs: { model: { title: "Model", type: "string" } } },
@@ -230,21 +239,24 @@ describe("jsonSchemaInputPlugin advanced lower", () => {
     const model = objectPropertyExpression(root, "model");
     const value = objectPropertyExpression(root, "value");
 
-    expect(declarationSymbols(lowered)).toContain(
-      ["schema:", externalSchemaUri, "#/$defs/model"].join(""),
+    assert.ok(
+      declarationSymbols(lowered).includes(
+        ["schema:", externalSchemaUri, "#/$defs/model"].join(""),
+      ),
     );
-    expect(count.calls.map((call) => String(call.method))).toEqual(["int", "gte", "lt"]);
-    expect(model.kind).toBe("reference");
-    if (model.kind !== "reference") throw new Error("Expected model to lower to a reference.");
-    expect(String(model.symbol)).toBe(`schema:${externalSchemaUri}#/$defs/model`);
-    expect(value.kind).toBe("factory");
-    if (value.kind !== "factory") throw new Error("Expected value to lower to a factory.");
-    expect(value.factory).toBe("union");
+    assert.deepEqual(
+      count.calls.map((call) => String(call.method)),
+      ["int", "gte", "lt"],
+    );
+    assert.equal(model.kind, "reference");
+    assert.equal(String(model.symbol), `schema:${externalSchemaUri}#/$defs/model`);
+    assert.equal(value.kind, "factory");
+    assert.equal(value.factory, "union");
   });
 });
 
-describe("jsonSchemaInputPlugin precise lower", () => {
-  test("lowers array bounds, string patterns, fixed tuples, and required unknown keys", async () => {
+void describe("jsonSchemaInputPlugin precise lower", () => {
+  void test("lowers array bounds, string patterns, fixed tuples, and required unknown keys", async () => {
     const prepared = expectOk(
       await jsonSchemaInputPlugin.prepare(
         fileDocument(
@@ -278,27 +290,28 @@ describe("jsonSchemaInputPlugin precise lower", () => {
     const tags = objectPropertyExpression(root, "tags");
     const value = objectPropertyExpression(root, "value");
 
-    expect(root.calls.map((call) => String(call.method))).toEqual(["required", "passthrough"]);
-    expect(stringLiteralArrayArgumentValues(root, 0)).toEqual(["value", "metadata"]);
-    expect(metadata.kind).toBe("factory");
-    if (metadata.kind !== "factory") throw new Error("Expected metadata to lower to a factory.");
-    expect(metadata.factory).toBe("unknown");
-    expect(value.kind).toBe("factory");
-    if (value.kind !== "factory") throw new Error("Expected value to lower to a factory.");
-    expect(value.factory).toBe("unknown");
-    expect(pair.kind).toBe("factory");
-    if (pair.kind !== "factory") throw new Error("Expected pair to lower to a factory.");
-    expect(pair.factory).toBe("tuple");
-    expect(slug.calls.map((call) => String(call.method))).toEqual([
-      "regex",
-      "min",
-      "max",
-      "optional",
-    ]);
-    expect(tags.calls.map((call) => String(call.method))).toEqual(["min", "max", "optional"]);
+    assert.deepEqual(
+      root.calls.map((call) => String(call.method)),
+      ["required", "passthrough"],
+    );
+    assert.deepEqual(stringLiteralArrayArgumentValues(root, 0), ["value", "metadata"]);
+    assert.equal(metadata.kind, "factory");
+    assert.equal(metadata.factory, "unknown");
+    assert.equal(value.kind, "factory");
+    assert.equal(value.factory, "unknown");
+    assert.equal(pair.kind, "factory");
+    assert.equal(pair.factory, "tuple");
+    assert.deepEqual(
+      slug.calls.map((call) => String(call.method)),
+      ["regex", "min", "max", "optional"],
+    );
+    assert.deepEqual(
+      tags.calls.map((call) => String(call.method)),
+      ["min", "max", "optional"],
+    );
   });
 
-  test("lowers required-only object schemas into required shape keys", async () => {
+  void test("lowers required-only object schemas into required shape keys", async () => {
     const prepared = expectOk(
       await jsonSchemaInputPlugin.prepare(
         fileDocument(JSON.stringify({ required: ["metadata"] })),
@@ -312,16 +325,39 @@ describe("jsonSchemaInputPlugin precise lower", () => {
     const root = rootExpression(lowered);
     const metadata = objectPropertyExpression(root, "metadata");
 
-    expect(root.calls.map((call) => String(call.method))).toEqual(["required", "passthrough"]);
-    expect(stringLiteralArrayArgumentValues(root, 0)).toEqual(["metadata"]);
-    expect(metadata.kind).toBe("factory");
-    if (metadata.kind !== "factory") throw new Error("Expected metadata to lower to a factory.");
-    expect(metadata.factory).toBe("unknown");
+    assert.deepEqual(
+      root.calls.map((call) => String(call.method)),
+      ["required", "passthrough"],
+    );
+    assert.deepEqual(stringLiteralArrayArgumentValues(root, 0), ["metadata"]);
+    assert.equal(metadata.kind, "factory");
+    assert.equal(metadata.factory, "unknown");
+  });
+
+  void test("allows redundant integer type siblings for integer const and enum literals", async () => {
+    const cases = [
+      { const: 1, type: "integer" },
+      { enum: [1, 2], type: "integer" },
+    ];
+    const results = await Promise.all(
+      cases.map(async (schema) => {
+        const prepared = expectOk(
+          await jsonSchemaInputPlugin.prepare(
+            fileDocument(JSON.stringify(schema)),
+            options({ validator: "none" }),
+          ),
+        );
+
+        return jsonSchemaInputPlugin.lower(prepared, options({ validator: "none" }));
+      }),
+    );
+
+    for (const result of results) expectOk(result);
   });
 });
 
-describe("jsonSchemaInputPlugin precise diagnostics", () => {
-  test("diagnoses malformed required arrays without validator preflight", async () => {
+void describe("jsonSchemaInputPlugin precise diagnostics", () => {
+  void test("diagnoses malformed required arrays without validator preflight", async () => {
     const prepared = expectOk(
       await jsonSchemaInputPlugin.prepare(
         fileDocument(JSON.stringify({ required: ["name", "name", true], type: "object" })),
@@ -333,11 +369,35 @@ describe("jsonSchemaInputPlugin precise diagnostics", () => {
     expectErrCode(result, "invalid_schema_document");
     const pointers =
       result.diagnostics?.map((diagnostic) => String(diagnostic.location?.pointer)) ?? [];
-    expect(pointers).toContain("/required/1");
-    expect(pointers).toContain("/required/2");
+    assert.ok(pointers.includes("/required/1"));
+    assert.ok(pointers.includes("/required/2"));
   });
 
-  test("collects unsupported keyword diagnostics from referenced external schemas", async () => {
+  void test("diagnoses malformed enum and type keywords without validator preflight", async () => {
+    const cases = [
+      { expectedPointer: "/enum", schema: { enum: "build" } },
+      { expectedPointer: "/type", schema: { type: true } },
+    ];
+    const results = await Promise.all(
+      cases.map(async ({ expectedPointer, schema }) => {
+        const prepared = expectOk(
+          await jsonSchemaInputPlugin.prepare(
+            fileDocument(JSON.stringify(schema)),
+            options({ validator: "none" }),
+          ),
+        );
+        const result = await jsonSchemaInputPlugin.lower(prepared, options({ validator: "none" }));
+        return { expectedPointer, result };
+      }),
+    );
+
+    for (const { expectedPointer, result } of results) {
+      expectErrCode(result, "invalid_schema_document");
+      assert.ok(diagnosticPointers(result).includes(expectedPointer));
+    }
+  });
+
+  void test("collects unsupported keyword diagnostics from referenced external schemas", async () => {
     const pluginOptions = options({
       externalSchemas: {
         [externalSchemaUri]: { $defs: { tags: { type: "array", uniqueItems: true } } },
@@ -354,12 +414,10 @@ describe("jsonSchemaInputPlugin precise diagnostics", () => {
     const result = await jsonSchemaInputPlugin.lower(prepared, pluginOptions);
 
     expectErrCode(result, "unsupported_keyword");
-    expect(result.diagnostics?.map((diagnostic) => String(diagnostic.location?.pointer))).toContain(
-      "/$defs/tags/uniqueItems",
-    );
+    assert.ok(diagnosticPointers(result).includes("/$defs/tags/uniqueItems"));
   });
 
-  test("fails when keyword-specific lowerers would ignore sibling assertions", async () => {
+  void test("fails when keyword-specific lowerers would ignore sibling assertions", async () => {
     const cases = [
       { $defs: { value: { type: "string" } }, $ref: "#/$defs/value", type: "number" },
       { const: "build", type: "number" },
@@ -384,8 +442,8 @@ describe("jsonSchemaInputPlugin precise diagnostics", () => {
   });
 });
 
-describe("jsonSchemaInputPlugin regression diagnostics", () => {
-  test("diagnoses malformed numeric bounds without validator preflight", async () => {
+void describe("jsonSchemaInputPlugin regression diagnostics", () => {
+  void test("diagnoses malformed numeric bounds without validator preflight", async () => {
     const prepared = expectOk(
       await jsonSchemaInputPlugin.prepare(
         fileDocument(JSON.stringify({ minimum: "1", type: "number" })),
@@ -395,12 +453,10 @@ describe("jsonSchemaInputPlugin regression diagnostics", () => {
     const result = await jsonSchemaInputPlugin.lower(prepared, options({ validator: "none" }));
 
     expectErrCode(result, "invalid_schema_document");
-    expect(result.diagnostics?.map((diagnostic) => String(diagnostic.location?.pointer))).toContain(
-      "/minimum",
-    );
+    assert.ok(diagnosticPointers(result).includes("/minimum"));
   });
 
-  test("fails when string pattern constraints omit a string type", async () => {
+  void test("fails when string pattern constraints omit a string type", async () => {
     const prepared = expectOk(
       await jsonSchemaInputPlugin.prepare(
         fileDocument(JSON.stringify({ pattern: "^a$" })),
@@ -410,12 +466,10 @@ describe("jsonSchemaInputPlugin regression diagnostics", () => {
     const result = await jsonSchemaInputPlugin.lower(prepared, options({ validator: "none" }));
 
     expectErrCode(result, "unrepresentable_schema_combination");
-    expect(result.diagnostics?.map((diagnostic) => String(diagnostic.location?.pointer))).toContain(
-      "/pattern",
-    );
+    assert.ok(diagnosticPointers(result).includes("/pattern"));
   });
 
-  test("does not resolve partial array-index tokens in JSON Pointers", async () => {
+  void test("does not resolve partial array-index tokens in JSON Pointers", async () => {
     const prepared = expectOk(
       await jsonSchemaInputPlugin.prepare(
         fileDocument(

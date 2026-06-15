@@ -57,6 +57,8 @@ export type {
   ZodSourceFile,
   ZodSourceOutputOptions,
 } from "./source";
+export { printSourceFile, printSourceFileSync } from "./source-print";
+export type { SourceFilePrintOptions } from "./source-print";
 export {
   isZodKnownMethodName,
   zodFactoryMetadata,
