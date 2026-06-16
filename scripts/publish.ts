@@ -1,3 +1,5 @@
+#!/usr/bin/env bun
+
 import process from "node:process";
 
 import { read as readChangesetConfig } from "@changesets/config";

@@ -67,6 +67,50 @@ export default defineConfig({
 });
 ```
 
+Generated source can optionally run through code quality plugins. Register the plugins once, then
+select the ordered tools per output:
+
+```ts
+import { defineConfig } from "@x2zod/config";
+import { oxfmtCodeQualityPlugin } from "@x2zod/code-quality-oxfmt";
+import { oxlintCodeQualityPlugin } from "@x2zod/code-quality-oxlint";
+import { jsonSchemaInputPlugin } from "@x2zod/input-json-schema";
+
+export default defineConfig({
+  plugins: {
+    codeQuality: { oxfmt: oxfmtCodeQualityPlugin, oxlint: oxlintCodeQualityPlugin },
+    input: { "json-schema": jsonSchemaInputPlugin },
+  },
+  targets: {
+    user: {
+      kind: "json-schema",
+      input: { path: "schema.json" },
+      output: {
+        codeQuality: [
+          {
+            kind: "oxlint",
+            // Optional: omit options to let oxlint find local config.
+            // options: { config: { kind: "path", path: "./.oxlintrc.json" } },
+          },
+          {
+            kind: "oxfmt",
+            // Optional: omit options to let oxfmt find local config.
+            // options: { config: { kind: "path", path: "./oxfmt.json" } },
+            // options: { config: { kind: "inline", value: { semi: false } } },
+          },
+        ],
+        path: "src/generated/user.ts",
+        typeName: "User",
+      },
+    },
+  },
+});
+```
+
+Code quality plugins run in the order listed. Each plugin owns its own typed options. Both bundled
+plugins can use local tool config discovery, an explicit config path, or an inline typed config
+value.
+
 Running `x2zod` with no arguments runs every configured target. `x2zod run` does the same
 explicitly. `x2zod compile -g user` runs one named target, and compile flags are ephemeral overrides
 over file defaults.

@@ -248,6 +248,7 @@ void test("runCLI applies configured code quality tools before writing generated
 
     assertCLISuccess(result);
     const generated = await readGeneratedText(directory);
+    assert.ok(generated.startsWith("// prepared\n"));
     assert.ok(generated.endsWith("// checked\n"));
   }, cliWorkspaceTemp);
 });
