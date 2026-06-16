@@ -9,13 +9,13 @@ import type {
 
 import type {
   X2ZodInputConfig,
-  X2ZodLoadedConfigPlugin,
-  X2ZodLoadedPluginRegistry,
-  X2ZodOutputConfig,
+  X2ZodLoadedCodeQualityRegistry,
+  X2ZodLoadedInputPlugin,
+  X2ZodLoadedInputPluginRegistry,
   X2ZodResolvedConfig,
   X2ZodResolvedTarget,
   X2ZodResolvedOutputConfig,
-  X2ZodResolvedPluginRegistry,
+  X2ZodResolvedInputPluginRegistry,
 } from "./types";
 import {
   mergeZodCLIOptionOverrides,
@@ -24,13 +24,21 @@ import {
 import type { ZodCLIOptionTransformContext } from "./zod-cli-option-overrides";
 
 type ExecutableInputPlugin = InputPlugin<unknown, unknown, unknown>;
+
+export type X2ZodCompilableOutput = Readonly<
+  ZodSourceOutputOptions & {
+    codeQuality?: X2ZodResolvedOutputConfig<X2ZodLoadedCodeQualityRegistry>["codeQuality"];
+    path: string;
+  }
+>;
+
 export type X2ZodCompilableTarget = Readonly<{
   input: X2ZodInputConfig;
   kind: string;
   name: string;
   options: unknown;
-  output: X2ZodOutputConfig;
-  plugin: X2ZodLoadedConfigPlugin;
+  output: X2ZodCompilableOutput;
+  plugin: X2ZodLoadedInputPlugin;
 }>;
 
 export type X2ZodCompileTargetOverrides = Readonly<{
@@ -58,14 +66,18 @@ export type CompileX2ZodTargetRequest = Readonly<{
   loadInputDocument?: X2ZodTargetInputLoader | undefined;
   output?: ZodSourceOutputOptions | undefined;
   pluginOptions?: unknown;
-  target: X2ZodCompilableTarget | X2ZodResolvedTarget<X2ZodLoadedPluginRegistry>;
+  target:
+    | X2ZodCompilableTarget
+    | X2ZodResolvedTarget<X2ZodLoadedInputPluginRegistry, X2ZodLoadedCodeQualityRegistry>;
 }>;
 
 export type ResolveX2ZodCompilableTargetRequest = Readonly<{
-  config?: X2ZodResolvedConfig<X2ZodLoadedPluginRegistry> | undefined;
+  config?:
+    | X2ZodResolvedConfig<X2ZodLoadedInputPluginRegistry, X2ZodLoadedCodeQualityRegistry>
+    | undefined;
   optionTransformContext: ZodCLIOptionTransformContext;
   overrides: X2ZodCompileTargetOverrides;
-  pluginRegistry?: X2ZodResolvedPluginRegistry<X2ZodLoadedPluginRegistry> | undefined;
+  pluginRegistry?: X2ZodResolvedInputPluginRegistry<X2ZodLoadedInputPluginRegistry> | undefined;
 }>;
 
 export type ResolveX2ZodCompilableTargetResult = Readonly<{
@@ -73,7 +85,7 @@ export type ResolveX2ZodCompilableTargetResult = Readonly<{
   target: X2ZodCompilableTarget;
 }>;
 
-const asExecutablePlugin = (plugin: X2ZodLoadedConfigPlugin): ExecutableInputPlugin =>
+const asExecutablePlugin = (plugin: X2ZodLoadedInputPlugin): ExecutableInputPlugin =>
   plugin as unknown as ExecutableInputPlugin;
 
 const withMediaType = <TValue extends object>(
@@ -110,7 +122,7 @@ const requireValue = (value: string | undefined, optionName: string): string => 
 
 const outputFromAnonymousOverrides = (
   overrides: X2ZodCompileTargetOverrides,
-): X2ZodOutputConfig => ({
+): X2ZodCompilableOutput => ({
   path: requireValue(overrides.outputPath, "--output"),
   typeName: requireValue(overrides.typeName, "--type-name"),
   ...(overrides.declarationExportMode === undefined
@@ -120,9 +132,10 @@ const outputFromAnonymousOverrides = (
 });
 
 const outputWithOverrides = (
-  output: X2ZodResolvedOutputConfig,
+  output: X2ZodResolvedOutputConfig<X2ZodLoadedCodeQualityRegistry>,
   overrides: X2ZodCompileTargetOverrides,
-): X2ZodOutputConfig => ({
+): X2ZodCompilableOutput => ({
+  ...(output.codeQuality === undefined ? {} : { codeQuality: output.codeQuality }),
   declarationExportMode: overrides.declarationExportMode ?? output.declarationExportMode,
   path: overrides.outputPath ?? output.path,
   typeName: overrides.typeName ?? output.typeName,
@@ -130,20 +143,21 @@ const outputWithOverrides = (
 });
 
 const availableAnonymousPluginRegistry = (
-  pluginRegistry: X2ZodResolvedPluginRegistry<X2ZodLoadedPluginRegistry> | undefined,
-): X2ZodLoadedPluginRegistry => pluginRegistry?.plugins ?? {};
+  pluginRegistry: X2ZodResolvedInputPluginRegistry<X2ZodLoadedInputPluginRegistry> | undefined,
+): X2ZodLoadedInputPluginRegistry => pluginRegistry?.plugins ?? {};
 
 const requireAnonymousPlugin = (
   kind: string,
-  pluginRegistry: X2ZodResolvedPluginRegistry<X2ZodLoadedPluginRegistry> | undefined,
-): X2ZodLoadedConfigPlugin => {
+  pluginRegistry: X2ZodResolvedInputPluginRegistry<X2ZodLoadedInputPluginRegistry> | undefined,
+): X2ZodLoadedInputPlugin => {
   const plugin = availableAnonymousPluginRegistry(pluginRegistry)[kind];
   if (plugin !== undefined) return plugin;
   throw new Error(`Unknown input plugin kind ${kind}.`);
 };
 
-const targetNames = (config: X2ZodResolvedConfig<X2ZodLoadedPluginRegistry>): string =>
-  Object.keys(config.targets).join(", ");
+const targetNames = (
+  config: X2ZodResolvedConfig<X2ZodLoadedInputPluginRegistry, X2ZodLoadedCodeQualityRegistry>,
+): string => Object.keys(config.targets).join(", ");
 
 const resolveAnonymousCompilableTarget = async ({
   optionTransformContext,
@@ -179,7 +193,7 @@ const resolveConfiguredCompilableTarget = async ({
   overrides,
 }: ResolveX2ZodCompilableTargetRequest &
   Readonly<{
-    config: X2ZodResolvedConfig<X2ZodLoadedPluginRegistry>;
+    config: X2ZodResolvedConfig<X2ZodLoadedInputPluginRegistry, X2ZodLoadedCodeQualityRegistry>;
   }>): Promise<ResolveX2ZodCompilableTargetResult> => {
   const targetName = requireValue(overrides.targetName, "--target");
   const target = config.targets[targetName];
@@ -206,7 +220,7 @@ const resolveConfiguredCompilableTarget = async ({
 };
 
 export const zodSourceOutputOptionsForConfig = (
-  output: X2ZodOutputConfig,
+  output: X2ZodCompilableOutput,
 ): ZodSourceOutputOptions => ({
   ...(output.declarationExportMode === undefined
     ? {}

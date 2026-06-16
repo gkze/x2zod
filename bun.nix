@@ -669,7 +669,7 @@
   "@x2zod/cli" = copyPathToStore ./apps/cli;
   "@x2zod/core" = copyPathToStore ./packages/core;
   "@x2zod/eslint-plugins" = copyPathToStore ./packages/eslint-plugins;
-  "@x2zod/json-schema" = copyPathToStore ./packages/json-schema;
+  "@x2zod/input-json-schema" = copyPathToStore ./packages/input-json-schema;
   "@x2zod/tsconfig" = copyPathToStore ./packages/tsconfig;
   "@xhmikosr/decompress-tar@8.1.0" = fetchurl {
     url = "https://registry.npmjs.org/@xhmikosr/decompress-tar/-/decompress-tar-8.1.0.tgz";

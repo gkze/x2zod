@@ -1,0 +1,38 @@
+{
+  "name": "@x2zod/code-quality-oxlint",
+  "version": "0.1.2",
+  "description": "Oxlint code quality plugin for x2zod.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gkze/x2zod.git",
+    "directory": "packages/code-quality-oxlint"
+  },
+  "files": [
+    "src"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "check": "turbo run lint typecheck test --filter=@x2zod/code-quality-oxlint",
+    "lint": "bun --cwd ../.. oxlint packages/code-quality-oxlint",
+    "test": "bun test ./test",
+    "typecheck": "tsgo --project tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@x2zod/config": "workspace:*",
+    "oxlint": "1.69.0",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@x2zod/tsconfig": "workspace:*"
+  }
+}

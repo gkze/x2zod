@@ -1,12 +1,12 @@
 {
-  "name": "@x2zod/json-schema",
+  "name": "@x2zod/input-json-schema",
   "version": "0.1.2",
   "description": "JSON Schema input plugin for x2zod.",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/gkze/x2zod.git",
-    "directory": "packages/json-schema"
+    "directory": "packages/input-json-schema"
   },
   "files": [
     "src"
@@ -22,8 +22,8 @@
     "access": "public"
   },
   "scripts": {
-    "check": "turbo run lint typecheck test --filter=@x2zod/json-schema",
-    "lint": "bun --cwd ../.. oxlint packages/json-schema",
+    "check": "turbo run lint typecheck test --filter=@x2zod/input-json-schema",
+    "lint": "bun --cwd ../.. oxlint packages/input-json-schema",
     "test": "bun test ./test --path-ignore-patterns test/opencode.e2e.test.ts && bun test ./test/opencode.e2e.test.ts",
     "typecheck": "tsgo --project tsconfig.json --noEmit"
   },

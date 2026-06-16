@@ -43,7 +43,7 @@
   },
   "devDependencies": {
     "@typescript/native-preview": "7.0.0-dev.20260612.1",
-    "@x2zod/json-schema": "workspace:*",
+    "@x2zod/input-json-schema": "workspace:*",
     "@x2zod/tsconfig": "workspace:*"
   }
 }

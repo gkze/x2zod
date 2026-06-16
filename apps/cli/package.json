@@ -39,10 +39,10 @@
     "@optique/core": "1.0.2",
     "@x2zod/config": "workspace:*",
     "@x2zod/core": "workspace:*",
-    "@x2zod/json-schema": "workspace:*",
     "zod": "4.4.3"
   },
   "devDependencies": {
+    "@x2zod/input-json-schema": "workspace:*",
     "@x2zod/tsconfig": "workspace:*"
   }
 }

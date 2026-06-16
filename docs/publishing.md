@@ -6,10 +6,12 @@ Public npm packages:
 
 - `@x2zod/build-inputs`
 - `@x2zod/cli`
+- `@x2zod/code-quality-oxfmt`
+- `@x2zod/code-quality-oxlint`
 - `@x2zod/config`
 - `@x2zod/core`
 - `@x2zod/eslint-plugins`
-- `@x2zod/json-schema`
+- `@x2zod/input-json-schema`
 - `@x2zod/tsconfig`
 
 Public JSR packages are packages with a checked-in `jsr.json` file. `@x2zod/build-inputs` and

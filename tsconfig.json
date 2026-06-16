@@ -4,11 +4,13 @@
   "files": [],
   "references": [
     { "path": "./apps/cli" },
+    { "path": "./packages/code-quality-oxfmt" },
+    { "path": "./packages/code-quality-oxlint" },
     { "path": "./packages/config" },
     { "path": "./packages/core" },
     { "path": "./packages/build-inputs" },
     { "path": "./packages/eslint-plugins" },
-    { "path": "./packages/json-schema" },
+    { "path": "./packages/input-json-schema" },
     { "path": "./packages/tsconfig" },
     { "path": "./tsconfig.configs.json" }
   ]

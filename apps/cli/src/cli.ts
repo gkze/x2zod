@@ -18,8 +18,11 @@ import {
   withDefault,
 } from "@optique/core";
 import type { Parser, RunOptions } from "@optique/core";
-import { loadX2ZodPluginRegistry } from "@x2zod/config";
-import type { X2ZodLoadedPluginRegistry, X2ZodResolvedPluginRegistry } from "@x2zod/config";
+import { loadX2ZodInputPluginRegistry } from "@x2zod/config";
+import type {
+  X2ZodLoadedInputPluginRegistry,
+  X2ZodResolvedInputPluginRegistry,
+} from "@x2zod/config";
 
 import { compileFromCLI, runConfiguredTargets } from "./compile";
 import type { CLIWriter, CompileTargetOverrides } from "./compile";
@@ -40,7 +43,7 @@ type CompileBootstrapOptions = Readonly<{
 type ParsedCommandContext = Readonly<{
   commandResult: ParsedCommand | ParserExit;
   mode: "parsed";
-  pluginRegistry?: X2ZodResolvedPluginRegistry<X2ZodLoadedPluginRegistry> | undefined;
+  pluginRegistry?: X2ZodResolvedInputPluginRegistry<X2ZodLoadedInputPluginRegistry> | undefined;
 }>;
 type ParserSetupFailure = Readonly<{ exitCode: number; mode: "setup-error" }>;
 type ParsedCommandContextResult = ParsedCommandContext | ParserSetupFailure;
@@ -82,7 +85,9 @@ const configFileOption = optional(
 );
 const emptyOptionsParser = constant({} as const) as PluginOptionsParser;
 
-const createCompileParser = (plugins: X2ZodLoadedPluginRegistry): Parser<"sync", CompileCommand> =>
+const createCompileParser = (
+  plugins: X2ZodLoadedInputPluginRegistry,
+): Parser<"sync", CompileCommand> =>
   command(
     "compile",
     map(
@@ -159,7 +164,7 @@ const runParser = command(
 );
 
 const pluginKindChoices = (
-  plugins: X2ZodLoadedPluginRegistry,
+  plugins: X2ZodLoadedInputPluginRegistry,
 ): readonly [PluginKind, ...PluginKind[]] | undefined => {
   const kinds = Object.keys(plugins);
   if (kinds.length === 0) return undefined;
@@ -177,7 +182,7 @@ const genericPluginSelectionParser = (): Parser<"sync", PluginSelection> =>
   );
 
 const pluginOptionBranches = (
-  plugins: X2ZodLoadedPluginRegistry,
+  plugins: X2ZodLoadedInputPluginRegistry,
 ): Record<string, PluginOptionsParser> =>
   Object.fromEntries(
     Object.entries(plugins).map(([kind, plugin]) => [
@@ -187,7 +192,7 @@ const pluginOptionBranches = (
   );
 
 const pluginSelectionParser = (
-  plugins: X2ZodLoadedPluginRegistry,
+  plugins: X2ZodLoadedInputPluginRegistry,
 ): Parser<"sync", PluginSelection> => {
   const choices = pluginKindChoices(plugins);
   if (choices === undefined) return genericPluginSelectionParser();
@@ -200,7 +205,7 @@ const pluginSelectionParser = (
 };
 
 const createCommandParser = (
-  pluginRegistry: X2ZodResolvedPluginRegistry<X2ZodLoadedPluginRegistry> | undefined,
+  pluginRegistry: X2ZodResolvedInputPluginRegistry<X2ZodLoadedInputPluginRegistry> | undefined,
 ): CommandParser => {
   const compileParser = createCompileParser(pluginRegistry?.plugins ?? {});
   return or(compileParser, runParser);
@@ -227,7 +232,7 @@ const runOptions = (options: RunCLIOptions): RunOptions<ParserExit, ParserExit> 
 const parseCommand = (
   argv: readonly string[],
   options: RunCLIOptions,
-  pluginRegistry: X2ZodResolvedPluginRegistry<X2ZodLoadedPluginRegistry> | undefined,
+  pluginRegistry: X2ZodResolvedInputPluginRegistry<X2ZodLoadedInputPluginRegistry> | undefined,
 ): ParsedCommand | ParserExit =>
   runParserSync(createCommandParser(pluginRegistry), programName, argv, runOptions(options)) as
     | ParsedCommand
@@ -262,12 +267,12 @@ const optionArgument = (argv: readonly string[], optionIndex: number): string | 
 const loadPluginRegistryForArgv = async (
   argv: readonly string[],
   cwd: string,
-): Promise<X2ZodResolvedPluginRegistry<X2ZodLoadedPluginRegistry> | undefined> => {
+): Promise<X2ZodResolvedInputPluginRegistry<X2ZodLoadedInputPluginRegistry> | undefined> => {
   const registryArgv = pluginRegistryArgv(argv);
   if (registryArgv[0] !== "compile") return undefined;
 
   const bootstrap = compileBootstrapOptions(registryArgv);
-  const pluginRegistry = await loadX2ZodPluginRegistry({
+  const pluginRegistry = await loadX2ZodInputPluginRegistry({
     configFile: bootstrap.configFile,
     configFileRequired: bootstrap.configFile !== undefined,
     cwd,

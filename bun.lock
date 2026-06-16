@@ -37,7 +37,7 @@
     },
     "apps/cli": {
       "name": "@x2zod/cli",
-      "version": "0.0.1",
+      "version": "0.1.2",
       "bin": {
         "x2zod": "bin/x2zod.ts",
       },
@@ -45,16 +45,16 @@
         "@optique/core": "1.0.2",
         "@x2zod/config": "workspace:*",
         "@x2zod/core": "workspace:*",
-        "@x2zod/json-schema": "workspace:*",
         "zod": "4.4.3",
       },
       "devDependencies": {
+        "@x2zod/input-json-schema": "workspace:*",
         "@x2zod/tsconfig": "workspace:*",
       },
     },
     "packages/build-inputs": {
       "name": "@x2zod/build-inputs",
-      "version": "0.0.1",
+      "version": "0.1.2",
       "bin": {
         "build-inputs": "bin/build-inputs.ts",
       },
@@ -73,9 +73,33 @@
         "@x2zod/tsconfig": "workspace:*",
       },
     },
+    "packages/code-quality-oxfmt": {
+      "name": "@x2zod/code-quality-oxfmt",
+      "version": "0.1.2",
+      "dependencies": {
+        "@x2zod/config": "workspace:*",
+        "oxfmt": "0.54.0",
+        "zod": "4.4.3",
+      },
+      "devDependencies": {
+        "@x2zod/tsconfig": "workspace:*",
+      },
+    },
+    "packages/code-quality-oxlint": {
+      "name": "@x2zod/code-quality-oxlint",
+      "version": "0.1.2",
+      "dependencies": {
+        "@x2zod/config": "workspace:*",
+        "oxlint": "1.69.0",
+        "zod": "4.4.3",
+      },
+      "devDependencies": {
+        "@x2zod/tsconfig": "workspace:*",
+      },
+    },
     "packages/config": {
       "name": "@x2zod/config",
-      "version": "0.0.1",
+      "version": "0.1.2",
       "dependencies": {
         "@optique/core": "1.0.2",
         "@x2zod/core": "workspace:*",
@@ -84,13 +108,13 @@
       },
       "devDependencies": {
         "@typescript/native-preview": "7.0.0-dev.20260612.1",
-        "@x2zod/json-schema": "workspace:*",
+        "@x2zod/input-json-schema": "workspace:*",
         "@x2zod/tsconfig": "workspace:*",
       },
     },
     "packages/core": {
       "name": "@x2zod/core",
-      "version": "0.0.1",
+      "version": "0.1.2",
       "dependencies": {
         "@typescript/native-preview": "7.0.0-dev.20260612.1",
         "zod": "4.4.3",
@@ -101,7 +125,7 @@
     },
     "packages/eslint-plugins": {
       "name": "@x2zod/eslint-plugins",
-      "version": "0.0.1",
+      "version": "0.1.2",
       "dependencies": {
         "@typescript/native-preview": "7.0.0-dev.20260612.1",
         "zod": "4.4.3",
@@ -110,9 +134,9 @@
         "@x2zod/tsconfig": "workspace:*",
       },
     },
-    "packages/json-schema": {
-      "name": "@x2zod/json-schema",
-      "version": "0.0.1",
+    "packages/input-json-schema": {
+      "name": "@x2zod/input-json-schema",
+      "version": "0.1.2",
       "dependencies": {
         "@x2zod/core": "workspace:*",
         "ajv": "8.20.0",
@@ -129,7 +153,7 @@
     },
     "packages/tsconfig": {
       "name": "@x2zod/tsconfig",
-      "version": "0.0.1",
+      "version": "0.1.2",
     },
   },
   "packages": {
@@ -415,13 +439,17 @@
 
     "@x2zod/cli": ["@x2zod/cli@workspace:apps/cli"],
 
+    "@x2zod/code-quality-oxfmt": ["@x2zod/code-quality-oxfmt@workspace:packages/code-quality-oxfmt"],
+
+    "@x2zod/code-quality-oxlint": ["@x2zod/code-quality-oxlint@workspace:packages/code-quality-oxlint"],
+
     "@x2zod/config": ["@x2zod/config@workspace:packages/config"],
 
     "@x2zod/core": ["@x2zod/core@workspace:packages/core"],
 
     "@x2zod/eslint-plugins": ["@x2zod/eslint-plugins@workspace:packages/eslint-plugins"],
 
-    "@x2zod/json-schema": ["@x2zod/json-schema@workspace:packages/json-schema"],
+    "@x2zod/input-json-schema": ["@x2zod/input-json-schema@workspace:packages/input-json-schema"],
 
     "@x2zod/tsconfig": ["@x2zod/tsconfig@workspace:packages/tsconfig"],
 

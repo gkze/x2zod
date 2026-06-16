@@ -18,13 +18,20 @@ start:
 
 - `@x2zod/core`: shared result and diagnostic types, input plugin contracts, an aligned `ts`
   namespace re-export, source-file construction and printing internals, and the Zod emission model.
-- `@x2zod/json-schema`: JSON Schema input plugin plus its typed option schema. This package owns
-  JSON Schema dialect selection, schema-document validation policy, ref resolution, and JSON
+- `@x2zod/input-json-schema`: JSON Schema input plugin plus its typed option schema. This package
+  owns JSON Schema dialect selection, schema-document validation policy, ref resolution, and JSON
   Schema-to-Zod lowering. Validator and resolver bridge code is internal to this package.
 - `@x2zod/config`: project configuration contracts, `defineConfig`, config file loading, plugin
   registry validation, target option resolution, and target output resolution. This package lets
   library callers share the same config surface as the CLI without importing the CLI binary module.
+- `@x2zod/code-quality-oxfmt`: optional Oxfmt code-quality plugin, including its typed config
+  re-exports and subprocess adapter.
+- `@x2zod/code-quality-oxlint`: optional Oxlint code-quality plugin, including its typed config
+  re-exports and subprocess adapter.
 - `@x2zod/cli`: CLI package, located at `apps/cli` and exposing the `x2zod` binary.
+
+Supporting workspace packages such as `@x2zod/build-inputs`, `@x2zod/eslint-plugins`, and
+`@x2zod/tsconfig` remain separate packages; they are not input or code-quality plugins.
 
 There should not be standalone validator packages in v1. The core plugin interface does not expose a
 generic schema-language validation extension point, so validator selection is a JSON Schema plugin
@@ -62,8 +69,8 @@ The exact names can evolve, but the boundary should stay stable:
 - core owns diagnostics plumbing, orchestration, TypeScript source construction, and final
   `ts.SourceFile` output.
 
-For JSON Schema, `@x2zod/json-schema` is the first input plugin. Ajv and any future validator or
-resolver adapters are internal tools used by that plugin, not global core behavior and not
+For JSON Schema, `@x2zod/input-json-schema` is the first input plugin. Ajv and any future validator
+or resolver adapters are internal tools used by that plugin, not global core behavior and not
 separately published package boundaries.
 
 ## Dependency Strategy
@@ -181,13 +188,29 @@ ways the CLI adapter cannot model.
 Plugins with no options should declare `z.object({})`; the CLI may use an empty parser internally
 for configured-target invocations that do not select a plugin kind.
 
-The CLI builds the compile parser from the configured plugin registry. No plugin is implicitly
-available: JSON Schema must be declared in `config.plugins` like every other input plugin. A
+The CLI builds the compile parser from the configured input plugin registry. No plugin is implicitly
+available: JSON Schema must be declared in `config.plugins.input` like every other input plugin. A
 lightweight bootstrap scan reads enough of `compile` and completion invocations to find `--config`,
-loads the configured plugin registry when present, and builds a conditional `--kind` parser with one
-branch per plugin. `--kind` stays optional in the final parsed command so configured-target
+loads the configured input plugin registry when present, and builds a conditional `--kind` parser
+with one branch per plugin. `--kind` stays optional in the final parsed command so configured-target
 compilation can rely on the target's resolved kind; anonymous compilation requires an explicit
 configured `--kind` at execution time.
+
+Project config has role-scoped plugin registries:
+
+```ts
+defineConfig({
+  plugins: {
+    input: { "json-schema": jsonSchemaInputPlugin },
+    codeQuality: { oxlint: oxlintCodeQualityPlugin },
+  },
+  targets: {},
+});
+```
+
+Targets select input plugins through `target.kind`. Outputs select code-quality plugins through
+`output.codeQuality.kind`. Both selections are type-level constrained by the matching configured
+registry.
 
 Per-kind help and shell completion use the same conditional parser. Shell completion scripts
 delegate back into the JavaScript runtime through Optique's completion command, so dynamic plugin
@@ -401,8 +424,9 @@ x2zod compile -g <target>
 x2zod run
 ```
 
-Both anonymous and named-target compilation use the configured plugin registry. The CLI does not
-implicitly install or select JSON Schema; projects must declare every input plugin in config.
+Both anonymous and named-target compilation use the configured input plugin registry. The CLI does
+not implicitly install or select JSON Schema; projects must declare every input plugin in
+`plugins.input`.
 
 The CLI should:
 
@@ -466,10 +490,10 @@ The adapter validates the schema document against the selected JSON Schema diale
 typed options request that validation mode, then returns normalized diagnostics to the JSON Schema
 plugin. It does not validate data instances and is not an oracle interface.
 
-V1 starts with an internal Ajv adapter inside `@x2zod/json-schema`. The JSON Schema plugin's default
-options use Ajv for schema-document validation, with `none` available for trusted inputs or tests
-that intentionally bypass preflight. `ata-validator` is not a V1 default; it can be revisited later
-as a performance or AOT-validation spike if it proves useful for this plugin boundary.
+V1 starts with an internal Ajv adapter inside `@x2zod/input-json-schema`. The JSON Schema plugin's
+default options use Ajv for schema-document validation, with `none` available for trusted inputs or
+tests that intentionally bypass preflight. `ata-validator` is not a V1 default; it can be revisited
+later as a performance or AOT-validation spike if it proves useful for this plugin boundary.
 
 Preflight validator diagnostics should normalize to `x2zod` diagnostics using JSON Pointer locations
 before the plugin returns failures to core.

@@ -20,12 +20,15 @@ This is a new standalone TypeScript project scaffolded from the `mcpsync` repo s
   not map cleanly.
 - Keep core schema-language agnostic: plugins own validation and mapping; core owns orchestration
   and TypeScript source construction.
-- V1 package boundaries are `@x2zod/core`, `@x2zod/json-schema`, and `@x2zod/cli`. Do not add
-  standalone validator packages unless the design docs are intentionally changed.
+- V1 compiler and plugin package boundaries are `@x2zod/core`, `@x2zod/input-json-schema`,
+  `@x2zod/config`, `@x2zod/code-quality-oxfmt`, `@x2zod/code-quality-oxlint`, and `@x2zod/cli`.
+  Supporting packages such as `@x2zod/build-inputs`, `@x2zod/eslint-plugins`, and `@x2zod/tsconfig`
+  remain separate workspace packages. Do not add standalone validator packages unless the design
+  docs are intentionally changed.
 - `@x2zod/core` should expose shared results, diagnostics, input plugin contracts, the Zod emission
   model, TypeScript source construction, and the aligned `ts` namespace.
-- `@x2zod/json-schema` should own JSON Schema parsing, dialect selection, schema validation policy,
-  reference handling, source profiles, option schemas, and lowering.
+- `@x2zod/input-json-schema` should own JSON Schema parsing, dialect selection, schema validation
+  policy, reference handling, source profiles, option schemas, and lowering.
 - Generated modules should import only Zod by default. Emit deduplicated helpers in generated source
   when supported runtime semantics need code beyond Zod constructors.
 - The public compile result should return a finalized TypeScript compiler `SourceFile`; source text

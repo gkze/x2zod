@@ -1,0 +1,7 @@
+{
+  "name": "@x2zod/code-quality-oxfmt",
+  "version": "0.1.2",
+  "license": "MIT",
+  "exports": "./src/index.ts",
+  "publish": { "exclude": ["test/**"], "include": ["package.json", "src/**/*.ts"] }
+}

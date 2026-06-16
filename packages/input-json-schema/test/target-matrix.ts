@@ -168,7 +168,7 @@ const targetMatrixEntries = [
   {
     name: "OpenCode config",
     reason:
-      "Covered by packages/json-schema/test/opencode.e2e.test.ts with generated Zod parsing and OpenCode CLI config acceptance.",
+      "Covered by packages/input-json-schema/test/opencode.e2e.test.ts with generated Zod parsing and OpenCode CLI config acceptance.",
     roundTripLevel: "dedicated-product-e2e",
   },
   {

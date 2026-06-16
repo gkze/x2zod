@@ -121,7 +121,7 @@
   },
   "overrides": [
     {
-      "files": ["packages/core/src/**/*.ts", "packages/json-schema/src/**/*.ts"],
+      "files": ["packages/core/src/**/*.ts", "packages/input-json-schema/src/**/*.ts"],
       "rules": {
         // Published library source should stay runtime-neutral; hosts, tests, and scripts own Node adapters.
         "no-nodejs-modules": "error",
@@ -151,6 +151,7 @@
         "packages/build-inputs/src/build-inputs.ts",
         "packages/build-inputs/src/lockfile.ts",
         "packages/build-inputs/src/schemas.ts",
+        "packages/config/src/load.ts",
       ],
       "rules": {
         // This package is intentionally a filesystem/archive state machine; the remaining rules are

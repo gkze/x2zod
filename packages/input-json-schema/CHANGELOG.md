@@ -1,4 +1,4 @@
-# @x2zod/json-schema
+# @x2zod/input-json-schema
 
 ## 0.1.2
 
