@@ -18,10 +18,12 @@ import type {
   X2ZodLoadedCodeQualityPlugin,
   X2ZodLoadedInputPlugin,
   X2ZodLoadedInputPluginRegistry,
+  X2ZodOutputCodeQualityConfigItem,
   X2ZodOutputConfig,
   X2ZodInputPluginRegistry,
   X2ZodInputPluginRegistryFor,
   X2ZodResolvedConfig,
+  X2ZodResolvedOutputCodeQualityConfigItem,
   X2ZodResolvedOutputConfig,
   X2ZodResolvedInputPluginRegistry,
   X2ZodResolvedTarget,
@@ -57,13 +59,17 @@ const inputConfigSchema: z.ZodType<X2ZodInputConfig, X2ZodInputConfig> = zod.uni
 const outputCodeQualityConfigSchema = zod
   .strictObject({ kind: nonEmptyStringSchema, options: zod.unknown().optional() })
   .readonly();
+const outputCodeQualityPipelineConfigSchema = zod.union([
+  outputCodeQualityConfigSchema,
+  outputCodeQualityConfigSchema.array().readonly(),
+]);
 
 const outputConfigSchema: z.ZodType<
   X2ZodOutputConfig<X2ZodLoadedCodeQualityRegistry>,
   X2ZodOutputConfig<X2ZodLoadedCodeQualityRegistry>
 > = zod
   .strictObject({
-    codeQuality: outputCodeQualityConfigSchema.optional(),
+    codeQuality: outputCodeQualityPipelineConfigSchema.optional(),
     declarationExportMode: declarationExportModeSchema.optional(),
     path: nonEmptyStringSchema,
     typeName: nonEmptyStringSchema,
@@ -110,6 +116,13 @@ type ReadResolvedCodeQualityContext = Readonly<{
   issues: X2ZodConfigIssue[];
   path: readonly X2ZodConfigPathSegment[];
   value: X2ZodOutputConfig<X2ZodLoadedCodeQualityRegistry>["codeQuality"];
+}>;
+
+type ReadResolvedCodeQualityItemContext = Readonly<{
+  codeQuality: X2ZodLoadedCodeQualityRegistry;
+  issues: X2ZodConfigIssue[];
+  path: readonly X2ZodConfigPathSegment[];
+  value: X2ZodOutputCodeQualityConfigItem<X2ZodLoadedCodeQualityRegistry>;
 }>;
 
 type ReadResolvedTargetsContext = Readonly<{
@@ -394,6 +407,31 @@ const readResolvedCodeQuality = ({
   | X2ZodResolvedOutputConfig<X2ZodLoadedCodeQualityRegistry>["codeQuality"]
   | undefined => {
   if (value === undefined) return undefined;
+  const isPipeline = Array.isArray(value);
+  const values: readonly X2ZodOutputCodeQualityConfigItem<X2ZodLoadedCodeQualityRegistry>[] =
+    isPipeline ? value : [value];
+  const resolved = values
+    .map((item, index) =>
+      readResolvedCodeQualityItem({
+        codeQuality,
+        issues,
+        path: isPipeline ? [...path, index] : path,
+        value: item,
+      }),
+    )
+    .filter((item) => item !== undefined);
+
+  return resolved.length === values.length ? resolved : undefined;
+};
+
+const readResolvedCodeQualityItem = ({
+  codeQuality,
+  issues,
+  path,
+  value,
+}: ReadResolvedCodeQualityItemContext):
+  | X2ZodResolvedOutputCodeQualityConfigItem<X2ZodLoadedCodeQualityRegistry>
+  | undefined => {
   const plugin = codeQuality[value.kind];
   if (plugin === undefined) {
     issues.push(

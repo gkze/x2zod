@@ -108,8 +108,9 @@ export const applyX2ZodCodeQuality = async ({
   sourceText,
 }: ApplyX2ZodCodeQualityRequest): Promise<string> => {
   if (output.codeQuality === undefined) return sourceText;
-  const transformed = await Promise.resolve(
-    output.codeQuality.plugin.transform(sourceText, output.codeQuality.options as never, context),
-  );
+  let transformed = sourceText;
+  for (const step of output.codeQuality)
+    // eslint-disable-next-line no-await-in-loop -- each tool consumes the previous output.
+    transformed = await step.plugin.transform(transformed, step.options as never, context);
   return transformed;
 };

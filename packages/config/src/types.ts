@@ -88,19 +88,28 @@ export type X2ZodResolvedPluginConfig<
   TCodeQuality extends X2ZodCodeQualityRegistry = X2ZodEmptyCodeQualityRegistry,
 > = Readonly<{ codeQuality: TCodeQuality; input: TInput }>;
 
-export type X2ZodOutputCodeQualityConfigFor<
+export type X2ZodOutputCodeQualityConfigItemFor<
   TCodeQuality extends X2ZodCodeQualityRegistry,
   TKind extends X2ZodCodeQualityKey<TCodeQuality>,
 > = Readonly<{ kind: TKind; options?: z.input<TCodeQuality[TKind]["optionsSchema"]> | undefined }>;
 
-export type X2ZodOutputCodeQualityConfig<TCodeQuality extends X2ZodCodeQualityRegistry> = {
-  readonly [TKind in X2ZodCodeQualityKey<TCodeQuality>]: X2ZodOutputCodeQualityConfigFor<
+export type X2ZodOutputCodeQualityConfigFor<
+  TCodeQuality extends X2ZodCodeQualityRegistry,
+  TKind extends X2ZodCodeQualityKey<TCodeQuality>,
+> = X2ZodOutputCodeQualityConfigItemFor<TCodeQuality, TKind>;
+
+export type X2ZodOutputCodeQualityConfigItem<TCodeQuality extends X2ZodCodeQualityRegistry> = {
+  readonly [TKind in X2ZodCodeQualityKey<TCodeQuality>]: X2ZodOutputCodeQualityConfigItemFor<
     TCodeQuality,
     TKind
   >;
 }[X2ZodCodeQualityKey<TCodeQuality>];
 
-export type X2ZodResolvedOutputCodeQualityConfigFor<
+export type X2ZodOutputCodeQualityConfig<TCodeQuality extends X2ZodCodeQualityRegistry> =
+  | X2ZodOutputCodeQualityConfigItem<TCodeQuality>
+  | readonly X2ZodOutputCodeQualityConfigItem<TCodeQuality>[];
+
+export type X2ZodResolvedOutputCodeQualityConfigItemFor<
   TCodeQuality extends X2ZodCodeQualityRegistry,
   TKind extends X2ZodCodeQualityKey<TCodeQuality>,
 > = Readonly<{
@@ -109,12 +118,22 @@ export type X2ZodResolvedOutputCodeQualityConfigFor<
   plugin: TCodeQuality[TKind];
 }>;
 
-export type X2ZodResolvedOutputCodeQualityConfig<TCodeQuality extends X2ZodCodeQualityRegistry> = {
-  readonly [TKind in X2ZodCodeQualityKey<TCodeQuality>]: X2ZodResolvedOutputCodeQualityConfigFor<
+export type X2ZodResolvedOutputCodeQualityConfigFor<
+  TCodeQuality extends X2ZodCodeQualityRegistry,
+  TKind extends X2ZodCodeQualityKey<TCodeQuality>,
+> = X2ZodResolvedOutputCodeQualityConfigItemFor<TCodeQuality, TKind>;
+
+export type X2ZodResolvedOutputCodeQualityConfigItem<
+  TCodeQuality extends X2ZodCodeQualityRegistry,
+> = {
+  readonly [TKind in X2ZodCodeQualityKey<TCodeQuality>]: X2ZodResolvedOutputCodeQualityConfigItemFor<
     TCodeQuality,
     TKind
   >;
 }[X2ZodCodeQualityKey<TCodeQuality>];
+
+export type X2ZodResolvedOutputCodeQualityConfig<TCodeQuality extends X2ZodCodeQualityRegistry> =
+  readonly X2ZodResolvedOutputCodeQualityConfigItem<TCodeQuality>[];
 
 export type X2ZodFileInputConfig = Readonly<{ mediaType?: string | undefined; path: string }>;
 

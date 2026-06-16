@@ -19,6 +19,15 @@ import type { X2ZodCodeQualityPlugin, X2ZodInputPluginKey, X2ZodTargetFor } from
 
 const plugins = { "json-schema": jsonSchemaInputPlugin } as const;
 const codeQuality = {
+  banner: {
+    kind: "banner",
+    optionsSchema: z.strictObject({ prefix: z.string().default("// prepared") }).readonly(),
+    transform: (sourceText, options): string => [options.prefix, sourceText].join("\n"),
+  } satisfies X2ZodCodeQualityPlugin<
+    Readonly<{ prefix: string }>,
+    Readonly<{ prefix?: string | undefined }>,
+    "banner"
+  >,
   marker: {
     kind: "marker",
     optionsSchema: z.strictObject({ suffix: z.string().default("// quality") }).readonly(),
@@ -151,7 +160,8 @@ void test("defineConfig types target code quality options from the code quality 
     targets: { user: target },
   });
 
-  assert.equal(config.targets["user"]?.output.codeQuality?.kind, "marker");
+  assert.equal(target.output.codeQuality.kind, "marker");
+  assert.equal(config.targets["user"]?.kind, "json-schema");
 });
 
 void test("defineConfig rejects unknown target kinds at typecheck time", () => {
@@ -287,8 +297,42 @@ void test("resolveX2ZodConfig validates and resolves code quality options", () =
   const userTarget = resolved.targets["user"];
   assert.ok(userTarget !== undefined);
   assert.ok(userTarget.output.codeQuality !== undefined);
-  assert.equal(userTarget.output.codeQuality.kind, "marker");
-  assert.deepEqual(userTarget.output.codeQuality.options, { suffix: "// quality" });
+  assert.equal(userTarget.output.codeQuality[0]?.kind, "marker");
+  assert.deepEqual(userTarget.output.codeQuality[0].options, { suffix: "// quality" });
+});
+
+void test("resolveX2ZodConfig validates and resolves ordered code quality pipelines", () => {
+  const resolved = resolveX2ZodConfig(
+    defineConfig({
+      plugins: { codeQuality, input: plugins },
+      targets: {
+        user: {
+          input: { path: "schema.json" },
+          kind: "json-schema",
+          output: {
+            codeQuality: [
+              { kind: "banner" },
+              { kind: "marker", options: { suffix: "// checked" } },
+            ],
+            path: "generated/user.ts",
+            typeName: "User",
+          },
+        },
+      },
+    }),
+  );
+
+  const userTarget = resolved.targets["user"];
+  assert.ok(userTarget !== undefined);
+  const pipeline = userTarget.output.codeQuality;
+  assert.ok(pipeline !== undefined);
+  assert.deepEqual(
+    pipeline.map(({ kind, options }) => ({ kind, options })),
+    [
+      { kind: "banner", options: { prefix: "// prepared" } },
+      { kind: "marker", options: { suffix: "// checked" } },
+    ],
+  );
 });
 
 void test("resolveX2ZodConfig reports unknown code quality kinds", () => {
@@ -301,14 +345,14 @@ void test("resolveX2ZodConfig reports unknown code quality kinds", () => {
             input: { path: "schema.json" },
             kind: "json-schema",
             output: {
-              codeQuality: { kind: "unknown" },
+              codeQuality: [{ kind: "unknown" }],
               path: "generated/user.ts",
               typeName: "User",
             },
           },
         },
       } as never),
-    ["targets.badQuality.output.codeQuality.kind: unknown code quality kind unknown"],
+    ["targets.badQuality.output.codeQuality.0.kind: unknown code quality kind unknown"],
   );
 });
 
