@@ -1,18 +1,18 @@
 import nodePath from "node:path";
 
 import {
+  applyX2ZodCodeQuality,
   compileX2ZodTarget,
   loadX2ZodConfig,
-  loadX2ZodPluginRegistry,
+  loadX2ZodInputPluginRegistry,
   resolveX2ZodCompilableTarget,
 } from "@x2zod/config";
 import type {
   X2ZodCompilableTarget,
   X2ZodCompileTargetOverrides,
   X2ZodInputConfig,
-  X2ZodLoadedPluginRegistry,
-  X2ZodOutputConfig,
-  X2ZodResolvedPluginRegistry,
+  X2ZodLoadedInputPluginRegistry,
+  X2ZodResolvedInputPluginRegistry,
   ZodCLIOptionTransformContext,
 } from "@x2zod/config";
 import { printSourceFile } from "@x2zod/core";
@@ -41,7 +41,9 @@ export type RunConfiguredTargetsOptions = Readonly<{
   CLIIO;
 
 export type CompileFromCLIOptions = RunConfiguredTargetsOptions &
-  Readonly<{ pluginRegistry?: X2ZodResolvedPluginRegistry<X2ZodLoadedPluginRegistry> | undefined }>;
+  Readonly<{
+    pluginRegistry?: X2ZodResolvedInputPluginRegistry<X2ZodLoadedInputPluginRegistry> | undefined;
+  }>;
 
 type CompileContext = Readonly<{
   baseDirectory: string;
@@ -56,6 +58,8 @@ type CompileTargetRequest = Readonly<{
   pluginOptions: unknown;
   target: X2ZodCompilableTarget;
 }>;
+
+type OutputPathConfig = Readonly<{ path: string }>;
 
 class CLICompileError extends Error {
   public constructor(message: string) {
@@ -86,6 +90,9 @@ const createCompileContext = (
 
 const resolvePath = (baseDirectory: string, filePath: string): string =>
   nodePath.isAbsolute(filePath) ? filePath : nodePath.join(baseDirectory, filePath);
+
+const outputPathFor = (output: OutputPathConfig, context: CompileContext): string | undefined =>
+  output.path === outputToStdoutPath ? undefined : resolvePath(context.baseDirectory, output.path);
 
 const configBaseDirectory = (cwd: string, configFile: string | undefined): string =>
   configFile === undefined ? cwd : nodePath.dirname(configFile);
@@ -153,16 +160,16 @@ const runCLITask = async (io: CLIIO, run: () => Promise<number>): Promise<number
 };
 
 const writeGeneratedSource = async (
-  output: X2ZodOutputConfig,
+  output: OutputPathConfig,
   sourceText: string,
   context: CompileContext,
 ): Promise<void> => {
-  if (output.path === outputToStdoutPath) {
+  const outputPath = outputPathFor(output, context);
+  if (outputPath === undefined) {
     context.stdout(sourceText);
     return;
   }
 
-  const outputPath = resolvePath(context.baseDirectory, output.path);
   await context.fileSystem.makeDirectory(nodePath.dirname(outputPath), { recursive: true });
   await context.fileSystem.writeTextFile(outputPath, sourceText);
 };
@@ -188,11 +195,17 @@ const compileTarget = async ({
 
   if (!result.ok) throw new CLICompileError(formatDiagnostics(result.diagnostics));
 
-  await writeGeneratedSource(
-    target.output,
-    await printSourceFile(result.value.sourceFile, { cwd: context.cwd }),
-    context,
-  );
+  const sourceText = await printSourceFile(result.value.sourceFile, { cwd: context.cwd });
+  const qualitySourceText = await applyX2ZodCodeQuality({
+    context: {
+      baseDirectory: context.baseDirectory,
+      outputPath: outputPathFor(target.output, context),
+    },
+    output: target.output,
+    sourceText,
+  });
+
+  await writeGeneratedSource(target.output, qualitySourceText, context);
 };
 
 export const compileFromCLI = async (
@@ -207,7 +220,10 @@ export const compileFromCLI = async (
     const pluginRegistry =
       config === undefined
         ? (options.pluginRegistry ??
-          (await loadX2ZodPluginRegistry({ configFile: overrides.configFile, cwd: options.cwd })))
+          (await loadX2ZodInputPluginRegistry({
+            configFile: overrides.configFile,
+            cwd: options.cwd,
+          })))
         : undefined;
     const context = createCompileContext(
       options.cwd,

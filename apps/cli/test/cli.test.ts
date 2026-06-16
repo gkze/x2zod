@@ -19,6 +19,7 @@ import {
   writeConfiguredUserTarget,
   writeDynamicUserTarget,
   writeJsonFile,
+  writeQualityUserTarget,
 } from "./fixtures";
 
 void test("runCLI compile writes generated source for anonymous JSON Schema input", async () => {
@@ -236,6 +237,18 @@ void test("runCLI with no args runs every configured target", async () => {
     assertCLISuccess(result);
     const generated = await readGeneratedText(directory);
     assert.ok(generated.includes("export type User = z.infer<typeof userSchema>;"));
+  }, cliWorkspaceTemp);
+});
+
+void test("runCLI applies configured code quality tools before writing generated source", async () => {
+  await withTempDirectory(async (directory) => {
+    await writeQualityUserTarget(directory);
+
+    const result = await runCLITest(["compile", "-g", "user"], { cwd: directory });
+
+    assertCLISuccess(result);
+    const generated = await readGeneratedText(directory);
+    assert.ok(generated.endsWith("// checked\n"));
   }, cliWorkspaceTemp);
 });
 

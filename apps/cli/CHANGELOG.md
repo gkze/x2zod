@@ -8,7 +8,6 @@
 - Updated dependencies
   - @x2zod/config@0.1.2
   - @x2zod/core@0.1.2
-  - @x2zod/json-schema@0.1.2
 
 ## 0.1.1
 
@@ -18,7 +17,7 @@
 - Updated dependencies
   - @x2zod/config@0.1.1
   - @x2zod/core@0.1.1
-  - @x2zod/json-schema@0.1.1
+  - @x2zod/input-json-schema@0.1.1
 
 ## 0.0.1
 

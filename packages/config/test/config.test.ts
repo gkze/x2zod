@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { test } from "node:test";
 
-import { jsonSchemaInputPlugin } from "@x2zod/json-schema";
+import { jsonSchemaInputPlugin } from "@x2zod/input-json-schema";
 import { z } from "zod/v4";
 
 import {
@@ -11,13 +11,24 @@ import {
   compileX2ZodTarget,
   defineConfig,
   loadX2ZodConfig,
-  loadX2ZodPluginRegistry,
+  loadX2ZodInputPluginRegistry,
   resolveX2ZodConfig,
-  resolveX2ZodPluginRegistry,
+  resolveX2ZodInputPluginRegistry,
 } from "../src";
-import type { X2ZodPluginKey, X2ZodTargetFor } from "../src";
+import type { X2ZodCodeQualityPlugin, X2ZodInputPluginKey, X2ZodTargetFor } from "../src";
 
 const plugins = { "json-schema": jsonSchemaInputPlugin } as const;
+const codeQuality = {
+  marker: {
+    kind: "marker",
+    optionsSchema: z.strictObject({ suffix: z.string().default("// quality") }).readonly(),
+    transform: (sourceText, options): string => [sourceText, options.suffix, ""].join("\n"),
+  } satisfies X2ZodCodeQualityPlugin<
+    Readonly<{ suffix: string }>,
+    Readonly<{ suffix?: string | undefined }>,
+    "marker"
+  >,
+} as const;
 const configPackageRoot = path.join(import.meta.dirname, "..");
 const schemaText = JSON.stringify(
   { properties: { name: { type: "string" } }, required: ["name"], type: "object" },
@@ -41,7 +52,7 @@ const expectConfigError = (run: () => unknown, expectedMessages: readonly string
 
 const resolveInvalidTargetConfig = (): void => {
   resolveX2ZodConfig({
-    plugins,
+    plugins: { input: plugins },
     targets: {
       badKind: {
         input: { path: "schema.json" },
@@ -60,7 +71,7 @@ const resolveInvalidTargetConfig = (): void => {
 
 const resolveNullOptionsConfig = (): void => {
   resolveX2ZodConfig({
-    plugins,
+    plugins: { input: plugins },
     targets: {
       nullOptions: {
         input: { path: "schema.json" },
@@ -75,11 +86,13 @@ const resolveNullOptionsConfig = (): void => {
 const resolveInvalidPluginRegistryConfig = (): void => {
   resolveX2ZodConfig({
     plugins: {
-      "json-schema": {
-        kind: "wrong-kind",
-        lower: jsonSchemaInputPlugin.lower,
-        optionsSchema: jsonSchemaInputPlugin.optionsSchema,
-        prepare: jsonSchemaInputPlugin.prepare,
+      input: {
+        "json-schema": {
+          kind: "wrong-kind",
+          lower: jsonSchemaInputPlugin.lower,
+          optionsSchema: jsonSchemaInputPlugin.optionsSchema,
+          prepare: jsonSchemaInputPlugin.prepare,
+        },
       },
     },
     targets: {
@@ -93,19 +106,21 @@ const resolveInvalidPluginRegistryConfig = (): void => {
 };
 
 const resolveUnsupportedCLIOptionSchemaConfig = (): void => {
-  resolveX2ZodPluginRegistry({
+  resolveX2ZodInputPluginRegistry({
     plugins: {
-      bad: {
-        ...jsonSchemaInputPlugin,
-        kind: "bad" as const,
-        optionsSchema: z.strictObject({ input: z.string() }),
+      input: {
+        bad: {
+          ...jsonSchemaInputPlugin,
+          kind: "bad" as const,
+          optionsSchema: z.strictObject({ input: z.string() }),
+        },
       },
     },
   } as never);
 };
 
 void test("defineConfig types target kinds and plugin option inputs from the plugin registry", () => {
-  type PluginKey = X2ZodPluginKey<typeof plugins>;
+  type PluginKey = X2ZodInputPluginKey<typeof plugins>;
   const pluginKey: PluginKey = "json-schema";
 
   const target = {
@@ -115,9 +130,28 @@ void test("defineConfig types target kinds and plugin option inputs from the plu
     output: { path: "schema.ts", typeName: "User" },
   } satisfies X2ZodTargetFor<typeof plugins, "json-schema">;
 
-  const config = defineConfig({ plugins, targets: { user: target } });
+  const config = defineConfig({ plugins: { input: plugins }, targets: { user: target } });
 
   assert.equal(config.targets["user"]?.kind, "json-schema");
+});
+
+void test("defineConfig types target code quality options from the code quality registry", () => {
+  const target = {
+    input: { path: "schema.json" },
+    kind: "json-schema",
+    output: {
+      codeQuality: { kind: "marker", options: { suffix: "// checked" } },
+      path: "schema.ts",
+      typeName: "User",
+    },
+  } satisfies X2ZodTargetFor<typeof plugins, "json-schema", typeof codeQuality>;
+
+  const config = defineConfig({
+    plugins: { codeQuality, input: plugins },
+    targets: { user: target },
+  });
+
+  assert.equal(config.targets["user"]?.output.codeQuality?.kind, "marker");
 });
 
 void test("defineConfig rejects unknown target kinds at typecheck time", () => {
@@ -153,8 +187,10 @@ void test("defineConfig rejects plugin entries whose kind does not match their k
   assert.doesNotThrow(() =>
     defineConfig({
       plugins: {
-        // @ts-expect-error plugin keys must match plugin kind literals.
-        openapi: jsonSchemaInputPlugin,
+        input: {
+          // @ts-expect-error plugin keys must match plugin kind literals.
+          openapi: jsonSchemaInputPlugin,
+        },
       },
       targets: {},
     }),
@@ -165,8 +201,13 @@ void test("defineConfig rejects incomplete plugin registry entries at typecheck 
   assert.doesNotThrow(() =>
     defineConfig({
       plugins: {
-        // @ts-expect-error config plugins must include the input plugin contract.
-        "json-schema": { kind: "json-schema", optionsSchema: jsonSchemaInputPlugin.optionsSchema },
+        input: {
+          // @ts-expect-error config plugins must include the input plugin contract.
+          "json-schema": {
+            kind: "json-schema",
+            optionsSchema: jsonSchemaInputPlugin.optionsSchema,
+          },
+        },
       },
       targets: {},
     }),
@@ -177,13 +218,15 @@ void test("defineConfig rejects malformed plugin hook types at typecheck time", 
   assert.doesNotThrow(() =>
     defineConfig({
       plugins: {
-        "json-schema": {
-          kind: "json-schema",
-          // @ts-expect-error plugin lower must be callable.
-          lower: "not-a-function",
-          optionsSchema: jsonSchemaInputPlugin.optionsSchema,
-          // @ts-expect-error plugin prepare must be callable.
-          prepare: "not-a-function",
+        input: {
+          "json-schema": {
+            kind: "json-schema",
+            // @ts-expect-error plugin lower must be callable.
+            lower: "not-a-function",
+            optionsSchema: jsonSchemaInputPlugin.optionsSchema,
+            // @ts-expect-error plugin prepare must be callable.
+            prepare: "not-a-function",
+          },
         },
       },
       targets: {},
@@ -193,7 +236,7 @@ void test("defineConfig rejects malformed plugin hook types at typecheck time", 
 
 void test("resolveX2ZodConfig validates and resolves plugin options and output defaults", () => {
   const config = defineConfig({
-    plugins,
+    plugins: { input: plugins },
     targets: {
       user: {
         input: { mediaType: "application/schema+json", path: "schema.json" },
@@ -227,22 +270,64 @@ void test("resolveX2ZodConfig validates and resolves plugin options and output d
   assert.equal(userTarget.plugin, jsonSchemaInputPlugin);
 });
 
-void test("resolveX2ZodPluginRegistry validates plugins without requiring targets", () => {
-  const resolved = resolveX2ZodPluginRegistry({ plugins });
+void test("resolveX2ZodConfig validates and resolves code quality options", () => {
+  const resolved = resolveX2ZodConfig(
+    defineConfig({
+      plugins: { codeQuality, input: plugins },
+      targets: {
+        user: {
+          input: { path: "schema.json" },
+          kind: "json-schema",
+          output: { codeQuality: { kind: "marker" }, path: "generated/user.ts", typeName: "User" },
+        },
+      },
+    }),
+  );
+
+  const userTarget = resolved.targets["user"];
+  assert.ok(userTarget !== undefined);
+  assert.ok(userTarget.output.codeQuality !== undefined);
+  assert.equal(userTarget.output.codeQuality.kind, "marker");
+  assert.deepEqual(userTarget.output.codeQuality.options, { suffix: "// quality" });
+});
+
+void test("resolveX2ZodConfig reports unknown code quality kinds", () => {
+  expectConfigError(
+    () =>
+      resolveX2ZodConfig({
+        plugins: { codeQuality, input: plugins },
+        targets: {
+          badQuality: {
+            input: { path: "schema.json" },
+            kind: "json-schema",
+            output: {
+              codeQuality: { kind: "unknown" },
+              path: "generated/user.ts",
+              typeName: "User",
+            },
+          },
+        },
+      } as never),
+    ["targets.badQuality.output.codeQuality.kind: unknown code quality kind unknown"],
+  );
+});
+
+void test("resolveX2ZodInputPluginRegistry validates plugins without requiring targets", () => {
+  const resolved = resolveX2ZodInputPluginRegistry({ plugins: { input: plugins } });
 
   assert.equal(resolved.plugins["json-schema"], jsonSchemaInputPlugin);
 });
 
-void test("resolveX2ZodPluginRegistry rejects unsupported CLI option schemas", () => {
+void test("resolveX2ZodInputPluginRegistry rejects unsupported CLI option schemas", () => {
   expectConfigError(resolveUnsupportedCLIOptionSchemaConfig, [
-    "plugins.bad.optionsSchema: unsupported CLI option schema: input: missing CLI option metadata",
+    "plugins.input.bad.optionsSchema: unsupported CLI option schema: input: missing CLI option metadata",
   ]);
 });
 
 void test("compileX2ZodTarget compiles a resolved config target through the library API", async () => {
   const resolved = resolveX2ZodConfig(
     defineConfig({
-      plugins,
+      plugins: { input: plugins },
       targets: {
         user: {
           input: { id: "inline", text: schemaText },
@@ -276,7 +361,7 @@ void test("resolveX2ZodConfig rejects null plugin options instead of treating th
 
 void test("resolveX2ZodConfig validates plugin registry entries and output options", () => {
   expectConfigError(resolveInvalidPluginRegistryConfig, [
-    "plugins.json-schema.kind: plugin kind must match its key",
+    "plugins.input.json-schema.kind: plugin kind must match its key",
     "targets.badOutput.kind: unknown plugin kind json-schema",
   ]);
 });
@@ -290,10 +375,10 @@ void test("loadX2ZodConfig loads x2zod.config.ts through c12 and validates it", 
       path.join(tempDirectory, "x2zod.config.ts"),
       [
         'import { defineConfig } from "@x2zod/config";',
-        'import { jsonSchemaInputPlugin } from "@x2zod/json-schema";',
+        'import { jsonSchemaInputPlugin } from "@x2zod/input-json-schema";',
         "",
         "export default defineConfig({",
-        '  plugins: { "json-schema": jsonSchemaInputPlugin },',
+        '  plugins: { input: { "json-schema": jsonSchemaInputPlugin } },',
         "  targets: {",
         "    user: {",
         '      kind: "json-schema",',
@@ -324,7 +409,7 @@ void test("loadX2ZodConfig loads x2zod.config.ts through c12 and validates it", 
   }
 });
 
-void test("loadX2ZodPluginRegistry loads plugins without resolving invalid targets", async () => {
+void test("loadX2ZodInputPluginRegistry loads plugins without resolving invalid targets", async () => {
   const tempDirectory = await mkdtemp(path.join(configPackageRoot, ".tmp-x2zod-config-"));
 
   try {
@@ -332,10 +417,10 @@ void test("loadX2ZodPluginRegistry loads plugins without resolving invalid targe
       path.join(tempDirectory, "x2zod.config.ts"),
       [
         'import { defineConfig } from "@x2zod/config";',
-        'import { jsonSchemaInputPlugin } from "@x2zod/json-schema";',
+        'import { jsonSchemaInputPlugin } from "@x2zod/input-json-schema";',
         "",
         "export default defineConfig({",
-        '  plugins: { "json-schema": jsonSchemaInputPlugin },',
+        '  plugins: { input: { "json-schema": jsonSchemaInputPlugin } },',
         "  targets: {",
         "    badKind: {",
         '      kind: "openapi",',
@@ -348,7 +433,7 @@ void test("loadX2ZodPluginRegistry loads plugins without resolving invalid targe
       ].join("\n"),
     );
 
-    const resolved = await loadX2ZodPluginRegistry({ cwd: tempDirectory });
+    const resolved = await loadX2ZodInputPluginRegistry({ cwd: tempDirectory });
     assert.ok(resolved !== undefined);
 
     assert.equal(resolved.configFile, path.join(tempDirectory, "x2zod.config.ts"));

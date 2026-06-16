@@ -31,12 +31,18 @@ The V1 architecture is library-first:
 
 - [`@x2zod/core`](packages/core) owns shared result and diagnostic types, input plugin contracts,
   orchestration, the Zod emission model, and final TypeScript source-file construction.
-- [`@x2zod/json-schema`](packages/json-schema) is the first input plugin. It owns JSON Schema
-  parsing, validation policy, dialect and reference semantics, option schemas, and JSON
+- [`@x2zod/input-json-schema`](packages/input-json-schema) is the first input plugin. It owns JSON
+  Schema parsing, validation policy, dialect and reference semantics, option schemas, and JSON
   Schema-to-Zod lowering.
 - [`@x2zod/config`](packages/config) owns typed project config, plugin registry loading, target
   resolution, and the `defineConfig` helper for library and CLI callers.
+- [`@x2zod/code-quality-oxfmt`](packages/code-quality-oxfmt) and
+  [`@x2zod/code-quality-oxlint`](packages/code-quality-oxlint) provide optional generated-source
+  quality plugins.
 - [`@x2zod/cli`](apps/cli) exposes the `x2zod` binary and should stay thin over the library API.
+- Supporting packages such as [`@x2zod/build-inputs`](packages/build-inputs),
+  [`@x2zod/eslint-plugins`](packages/eslint-plugins), and [`@x2zod/tsconfig`](packages/tsconfig)
+  remain separate workspace packages.
 
 Core should stay schema-language agnostic. Plugins validate and lower their own input languages;
 core coordinates compilation and emits a finalized TypeScript compiler `SourceFile`.
@@ -47,10 +53,10 @@ Declare input plugins and reusable targets in `x2zod.config.ts`:
 
 ```ts
 import { defineConfig } from "@x2zod/config";
-import { jsonSchemaInputPlugin } from "@x2zod/json-schema";
+import { jsonSchemaInputPlugin } from "@x2zod/input-json-schema";
 
 export default defineConfig({
-  plugins: { "json-schema": jsonSchemaInputPlugin },
+  plugins: { input: { "json-schema": jsonSchemaInputPlugin } },
   targets: {
     user: {
       kind: "json-schema",
