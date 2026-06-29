@@ -5,6 +5,8 @@ import type { Package } from "@manypkg/get-packages";
 
 import { publishRegistries, publishRegistryPackage } from "./publish";
 import type { PublishContext, RegistryPublisher } from "./publish";
+import { npmRegistryHasVersion } from "./publish-registries";
+import { notFoundStatus } from "./publish-runtime";
 
 interface PublisherState {
   publishCalls: number;
@@ -22,6 +24,13 @@ const publishContext = (dryRun: boolean): PublishContext => ({
   npmAccess: "public",
   packageVersions: new Map([["@x2zod/example", "1.2.3"]]),
 });
+const jsonResponse = (value: unknown, status?: number): Response =>
+  status === undefined ? Response.json(value) : Response.json(value, { status });
+const requestUrl = (request: Parameters<typeof fetch>[0]): string => {
+  if (typeof request === "string") return request;
+  if (request instanceof URL) return request.href;
+  return request.url;
+};
 
 const createPublisher = (
   versionPublished: boolean,
@@ -123,6 +132,31 @@ void describe("publishRegistryPackage", () => {
         packageLabel: "@x2zod/example@1.2.3",
         registry: "failing-registry",
       },
+    ]);
+  });
+});
+
+void describe("npmRegistryHasVersion", () => {
+  void test("falls back to npm dist-tags when package metadata is temporarily missing", async () => {
+    const requestedUrls: string[] = [];
+    const registryFetch = (async (url: Parameters<typeof fetch>[0]): Promise<Response> => {
+      await Promise.resolve();
+      const requestedUrl = requestUrl(url);
+      requestedUrls.push(requestedUrl);
+      if (requestedUrl === "https://registry.npmjs.org/%40x2zod%2Fexample")
+        return jsonResponse({ error: "Not found" }, notFoundStatus);
+      if (requestedUrl === "https://registry.npmjs.org/-/package/%40x2zod%2Fexample/dist-tags")
+        return jsonResponse({ latest: "1.2.3" });
+
+      throw new Error(`Unexpected registry URL: ${requestedUrl}`);
+    }) as typeof fetch;
+
+    const published = await npmRegistryHasVersion("@x2zod/example", "1.2.3", registryFetch);
+
+    assert.equal(published, true);
+    assert.deepEqual(requestedUrls, [
+      "https://registry.npmjs.org/%40x2zod%2Fexample",
+      "https://registry.npmjs.org/-/package/%40x2zod%2Fexample/dist-tags",
     ]);
   });
 });
