@@ -3,7 +3,7 @@ import { describe, test } from "node:test";
 
 import type { Package } from "@manypkg/get-packages";
 
-import { publishRegistryPackage } from "./publish";
+import { publishRegistries, publishRegistryPackage } from "./publish";
 import type { PublishContext, RegistryPublisher } from "./publish";
 
 interface PublisherState {
@@ -45,6 +45,19 @@ const createPublisher = (
   return { publisher, state };
 };
 
+const createNamedPublisher = (
+  name: string,
+  publish: RegistryPublisher["publish"],
+): RegistryPublisher => ({
+  isPackagePublishable: (): boolean => true,
+  isVersionPublished: async (): Promise<boolean> => {
+    await Promise.resolve();
+    return false;
+  },
+  name,
+  publish,
+});
+
 void describe("publishRegistryPackage", () => {
   void test("skips already-published versions during dry runs", async () => {
     const { publisher, state } = createPublisher(true);
@@ -80,5 +93,36 @@ void describe("publishRegistryPackage", () => {
 
     assert.equal(result, 1);
     assert.deepEqual(state, { publishCalls: 1, publishDryRuns: [false], versionChecks: 1 });
+  });
+
+  void test("continues registry reconciliation after a package publish fails", async () => {
+    const publishCalls: string[] = [];
+    const failingPublisher = createNamedPublisher("failing-registry", async (): Promise<void> => {
+      await Promise.resolve();
+      throw new Error("simulated publish failure");
+    });
+    const succeedingPublisher = createNamedPublisher(
+      "succeeding-registry",
+      async (publishedPackage): Promise<void> => {
+        await Promise.resolve();
+        publishCalls.push(publishedPackage.packageJson.name);
+      },
+    );
+
+    const result = await publishRegistries(
+      [failingPublisher, succeedingPublisher],
+      [workspacePackage],
+      publishContext(false),
+    );
+
+    assert.equal(result.published, 1);
+    assert.deepEqual(publishCalls, ["@x2zod/example"]);
+    assert.deepEqual(result.failures, [
+      {
+        message: "simulated publish failure",
+        packageLabel: "@x2zod/example@1.2.3",
+        registry: "failing-registry",
+      },
+    ]);
   });
 });

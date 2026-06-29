@@ -33,6 +33,12 @@ type PublishOptions = Readonly<{
   tag: string | undefined;
 }>;
 type PublishCommand = PublishOptions | Readonly<{ mode: "sync-jsr-metadata" }>;
+type PublishFailure = Readonly<{
+  message: string;
+  packageLabel: string;
+  registry: RegistryPublisher["name"];
+}>;
+type PublishRegistriesResult = Readonly<{ failures: readonly PublishFailure[]; published: number }>;
 
 const program = defineProgram({
   metadata: { brief: optiqueMessage`Publish x2zod workspace packages.`, name: "publish" },
@@ -129,18 +135,44 @@ export const publishRegistryPackage = async (
   return 1;
 };
 
-const publishRegistries = async (
+const errorMessage = (error: unknown): string =>
+  error instanceof Error ? error.message : "Unknown publish failure.";
+
+export const publishRegistries = async (
   publishersToRun: readonly RegistryPublisher[],
   workspacePackages: readonly Package[],
   context: PublishContext,
-): Promise<number> => {
+): Promise<PublishRegistriesResult> => {
+  const failures: PublishFailure[] = [];
   let published = 0;
   for (const publisher of publishersToRun)
-    for (const workspacePackage of workspacePackages)
-      if (await publisher.isPackagePublishable(workspacePackage))
-        published += await publishRegistryPackage(publisher, workspacePackage, context);
-  return published;
+    for (const workspacePackage of workspacePackages) {
+      // Publish reconciliation is intentionally serial to preserve dependency order.
+      // eslint-disable-next-line no-await-in-loop
+      const publishable = await publisher.isPackagePublishable(workspacePackage);
+
+      if (publishable) {
+        const packageLabel = `${workspacePackage.packageJson.name}@${workspacePackage.packageJson.version}`;
+        try {
+          // eslint-disable-next-line no-await-in-loop
+          published += await publishRegistryPackage(publisher, workspacePackage, context);
+        } catch (error) {
+          const message = errorMessage(error);
+          failures.push({ message, packageLabel, registry: publisher.name });
+          writeLine(`Publish failed for ${packageLabel} with ${publisher.name}: ${message}`);
+        }
+      }
+    }
+  return { failures, published };
 };
+
+const publishFailureSummary = (failures: readonly PublishFailure[]): string =>
+  [
+    `Publish failed for ${failures.length.toString()} package registry operation(s):`,
+    ...failures.map(
+      ({ message, packageLabel, registry }) => `- ${packageLabel} with ${registry}: ${message}`,
+    ),
+  ].join("\n");
 
 const publishPackages = async (options: PublishOptions): Promise<void> => {
   const packages = await getPackages(rootDirectory);
@@ -169,7 +201,12 @@ const publishPackages = async (options: PublishOptions): Promise<void> => {
       ? {}
       : { npmTag: options.tag ?? preState?.tag }),
   };
-  const published = await publishRegistries(publishersToRun, workspacePackages, context);
+  const { failures, published } = await publishRegistries(
+    publishersToRun,
+    workspacePackages,
+    context,
+  );
+  if (failures.length > 0) fail(publishFailureSummary(failures));
   if (!options.dryRun && options.registry === undefined && published > 0)
     runCommand(
       [bunExecutable, "run", "changeset", "tag"],
