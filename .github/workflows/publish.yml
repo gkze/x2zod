@@ -6,12 +6,18 @@ on:
       - main
     paths:
       - .changeset/**
+      - apps/*/bin/**
       - apps/*/CHANGELOG.md
       - apps/*/jsr.json
       - apps/*/package.json
+      - apps/*/src/**
+      - packages/*/base.json
+      - packages/*/bin/**
       - packages/*/CHANGELOG.md
       - packages/*/jsr.json
       - packages/*/package.json
+      - packages/*/schema/**
+      - packages/*/src/**
   workflow_dispatch:
     inputs:
       dry_run:
