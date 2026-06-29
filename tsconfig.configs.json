@@ -5,6 +5,7 @@
   "files": [
     ".markdownlint-cli2.mjs",
     "commitlint.config.ts",
+    "scripts/changeset-required.ts",
     "scripts/publish-materialize.ts",
     "scripts/publish-registries.ts",
     "scripts/publish-runtime.ts",
