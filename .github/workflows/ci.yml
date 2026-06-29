@@ -38,6 +38,12 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Check changesets
+        if:
+          ${{ github.event_name == 'pull_request' && !startsWith(github.head_ref,
+          'changeset-release/') }}
+        run: bun run changeset status --since="${{ github.event.pull_request.base.sha }}"
+
       - name: Run checks
         run: bun run check
 
