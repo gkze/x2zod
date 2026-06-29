@@ -42,7 +42,27 @@ jobs:
         if:
           ${{ github.event_name == 'pull_request' && !startsWith(github.head_ref,
           'changeset-release/') }}
-        run: bun run changeset status --since="${{ github.event.pull_request.base.sha }}"
+        run: |
+          base="${{ github.event.pull_request.base.sha }}"
+          changed_payload="$(git diff --name-only "$base"...HEAD -- \
+            'apps/*/bin/**' \
+            'apps/*/jsr.json' \
+            'apps/*/package.json' \
+            'apps/*/src/**' \
+            'packages/*/base.json' \
+            'packages/*/bin/**' \
+            'packages/*/jsr.json' \
+            'packages/*/package.json' \
+            'packages/*/schema/**' \
+            'packages/*/src/**')"
+
+          if [ -z "$changed_payload" ]; then
+            echo "No package payload changes."
+            exit 0
+          fi
+
+          printf '%s\n' "$changed_payload"
+          bun run changeset status --since="$base"
 
       - name: Run checks
         run: bun run check

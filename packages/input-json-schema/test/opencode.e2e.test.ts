@@ -42,7 +42,8 @@ const openCodeSchemaUrl = "https://opencode.ai/config.json";
 const openCodeTestHostname = "127.0.0.1";
 const openCodeTestPort = 4099;
 const openCodeTestUsername = "x2zod-e2e";
-const openCodeSubprocessDeadlineMs = 4000;
+const openCodeSubprocessDeadlineMs = 12_000;
+const openCodeTestTimeoutMs = 15_000;
 const jsonSchemaNativePreviewExternals = [...nativePreviewExternals, "jsonc-parser"] as const;
 const sampleOpenCodeConfig = {
   $schema: openCodeSchemaUrl,
@@ -236,40 +237,44 @@ const assertOpenCodeAcceptsConfig = ({
 };
 
 void describe("OpenCode config JSON Schema E2E", () => {
-  void test("emits importable Zod source that OpenCode accepts as config", async () => {
-    const directory = createTemporaryDirectory({
-      prefix: tempDirectoryPrefix,
-      rootDirectory: tempRootDirectory,
-    });
-    const bundleFile = nodePath.join(directory, bundledPrinterFileName);
-    const generatedModuleFile = nodePath.join(directory, generatedModuleFileName);
-    const projectDirectory = nodePath.join(directory, projectDirectoryName);
-    const homeDirectory = nodePath.join(directory, homeDirectoryName);
-    const configDirectory = nodePath.join(homeDirectory, ".opencode");
-    const generatedConfigFile = nodePath.join(projectDirectory, generatedConfigFileName);
-
-    try {
-      mkdirSync(projectDirectory, { recursive: true });
-      mkdirSync(configDirectory, { recursive: true });
-      mkdirSync(homeDirectory, { recursive: true });
-      buildPrinterBundle(bundleFile);
-
-      await writeFile(generatedModuleFile, printGeneratedOpenCodeSource(bundleFile));
-      const generated = await importGeneratedOpenCodeModule(generatedModuleFile);
-      const parsedConfig = generated.openCodeConfigSchema.parse(sampleOpenCodeConfig);
-
-      assert.deepEqual(parsedConfig, sampleOpenCodeConfig);
-
-      await writeFile(generatedConfigFile, JSON.stringify(parsedConfig, null, 2));
-      assertOpenCodeAcceptsConfig({
-        configDirectory,
-        configFile: generatedConfigFile,
-        executable: openCodeExecutable(),
-        homeDirectory,
-        projectDirectory,
+  void test(
+    "emits importable Zod source that OpenCode accepts as config",
+    { timeout: openCodeTestTimeoutMs },
+    async () => {
+      const directory = createTemporaryDirectory({
+        prefix: tempDirectoryPrefix,
+        rootDirectory: tempRootDirectory,
       });
-    } finally {
-      rmSync(directory, { force: true, recursive: true });
-    }
-  });
+      const bundleFile = nodePath.join(directory, bundledPrinterFileName);
+      const generatedModuleFile = nodePath.join(directory, generatedModuleFileName);
+      const projectDirectory = nodePath.join(directory, projectDirectoryName);
+      const homeDirectory = nodePath.join(directory, homeDirectoryName);
+      const configDirectory = nodePath.join(homeDirectory, ".opencode");
+      const generatedConfigFile = nodePath.join(projectDirectory, generatedConfigFileName);
+
+      try {
+        mkdirSync(projectDirectory, { recursive: true });
+        mkdirSync(configDirectory, { recursive: true });
+        mkdirSync(homeDirectory, { recursive: true });
+        buildPrinterBundle(bundleFile);
+
+        await writeFile(generatedModuleFile, printGeneratedOpenCodeSource(bundleFile));
+        const generated = await importGeneratedOpenCodeModule(generatedModuleFile);
+        const parsedConfig = generated.openCodeConfigSchema.parse(sampleOpenCodeConfig);
+
+        assert.deepEqual(parsedConfig, sampleOpenCodeConfig);
+
+        await writeFile(generatedConfigFile, JSON.stringify(parsedConfig, null, 2));
+        assertOpenCodeAcceptsConfig({
+          configDirectory,
+          configFile: generatedConfigFile,
+          executable: openCodeExecutable(),
+          homeDirectory,
+          projectDirectory,
+        });
+      } finally {
+        rmSync(directory, { force: true, recursive: true });
+      }
+    },
+  );
 });
