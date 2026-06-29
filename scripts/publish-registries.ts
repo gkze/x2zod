@@ -17,20 +17,61 @@ import {
   rootNodeModulesCachePath,
   runCommand,
   runningInGitHubActions,
+  stringRecordSchema,
   writeJsonObject,
   writeLine,
 } from "./publish-runtime";
 import type { JsonObject } from "./publish-runtime";
 import type { PublishContext, RegistryPublisher } from "./publish-types";
 
-const registryMetadataHasVersion = async (url: string, version: string): Promise<boolean> => {
-  const response = await fetch(url, { headers: { accept: "application/json" } });
-  if (response.status === notFoundStatus) return false;
+type RegistryResponse = Awaited<ReturnType<typeof fetch>>;
+type RegistryFetch = typeof fetch;
+
+const registryMetadataResponseHasVersion = async (
+  response: RegistryResponse,
+  url: string,
+  version: string,
+): Promise<boolean> => {
   if (!response.ok) fail(`Registry metadata request failed: ${url} returned ${response.status}.`);
 
   const { versions } = jsonObjectSchema.parse(await response.json());
   const parsedVersions = jsonObjectSchema.safeParse(versions);
   return parsedVersions.success && version in parsedVersions.data;
+};
+
+const registryMetadataHasVersion = async (
+  url: string,
+  version: string,
+  registryFetch: RegistryFetch = fetch,
+): Promise<boolean> => {
+  const response = await registryFetch(url, { headers: { accept: "application/json" } });
+  if (response.status === notFoundStatus) return false;
+  return registryMetadataResponseHasVersion(response, url, version);
+};
+
+export const npmRegistryHasVersion = async (
+  packageName: string,
+  version: string,
+  registryFetch: RegistryFetch = fetch,
+): Promise<boolean> => {
+  const encodedPackageName = encodeURIComponent(packageName);
+  const metadataUrl = `https://registry.npmjs.org/${encodedPackageName}`;
+  const metadataResponse = await registryFetch(metadataUrl, {
+    headers: { accept: "application/json" },
+  });
+  if (metadataResponse.status !== notFoundStatus)
+    return registryMetadataResponseHasVersion(metadataResponse, metadataUrl, version);
+
+  const distTagsUrl = `https://registry.npmjs.org/-/package/${encodedPackageName}/dist-tags`;
+  const distTagsResponse = await registryFetch(distTagsUrl, {
+    headers: { accept: "application/json" },
+  });
+  if (distTagsResponse.status === notFoundStatus) return false;
+  if (!distTagsResponse.ok)
+    fail(`Registry dist-tags request failed: ${distTagsUrl} returned ${distTagsResponse.status}.`);
+
+  const distTags = stringRecordSchema.parse(await distTagsResponse.json());
+  return Object.values(distTags).includes(version);
 };
 
 const jsrPackageMetadataUrl = (packageName: string): string => {
@@ -85,8 +126,8 @@ export const syncJsrMetadata = async (): Promise<void> => {
 const npmPublisher = {
   isPackagePublishable: (): boolean => true,
   isVersionPublished: async (workspacePackage: Package): Promise<boolean> => {
-    const published = await registryMetadataHasVersion(
-      `https://registry.npmjs.org/${encodeURIComponent(workspacePackage.packageJson.name)}`,
+    const published = await npmRegistryHasVersion(
+      workspacePackage.packageJson.name,
       workspacePackage.packageJson.version,
     );
     return published;
