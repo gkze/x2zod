@@ -96,6 +96,7 @@ const compoundDefaultExportedFunctionDeclaration = [
   "",
 ].join("\n");
 const missingRuleMessage = "Missing rule";
+const registeredRuleSuites: Promise<void>[] = [];
 
 const getRule = (name: string): NonNullable<(typeof plugin.rules)[string]> => {
   const rule = plugin.rules[name];
@@ -106,7 +107,7 @@ const getRule = (name: string): NonNullable<(typeof plugin.rules)[string]> => {
 };
 
 RuleTester.describe = (name, run): void => {
-  void describe(name, run);
+  registeredRuleSuites.push(describe(name, run));
 };
 
 RuleTester.it = test as RuleTester.ItFn;
