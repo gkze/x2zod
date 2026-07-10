@@ -1,4 +1,5 @@
 import type { SourceFile } from "@typescript/native-preview/unstable/ast";
+import type { Project } from "@typescript/native-preview/unstable/sync";
 import type { RuleTester } from "oxlint/plugins-dev";
 
 import { getNativeService } from "#source";
@@ -16,10 +17,14 @@ export type EslintPlugin = Readonly<{
 }>;
 
 export interface SourceRuleOptions {
-  collectReplacements: (context: RuleContext, sourceFile: SourceFile) => readonly TextReplacement[];
-  description: string;
-  message: string;
-  schema?: readonly unknown[];
+  readonly collectReplacements: (
+    context: RuleContext,
+    sourceFile: SourceFile,
+    project: Project,
+  ) => readonly TextReplacement[];
+  readonly description: string;
+  readonly message: string;
+  readonly schema?: readonly unknown[];
 }
 
 export const createSourceRule = ({
@@ -34,7 +39,11 @@ export const createSourceRule = ({
 
       if (sourceContext === undefined) return;
 
-      for (const replacement of collectReplacements(context, sourceContext.sourceFile))
+      for (const replacement of collectReplacements(
+        context,
+        sourceContext.sourceFile,
+        sourceContext.project,
+      ))
         reportReplacement(context, replacement);
     },
   }),

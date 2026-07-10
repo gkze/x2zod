@@ -214,6 +214,7 @@ class NativeTypeScriptService {
     this.snapshot = shouldOpenProject
       ? this.api.updateSnapshot({ openProject: configPath })
       : this.api.updateSnapshot({ fileChanges: { changed: [absolutePath] } });
+    this.sourceContexts.clear();
 
     if (shouldOpenProject) this.openedConfigPaths.add(configPath);
 

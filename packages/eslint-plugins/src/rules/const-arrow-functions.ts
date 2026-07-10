@@ -38,7 +38,10 @@ import {
   getLeadingCommentRanges,
   getTrailingCommentRanges,
 } from "@typescript/native-preview/unstable/ast/scanner";
+import type { Project } from "@typescript/native-preview/unstable/sync";
 
+import { collectExportedLocalSymbolIds, hasModifier, isIdentifierExported } from "#exports";
+import type { ExportedLocalSymbols } from "#exports";
 import { parseOptionsRecord } from "#options";
 import { createSourceRule } from "#rule";
 import type { Rule, RuleContext } from "#rule";
@@ -49,8 +52,10 @@ interface ConstArrowFunctionsOptions {
   includeExportedFunctions?: boolean;
 }
 
-interface NodeWithModifiers extends Node {
-  readonly modifiers?: readonly Node[];
+interface FunctionDeclarationContext {
+  readonly exportedLocalSymbols: ExportedLocalSymbols;
+  readonly options: ConstArrowFunctionsOptions;
+  readonly sourceFile: SourceFile;
 }
 
 type FunctionToConvert = FunctionDeclaration | FunctionExpression;
@@ -63,14 +68,6 @@ const constArrowDescription = [
   "arrows",
 ].join(" ");
 const constArrowMessage = ["Convert function to const", "arrow."].join(" ");
-
-const hasModifierList = (node: Node): node is NodeWithModifiers => "modifiers" in node;
-
-const hasModifier = (node: Node, kind: SyntaxKind): boolean => {
-  const modifiers = hasModifierList(node) ? node.modifiers : undefined;
-
-  return modifiers?.some((modifier) => modifier.kind === kind) ?? false;
-};
 
 const getTextList = (
   sourceFile: SourceFile,
@@ -287,10 +284,10 @@ const buildArrowFunctionText = (
 };
 
 const buildFunctionDeclarationReplacement = (
-  sourceFile: SourceFile,
+  declarationContext: FunctionDeclarationContext,
   functionDeclaration: FunctionDeclaration,
-  options: ConstArrowFunctionsOptions,
 ): TextReplacement | undefined => {
+  const { exportedLocalSymbols, options, sourceFile } = declarationContext;
   const nameNode = functionDeclaration.name;
 
   if (nameNode === undefined) return undefined;
@@ -302,7 +299,7 @@ const buildFunctionDeclarationReplacement = (
   if (hasFunctionOverloadDeclaration(sourceFile, functionDeclaration, nameNode.text))
     return undefined;
   if (
-    hasModifier(functionDeclaration, SyntaxKind.ExportKeyword) &&
+    isIdentifierExported(exportedLocalSymbols, functionDeclaration, nameNode) &&
     options.includeExportedFunctions !== true
   )
     return undefined;
@@ -398,15 +395,22 @@ const parseOptions = (context: RuleContext): ConstArrowFunctionsOptions => {
 export const collectConstArrowFunctionReplacements = (
   context: RuleContext,
   sourceFile: SourceFile,
+  project: Project,
 ): readonly TextReplacement[] => {
   const options = parseOptions(context);
+  const exportedLocalSymbolIds = collectExportedLocalSymbolIds(sourceFile, project.checker, true);
+  const declarationContext: FunctionDeclarationContext = {
+    exportedLocalSymbols: { checker: project.checker, symbolIds: exportedLocalSymbolIds },
+    options,
+    sourceFile,
+  };
   const functionExpressionReplacements = collectNodes(sourceFile, isFunctionExpression).flatMap(
     (functionExpression) =>
       buildFunctionExpressionReplacement(sourceFile, functionExpression) ?? [],
   );
   const functionDeclarationReplacements = collectNodes(sourceFile, isFunctionDeclaration).flatMap(
     (functionDeclaration) =>
-      buildFunctionDeclarationReplacement(sourceFile, functionDeclaration, options) ?? [],
+      buildFunctionDeclarationReplacement(declarationContext, functionDeclaration) ?? [],
   );
 
   return [...functionExpressionReplacements, ...functionDeclarationReplacements];

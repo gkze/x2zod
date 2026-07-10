@@ -13,6 +13,7 @@
   ],
   "type": "module",
   "imports": {
+    "#exports": "./src/exports.ts",
     "#index": "./src/index.ts",
     "#options": "./src/options.ts",
     "#rule": "./src/rule.ts",

@@ -1,4 +1,4 @@
-import { test } from "node:test";
+import { describe, test } from "node:test";
 import { fileURLToPath } from "node:url";
 
 import { RuleTester } from "oxlint/plugins-dev";
@@ -48,6 +48,53 @@ const overloadedFunctionDeclaration = [
   "function parse(value: string): string { return value; }",
   "",
 ].join("\n");
+const indirectlyExportedFunctionDeclaration = [
+  "function Constructor(): void {}",
+  "export { Constructor };",
+  "",
+].join("\n");
+const indirectlyAliasedFunctionDeclaration = [
+  "function Constructor(): void {}",
+  "export { Constructor as PublicConstructor };",
+  "",
+].join("\n");
+const indirectlyDefaultExportedFunctionDeclaration = [
+  "function Constructor(): void {}",
+  "export default Constructor;",
+  "",
+].join("\n");
+const indirectlyDefaultAliasedFunctionDeclaration = [
+  "function Constructor(): void {}",
+  "export { Constructor as default };",
+  "",
+].join("\n");
+const constructibleFunctionDeclaration = [
+  "export {};",
+  "function Constructor(): void {}",
+  "new Constructor();",
+  "",
+].join("\n");
+const functionDeclarationWithPrototypeReference = [
+  "export {};",
+  "function Constructor(): void {}",
+  "Constructor.prototype.method = (): void => {};",
+  "",
+].join("\n");
+const exportEqualsFunctionDeclaration = [
+  "function Constructor(): void {}",
+  "export = Constructor;",
+  "",
+].join("\n");
+const typeOnlyExportedFunctionDeclaration = [
+  "function Constructor(): void {}",
+  "export type { Constructor };",
+  "",
+].join("\n");
+const compoundDefaultExportedFunctionDeclaration = [
+  "function Constructor(): void {}",
+  "export default { Constructor };",
+  "",
+].join("\n");
 const missingRuleMessage = "Missing rule";
 
 const getRule = (name: string): NonNullable<(typeof plugin.rules)[string]> => {
@@ -58,8 +105,8 @@ const getRule = (name: string): NonNullable<(typeof plugin.rules)[string]> => {
   return rule;
 };
 
-RuleTester.describe = (_name, run): void => {
-  run();
+RuleTester.describe = (name, run): void => {
+  void describe(name, run);
 };
 
 RuleTester.it = test as RuleTester.ItFn;
@@ -104,10 +151,38 @@ tester.run("const-arrow-functions", getRule("const-arrow-functions"), {
         "",
       ].join("\n"),
     },
+    {
+      code: ["function Constructor(): void {}", "export { Constructor };", ""].join("\n"),
+      errors: [{ messageId: "convert" }],
+      options: [{ includeExportedFunctions: true }],
+      output: ["const Constructor = (): void => {};", "export { Constructor };", ""].join("\n"),
+    },
+    {
+      code: [
+        "function Constructor(): void {}",
+        'export { ExternalConstructor as Constructor } from "./other";',
+        "",
+      ].join("\n"),
+      errors: [{ messageId: "convert" }],
+      output: [
+        "const Constructor = (): void => {};",
+        'export { ExternalConstructor as Constructor } from "./other";',
+        "",
+      ].join("\n"),
+    },
   ],
   valid: [
     ["export {};", "const local = (value: string): string => { return value; };", ""].join("\n"),
+    compoundDefaultExportedFunctionDeclaration,
+    constructibleFunctionDeclaration,
+    exportEqualsFunctionDeclaration,
+    functionDeclarationWithPrototypeReference,
+    indirectlyAliasedFunctionDeclaration,
+    indirectlyDefaultAliasedFunctionDeclaration,
+    indirectlyDefaultExportedFunctionDeclaration,
+    indirectlyExportedFunctionDeclaration,
     overloadedFunctionDeclaration,
+    typeOnlyExportedFunctionDeclaration,
   ],
 });
 
