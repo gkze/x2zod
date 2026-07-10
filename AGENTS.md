@@ -80,3 +80,5 @@ bun run check
 
 - Never use `--no-verify` for commits or pushes. If hooks fail, fix the hook issue, change the
   commit split so hooks can run correctly, or stop and report the blocker.
+- Keep commit subject and body lines at or below 100 characters, including squash-merge messages;
+  commitlint enforces the same limit after changes reach `main`.
