@@ -2,7 +2,6 @@ import type { OptionName } from "@optique/core";
 import type { z } from "zod/v4";
 
 import { isRecord } from "./structural";
-import type { UnknownRecord } from "./structural";
 import { schemaError } from "./zod-cli-errors";
 import { innerSchema, isSupportedWrapperType, schemaType } from "./zod-introspection";
 import type { ZodSchema } from "./zod-introspection";
@@ -26,7 +25,7 @@ export const withCLI = <TSchema extends z.ZodType>(
   schema: TSchema,
   metadata: ZodCLIOptionMetadata,
 ): TSchema => {
-  const existingMetadata = schema.meta() as UnknownRecord | undefined;
+  const existingMetadata = schema.meta();
   return schema.meta({ ...existingMetadata, x2zodCLI: metadata } as never);
 };
 
@@ -34,7 +33,7 @@ export const readCLIMetadata = (
   schema: ZodSchema,
   path: readonly string[],
 ): ZodCLIOptionMetadata => {
-  const metadata = (schema.meta() as UnknownRecord | undefined)?.["x2zodCLI"];
+  const metadata = schema.meta()?.["x2zodCLI"];
   if (metadata !== undefined) return parseCLIMetadata(metadata, path);
 
   const type = schemaType(schema, path);

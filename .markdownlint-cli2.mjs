@@ -13,12 +13,17 @@ const markdownlintCli2Config = {
   globs: [
     "**/*.md",
     "!**/.changeset/**",
+    "!**/.dex/**",
     "!**/.direnv/**",
+    "!**/.publish-tmp/**",
+    "!**/.turbo/**",
+    "!**/.cache/**",
+    "!**/.tmp-x2zod-*/**",
     "!**/coverage/**",
     "!**/dist/**",
     "!**/node_modules/**",
   ],
-  config: { default: true, MD013: false, MD024: { siblings_only: true } },
+  config: { default: true, MD013: { line_length: 100 }, MD024: { siblings_only: true } },
 };
 
 export default markdownlintCli2Config;

@@ -230,7 +230,7 @@ const isIntegerNumber = (def: ZodDef): boolean =>
     if (!isRecord(check)) return false;
     const nestedDef = isRecord(check["def"]) ? (check["def"] as ZodDef) : undefined;
     return (
-      isSafeIntegerNumberFormat(check as ZodDef) ||
+      isSafeIntegerNumberFormat(check) ||
       (nestedDef !== undefined && isSafeIntegerNumberFormat(nestedDef))
     );
   });

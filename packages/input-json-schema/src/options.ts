@@ -5,7 +5,6 @@ import type { JsonSchemaValue } from "./document";
 import { jsonSchemaDialects, jsonSchemaSourceProfiles, jsonSchemaValidators } from "./metadata";
 import type { JsonSchemaDialect, JsonSchemaSourceProfile, JsonSchemaValidator } from "./metadata";
 
-type UnknownRecord = Readonly<Record<string, unknown>>;
 type JsonSchemaCLIOptionMetadata = Readonly<{
   description: string;
   long?: string | undefined;
@@ -40,7 +39,7 @@ const withCLI = <TSchema extends z.ZodType>(
   schema: TSchema,
   metadata: JsonSchemaCLIOptionMetadata,
 ): TSchema => {
-  const existingMetadata = schema.meta() as UnknownRecord | undefined;
+  const existingMetadata = schema.meta();
   return schema.meta({ ...existingMetadata, x2zodCLI: metadata } as never);
 };
 

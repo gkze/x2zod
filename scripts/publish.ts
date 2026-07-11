@@ -148,13 +148,11 @@ export const publishRegistries = async (
   for (const publisher of publishersToRun)
     for (const workspacePackage of workspacePackages) {
       // Publish reconciliation is intentionally serial to preserve dependency order.
-      // eslint-disable-next-line no-await-in-loop
       const publishable = await publisher.isPackagePublishable(workspacePackage);
 
       if (publishable) {
         const packageLabel = `${workspacePackage.packageJson.name}@${workspacePackage.packageJson.version}`;
         try {
-          // eslint-disable-next-line no-await-in-loop
           published += await publishRegistryPackage(publisher, workspacePackage, context);
         } catch (error) {
           const message = errorMessage(error);

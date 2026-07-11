@@ -7,10 +7,15 @@
   "endOfLine": "lf",
   "htmlWhitespaceSensitivity": "strict",
   "ignorePatterns": [
+    ".dex/**",
+    ".direnv/**",
+    ".publish-tmp/**",
+    ".turbo/**",
+    "**/.cache/**",
+    "**/.tmp-x2zod-*/**",
+    "**/node_modules/**",
     "coverage/**",
     "dist/**",
-    "**/.tmp-x2zod-*/**",
-    "node_modules/**",
     "packages/*/src/generated/**",
     "packages/core/src/targets/**/generated/**",
     "src/targets/**/generated/**"
@@ -47,7 +52,7 @@
       "unknown"
     ],
     "ignoreCase": true,
-    "internalPattern": ["@mcpsync/", "~/", "@/"],
+    "internalPattern": ["@x2zod/", "~/", "@/"],
     "newlinesBetween": true,
     "order": "asc",
     "partitionByComment": false,

@@ -1,3 +1,8 @@
+import { getNodePath, getNodeValue, parseTree, printParseErrorCode } from "jsonc-parser";
+import type { JSONPath, Node, ParseError } from "jsonc-parser";
+import type { JsonObject, JsonPrimitive, JsonValue } from "type-fest";
+import { z } from "zod/v4";
+
 import { createDiagnostic, err, jsonPointerSchema, ok } from "@x2zod/core";
 import type {
   Diagnostic,
@@ -8,10 +13,6 @@ import type {
   SourcePosition,
   SourceSpan,
 } from "@x2zod/core";
-import { getNodePath, getNodeValue, parseTree, printParseErrorCode } from "jsonc-parser";
-import type { JSONPath, Node, ParseError } from "jsonc-parser";
-import type { JsonObject, JsonPrimitive, JsonValue } from "type-fest";
-import { z } from "zod/v4";
 
 import { resultFromJsonSchemaDiagnostics } from "./diagnostics";
 

@@ -11,6 +11,7 @@ export { isRecord } from "./structural";
 const textDecoder = new TextDecoder();
 export const nativePreviewShutdownStderr = "context canceled\n";
 const bunExecutable = process.execPath;
+const nodeExecutable = process.env["X2ZOD_NODE_BINARY"] ?? "node";
 
 export const nativePreviewExternals = [
   "@typescript/native-preview/unstable/ast",
@@ -75,7 +76,7 @@ export const createTemporaryDirectory = ({
 };
 
 export const runNode = ({ allowedStderr, args, cwd }: RunNodeRequest): string => {
-  const result = spawnSync("node", ["--no-warnings", ...args], {
+  const result = spawnSync(nodeExecutable, ["--no-warnings", ...args], {
     ...(cwd === undefined ? {} : { cwd }),
     stdio: ["ignore", "pipe", "pipe"],
   });

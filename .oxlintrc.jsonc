@@ -10,12 +10,16 @@
     "suspicious": "error",
   },
   "env": { "builtin": true, "node": true },
-  "globals": { "Bun": "readonly", "fetch": "readonly" },
   "ignorePatterns": [
+    ".dex/**",
+    ".direnv/**",
+    ".publish-tmp/**",
+    ".turbo/**",
+    "**/.cache/**",
+    "**/.tmp-x2zod-*/**",
+    "**/node_modules/**",
     "coverage/**",
     "dist/**",
-    "node_modules/**",
-    "**/.tmp-x2zod-*/**",
     "packages/*/src/generated/**",
     "packages/core/src/targets/**/generated/**",
     "src/targets/**/generated/**",
@@ -24,6 +28,7 @@
     "denyWarnings": true,
     "maxWarnings": 0,
     "reportUnusedDisableDirectives": "error",
+    "respectEslintDisableDirectives": false,
     "typeAware": true,
     "typeCheck": true,
   },
@@ -77,6 +82,7 @@
     "no-null": "off",
     // Async APIs are real package/script boundaries here; banning async/await would obscure control flow.
     "no-async-await": "off",
+    "no-console": "error",
     "no-duplicate-imports": ["error", { "allowSeparateTypeImports": true }],
     // CLI, publish scripts, and the Oxlint plugin legitimately use Node built-ins.
     "no-nodejs-modules": "off",
@@ -90,10 +96,8 @@
     "no-ternary": "off",
     // Explicit undefined checks are clearer than sentinel rewrites around TypeScript/native-preview APIs.
     "no-undefined": "off",
-    // Branded values and native-preview AST/test APIs still need narrow assertions at API boundaries.
-    "no-unsafe-type-assertion": "off",
-    // Recursive schemas and builders need forward references; enforcing declaration order creates worse structure.
-    "no-use-before-define": "off",
+    "no-unsafe-type-assertion": "error",
+    "no-use-before-define": "error",
     // Single-export modules should still use named exports for stable refactors and package APIs.
     "prefer-default-export": "off",
     // External callback types make readonly parameter checking noisy beyond the repo's own typed IRs.
@@ -132,6 +136,92 @@
       "rules": {
         // The CLI entrypoint is the only place allowed to write user-facing process output.
         "no-console": "off",
+      },
+    },
+    {
+      "files": ["packages/config/src/code-quality.ts", "scripts/publish.ts"],
+      "rules": {
+        // These loops intentionally serialize transforms and registry publishes.
+        "no-await-in-loop": "off",
+      },
+    },
+    {
+      "files": ["packages/input-json-schema/src/constraints.ts"],
+      "rules": {
+        // JSON Schema regex patterns do not imply JavaScript's Unicode flag.
+        "require-unicode-regexp": "off",
+      },
+    },
+    {
+      "files": [
+        "scripts/check-native-tools.ts",
+        "scripts/check-runtime-versions.ts",
+        "test/native-source-harness.ts",
+      ],
+      "rules": {
+        // Native tool and runtime paths are explicit host inputs supplied by Nix and CI.
+        "node/no-process-env": "off",
+      },
+    },
+    {
+      "files": ["packages/config/test/config.test.ts"],
+      "rules": {
+        // Runtime validation tests intentionally pass statically invalid fixtures through public APIs.
+        "typescript/no-unnecessary-type-assertion": "off",
+      },
+    },
+    {
+      "files": [
+        "apps/cli/src/cli.ts",
+        "apps/cli/test/zod-to-optique.test.ts",
+        "packages/config/src/code-quality.ts",
+        "packages/config/src/compile.ts",
+        "packages/config/src/load.ts",
+        "packages/config/src/zod-cli-metadata.ts",
+        "packages/config/src/zod-introspection.ts",
+        "packages/config/src/zod-to-optique.ts",
+        "packages/config/test/config.test.ts",
+        "packages/core/src/diagnostics.ts",
+        "packages/core/src/source.ts",
+        "packages/core/src/typescript-identifiers.ts",
+        "packages/core/src/zod-plan.ts",
+        "packages/core/test/source.test.ts",
+        "packages/input-json-schema/src/options.ts",
+        "packages/input-json-schema/src/reference.ts",
+        "scripts/changeset-required.ts",
+        "scripts/publish.test.ts",
+      ],
+      "rules": {
+        // Branded values, deliberately invalid fixtures, and third-party generic boundaries require
+        // checked narrowing helpers that TypeScript represents as assertions.
+        "no-unsafe-type-assertion": "off",
+      },
+    },
+    {
+      "files": [
+        "apps/cli/src/cli.ts",
+        "packages/build-inputs/src/archive-materialization.ts",
+        "packages/build-inputs/src/lockfile.ts",
+        "packages/config/src/errors.ts",
+        "packages/config/src/load.ts",
+        "packages/config/src/zod-cli-errors.ts",
+        "packages/config/src/zod-cli-metadata.ts",
+        "packages/config/src/zod-introspection.ts",
+        "packages/config/src/zod-to-optique.ts",
+        "packages/core/src/source.ts",
+        "packages/core/src/typescript-identifiers.ts",
+        "packages/core/src/zod-plan-metadata.ts",
+        "packages/core/src/zod-plan-receiver-validation.ts",
+        "packages/core/src/zod-plan-validation.ts",
+        "packages/core/src/zod-plan.ts",
+        "packages/input-json-schema/src/keyword-diagnostics.ts",
+        "packages/input-json-schema/src/lower.ts",
+        "packages/input-json-schema/src/unevaluated-properties.ts",
+        "packages/input-json-schema/test/plugin.test.ts",
+      ],
+      "rules": {
+        // These modules intentionally declare recursive or dependency-ordered const-arrow graphs.
+        "no-use-before-define": "off",
       },
     },
     {

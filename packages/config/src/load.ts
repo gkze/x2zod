@@ -1,8 +1,9 @@
-import { declarationExportModeSchema, resolveZodSourceOutputOptions } from "@x2zod/core";
 import { loadConfig as loadC12Config } from "c12";
 import type { LoadConfigOptions } from "c12";
 import type { z } from "zod/v4";
 import { z as zod } from "zod/v4";
+
+import { declarationExportModeSchema, resolveZodSourceOutputOptions } from "@x2zod/core";
 
 import { X2ZodConfigError } from "./errors";
 import type { X2ZodConfigIssue, X2ZodConfigPathSegment } from "./errors";
@@ -188,8 +189,7 @@ const c12LoadOptions = (
 
   if (options.configFile !== undefined) loadOptions.configFile = options.configFile;
   if (options.cwd !== undefined) loadOptions.cwd = options.cwd;
-  if (options.overrides !== undefined)
-    loadOptions.overrides = options.overrides as Record<string, unknown>;
+  if (options.overrides !== undefined) loadOptions.overrides = options.overrides;
 
   return loadOptions;
 };

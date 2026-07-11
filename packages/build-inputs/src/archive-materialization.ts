@@ -25,23 +25,23 @@ import type {
 } from "./schemas";
 
 export interface DownloadedArchiveBuildInput {
-  content: Buffer;
-  input: ResolvedBuildInputArchive;
-  sha256: Sha256Hex;
-  sizeBytes: number;
+  readonly content: Buffer;
+  readonly input: ResolvedBuildInputArchive;
+  readonly sha256: Sha256Hex;
+  readonly sizeBytes: number;
 }
 
 export interface MaterializedArchiveBuildInput {
-  input: ResolvedBuildInputArchive;
-  materializationSha256: Sha256Hex;
-  materialized: DirectoryMerkleTree;
-  sourceSha256: Sha256Hex;
-  sourceSizeBytes: number;
+  readonly input: ResolvedBuildInputArchive;
+  readonly materializationSha256: Sha256Hex;
+  readonly materialized: DirectoryMerkleTree;
+  readonly sourceSha256: Sha256Hex;
+  readonly sourceSizeBytes: number;
 }
 
 export interface PreparedArchiveBuildInput extends MaterializedArchiveBuildInput {
-  extractedDirectory: string;
-  temporaryRoot: string;
+  readonly extractedDirectory: string;
+  readonly temporaryRoot: string;
 }
 
 type ArchiveByteSignature = "gzip" | "tar" | "unknown" | "zip";

@@ -30,19 +30,22 @@
     "access": "public"
   },
   "scripts": {
-    "check": "turbo run lint typecheck test --filter=@x2zod/config",
-    "lint": "bun --cwd ../.. oxlint packages/config",
-    "test": "bun test ./test",
+    "check": "bun --no-env-file run --cwd ../.. runtime:check && turbo run lint typecheck test --filter=@x2zod/config",
+    "lint": "bun --no-env-file --cwd ../.. oxlint packages/config",
+    "test": "bun --no-env-file test ./test",
     "typecheck": "tsgo --project tsconfig.json --noEmit"
   },
   "dependencies": {
     "@optique/core": "1.0.2",
     "@x2zod/core": "workspace:*",
     "c12": "4.0.0-beta.5",
+    "chokidar": "5.0.0",
+    "giget": "3.3.0",
+    "jiti": "2.6.1",
     "zod": "4.4.3"
   },
   "devDependencies": {
-    "@typescript/native-preview": "7.0.0-dev.20260612.1",
+    "@typescript/native-preview": "7.0.0-dev.20260707.2",
     "@x2zod/input-json-schema": "workspace:*",
     "@x2zod/tsconfig": "workspace:*"
   }

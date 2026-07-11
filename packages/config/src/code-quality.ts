@@ -85,7 +85,7 @@ export const codeQualityToolConfigSchema = <TConfig>(): z.ZodType<
       zod.strictObject({ kind: zod.literal("inline"), value: zod.custom<TConfig>() }).readonly(),
       zod.strictObject({ kind: zod.literal("path"), path: zod.string().min(1) }).readonly(),
     ])
-    .readonly() as never;
+    .readonly();
 
 export const configPathFor = async <TConfig>({
   config,
@@ -110,7 +110,6 @@ export const applyX2ZodCodeQuality = async ({
   if (output.codeQuality === undefined) return sourceText;
   let transformed = sourceText;
   for (const step of output.codeQuality)
-    // eslint-disable-next-line no-await-in-loop -- each tool consumes the previous output.
     transformed = await step.plugin.transform(transformed, step.options as never, context);
   return transformed;
 };

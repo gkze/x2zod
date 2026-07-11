@@ -23,22 +23,26 @@ const expectInvalidRoot = (
 };
 
 void describe("parseZodEmissionModule", () => {
-  void test("rejects missing roots, duplicate symbols, unresolved refs, invalid factory args, and cycles", () => {
-    expectInvalidModule({ declarations: [], root: "root" }, "invalid_zod_emission_module");
-    expectInvalidModule(
-      {
-        declarations: [
-          { expression: zodPlan.string(), symbol: "root" },
-          { expression: zodPlan.number(), symbol: "root" },
-        ],
-        root: "root",
-      },
-      "invalid_zod_emission_module",
-    );
-    expectInvalidRoot(zodPlan.reference(zodSymbol("missing")), "unresolved_reference");
-    expectInvalidRoot({ factory: "array", kind: "factory" });
-    expectInvalidRoot(zodPlan.reference(zodSymbol("root")), "cyclic_reference");
-  });
+  void test(
+    "rejects missing roots, duplicate symbols, unresolved refs, invalid factory args, " +
+      "and cycles",
+    () => {
+      expectInvalidModule({ declarations: [], root: "root" }, "invalid_zod_emission_module");
+      expectInvalidModule(
+        {
+          declarations: [
+            { expression: zodPlan.string(), symbol: "root" },
+            { expression: zodPlan.number(), symbol: "root" },
+          ],
+          root: "root",
+        },
+        "invalid_zod_emission_module",
+      );
+      expectInvalidRoot(zodPlan.reference(zodSymbol("missing")), "unresolved_reference");
+      expectInvalidRoot({ factory: "array", kind: "factory" });
+      expectInvalidRoot(zodPlan.reference(zodSymbol("root")), "cyclic_reference");
+    },
+  );
 });
 
 void describe("parseZodEmissionModule method validation", () => {

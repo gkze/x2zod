@@ -1,11 +1,24 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
   "extends": "@x2zod/tsconfig/base.json",
-  "compilerOptions": { "allowJs": true, "checkJs": true, "isolatedDeclarations": false },
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "isolatedDeclarations": false,
+    "types": ["node"]
+  },
   "files": [
     ".markdownlint-cli2.mjs",
     "commitlint.config.ts",
     "scripts/changeset-required.ts",
+    "scripts/install-hooks.test.ts",
+    "scripts/install-hooks.ts",
+    "scripts/check-no-suppressions.test.ts",
+    "scripts/check-no-suppressions.ts",
+    "scripts/check-runtime-versions.ts",
+    "scripts/check-runtime-versions.test.ts",
+    "scripts/check-native-tools.ts",
+    "scripts/check-native-tools.test.ts",
     "scripts/publish-materialize.ts",
     "scripts/publish-registries.ts",
     "scripts/publish-runtime.ts",

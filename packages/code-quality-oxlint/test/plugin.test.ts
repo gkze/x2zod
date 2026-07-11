@@ -8,6 +8,8 @@ import type { X2ZodOutputCodeQualityConfig } from "@x2zod/config";
 import { oxlintCodeQualityPlugin } from "../src";
 import type { OxlintConfig } from "../src";
 
+type IsAssignable<TFrom, TTo> = [TFrom] extends [TTo] ? true : false;
+
 const codeQuality = { oxlint: oxlintCodeQualityPlugin } as const;
 const packageRoot = path.join(import.meta.dirname, "..");
 const repoRoot = path.join(packageRoot, "..", "..");
@@ -30,13 +32,15 @@ void test("oxlintCodeQualityPlugin types inline oxlint config only when selected
     kind: "oxlint",
     options: { config: { kind: "inline", value: oxlintConfig } },
   } satisfies X2ZodOutputCodeQualityConfig<typeof codeQuality>;
-  const invalid = {
-    // @ts-expect-error only oxlint is available in this registry.
-    kind: "oxfmt",
-  } satisfies X2ZodOutputCodeQualityConfig<typeof codeQuality>;
+  const invalid = { kind: "oxfmt" } as const;
+  const isAssignable: IsAssignable<
+    typeof invalid,
+    X2ZodOutputCodeQualityConfig<typeof codeQuality>
+  > = false;
 
   assert.equal(selected.kind, "oxlint");
   assert.equal(invalid.kind, "oxfmt");
+  assert.equal(isAssignable, false);
 });
 
 void test("oxlintCodeQualityPlugin runs oxlint through a subprocess and returns fixed text", async () => {

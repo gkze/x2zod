@@ -1,7 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
   "compilerOptions": {
-    "allowImportingTsExtensions": true,
     "allowUnreachableCode": false,
     "allowUnusedLabels": false,
     "alwaysStrict": true,
@@ -29,8 +28,7 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "resolveJsonModule": true,
-    "rewriteRelativeImportExtensions": true,
-    "skipLibCheck": true,
+    "skipLibCheck": false,
     "strict": true,
     "strictBindCallApply": true,
     "strictBuiltinIteratorReturn": true,
@@ -39,7 +37,6 @@
     "strictPropertyInitialization": true,
     "stripInternal": true,
     "target": "ESNext",
-    "types": ["node"],
     "useUnknownInCatchVariables": true,
     "verbatimModuleSyntax": true
   }

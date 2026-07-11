@@ -1,9 +1,10 @@
-import { createDiagnostic, err, jsonPointerSchema, ok } from "@x2zod/core";
-import type { Diagnostic, JsonPointer, Result, SourceLocationMap } from "@x2zod/core";
 import AjvDraft7 from "ajv";
 import type { ErrorObject, Options } from "ajv";
 import AjvDraft2019 from "ajv/dist/2019.js";
 import AjvDraft2020 from "ajv/dist/2020.js";
+
+import { createDiagnostic, err, jsonPointerSchema, ok } from "@x2zod/core";
+import type { Diagnostic, JsonPointer, Result, SourceLocationMap } from "@x2zod/core";
 
 import { jsonSchemaDiagnosticLocation } from "./diagnostics";
 import { jsonPointerFromPath } from "./document";

@@ -36,8 +36,8 @@ This is a new standalone TypeScript project scaffolded from the `mcpsync` repo s
 
 ## Code Style
 
-- Use Bun for package management, script execution, and tests. Use TypeScript 7 via
-  `@typescript/native-preview` / `tsgo`.
+- Use exactly Bun 1.3.14 and Node.js 24.18.0. Use Bun for package management, script execution, and
+  tests. Use TypeScript 7 via `@typescript/native-preview` / `tsgo`.
 - Keep TypeScript config strict. Shared compiler policy lives in `packages/tsconfig/base.json`;
   package-local `tsconfig.json` files should extend `@x2zod/tsconfig/base.json` and declare the
   `@x2zod/tsconfig` workspace package.
@@ -70,11 +70,12 @@ This is a new standalone TypeScript project scaffolded from the `mcpsync` repo s
 Run:
 
 ```sh
-bun install
-bun run check
+bun --no-env-file install
+bun --no-env-file run check
 ```
 
-`bun run check` runs formatting, strict TypeScript typechecking, linting, and Bun tests.
+`bun --no-env-file run check` verifies the exact toolchain, frozen lockfile, formatting, strict
+TypeScript typechecking, linting, and tests without loading repository dotenv files.
 
 ## Git
 

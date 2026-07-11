@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, rmSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import nodePath from "node:path";
 import process from "node:process";
 import { describe, test } from "node:test";
@@ -36,7 +37,8 @@ const openCodeConfigSchemaFixture = nodePath.join(
   "fixtures/opencode/config.schema.json",
 );
 const modelSchemaFixture = nodePath.join(testDirectory, "fixtures/opencode/model-schema.json");
-const openCodeBinaryName = process.platform === "win32" ? "opencode.cmd" : "opencode";
+const openCodeShimBinaryName = process.platform === "win32" ? "opencode.cmd" : "opencode";
+const openCodeNativeBinaryName = process.platform === "win32" ? "opencode.exe" : "opencode";
 const openCodeConfigSchemaExport = "openCodeConfigSchema";
 const openCodeSchemaUrl = "https://opencode.ai/config.json";
 const openCodeTestHostname = "127.0.0.1";
@@ -106,17 +108,50 @@ const pathExecutable = (binaryName: string): string | undefined =>
     .map((directory) => nodePath.join(directory, binaryName))
     .find((candidate) => existsSync(candidate));
 
+const openCodeNativePackageNames = (): readonly string[] => {
+  const platform = process.platform === "win32" ? "windows" : process.platform;
+  const baseName = `opencode-${platform}-${process.arch}`;
+  if (process.arch !== "x64")
+    return platform === "linux" ? [baseName, `${baseName}-musl`] : [baseName];
+
+  return platform === "linux"
+    ? [`${baseName}-baseline`, baseName, `${baseName}-baseline-musl`, `${baseName}-musl`]
+    : [`${baseName}-baseline`, baseName];
+};
+
+const openCodeNativeBinaryCandidates = (): readonly string[] => {
+  const packageRequire = createRequire(
+    createRequire(import.meta.url).resolve("opencode-ai/package.json"),
+  );
+  return openCodeNativePackageNames().flatMap((packageName) => {
+    try {
+      const packageJson = packageRequire.resolve(`${packageName}/package.json`);
+      return [nodePath.join(nodePath.dirname(packageJson), "bin", openCodeNativeBinaryName)];
+    } catch {
+      return [];
+    }
+  });
+};
+
+const isWorkingExecutable = (executable: string): boolean => {
+  const subprocess = spawnSync(executable, ["--version"], { stdio: "ignore" });
+  return subprocess.error === undefined && subprocess.status === 0;
+};
+
 const openCodeBinaryCandidates = (): readonly string[] => {
-  const pathCandidate = pathExecutable(openCodeBinaryName);
+  const pathCandidate = pathExecutable(openCodeShimBinaryName);
   return [
-    nodePath.join(packageRootDirectory, "node_modules/.bin", openCodeBinaryName),
-    nodePath.join(repositoryRootDirectory, "node_modules/.bin", openCodeBinaryName),
+    ...openCodeNativeBinaryCandidates(),
+    nodePath.join(packageRootDirectory, "node_modules/.bin", openCodeShimBinaryName),
+    nodePath.join(repositoryRootDirectory, "node_modules/.bin", openCodeShimBinaryName),
     ...(pathCandidate === undefined ? [] : [pathCandidate]),
   ];
 };
 
 const openCodeExecutable = (): string => {
-  const executable = openCodeBinaryCandidates().find((candidate) => existsSync(candidate));
+  const executable = openCodeBinaryCandidates().find(
+    (candidate) => existsSync(candidate) && isWorkingExecutable(candidate),
+  );
   if (executable === undefined)
     throw new Error("Missing opencode executable. Run bun install before the E2E test.");
   return executable;
@@ -195,7 +230,7 @@ const runOpenCodeSubprocess = ({
     stdio: ["ignore", "pipe", "pipe"],
     timeout: openCodeSubprocessDeadlineMs,
   });
-  if (subprocess.error !== undefined && subprocess.error.name !== "Error") throw subprocess.error;
+  if (subprocess.error !== undefined) throw subprocess.error;
 
   const exitCode = subprocess.status ?? 1;
   const timedOut = subprocess.signal === "SIGKILL";

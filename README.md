@@ -134,9 +134,14 @@ release path is ready.
 
 ## Commands
 
+The repository pins Bun and the current Node.js LTS in `.bun-version` and `.node-version`. The Nix
+development shell provisions those exact runtimes plus the native lint tools.
+`bun --no-env-file install` installs the pre-commit, commit-message, and pre-push hooks
+automatically; rerun `bun run hooks:install` to repair them.
+
 ```sh
-bun install
-bun run check
-bun run format
-bun run lint
+bun --no-env-file install
+bun --no-env-file run check
+bun --no-env-file run format
+bun --no-env-file run lint
 ```

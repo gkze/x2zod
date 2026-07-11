@@ -6,10 +6,10 @@ import type { Diagnostic, Range, RuleContext } from "#rule";
 type DiagnosticLocation = NonNullable<Diagnostic["loc"]>;
 
 export interface TextReplacement {
-  end: number;
-  messageId: string;
-  replacementText: string;
-  start: number;
+  readonly end: number;
+  readonly messageId: string;
+  readonly replacementText: string;
+  readonly start: number;
 }
 
 export const minimumPositiveInteger = 1;
