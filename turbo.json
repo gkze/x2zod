@@ -1,19 +1,24 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "globalDependencies": ["bun.lock"],
+  "globalDependencies": ["bun.lock", "bunfig.toml"],
   "tasks": {
     "//#format:check:workspace": {
       "inputs": [
+        "$TURBO_ROOT$/.bun-version",
+        "$TURBO_ROOT$/.changeset/**/*.md",
         "$TURBO_ROOT$/.github/workflows/**/*.yaml",
         "$TURBO_ROOT$/.github/workflows/**/*.yml",
         "$TURBO_ROOT$/.oxfmtrc.json",
         "$TURBO_ROOT$/.markdownlint-cli2.mjs",
         "$TURBO_ROOT$/.oxlintrc.jsonc",
         "$TURBO_ROOT$/.zed/**/*.json",
+        "$TURBO_ROOT$/.node-version",
+        "$TURBO_ROOT$/**/*.md",
         "$TURBO_ROOT$/AGENTS.md",
         "$TURBO_ROOT$/README.md",
         "$TURBO_ROOT$/apps/**/*.json",
         "$TURBO_ROOT$/apps/**/*.ts",
+        "$TURBO_ROOT$/bunfig.toml",
         "$TURBO_ROOT$/commitlint.config.ts",
         "$TURBO_ROOT$/docs/**/*.md",
         "$TURBO_ROOT$/package.json",
@@ -21,8 +26,18 @@
         "$TURBO_ROOT$/packages/**/*.ts",
         "$TURBO_ROOT$/prek.toml",
         "$TURBO_ROOT$/scripts/**/*.ts",
+        "$TURBO_ROOT$/test/**/*.ts",
         "$TURBO_ROOT$/tsconfig*.json",
-        "$TURBO_ROOT$/turbo.json"
+        "$TURBO_ROOT$/turbo.json",
+        "!$TURBO_ROOT$/**/.cache/**",
+        "!$TURBO_ROOT$/**/.dex/**",
+        "!$TURBO_ROOT$/**/.direnv/**",
+        "!$TURBO_ROOT$/**/.publish-tmp/**",
+        "!$TURBO_ROOT$/**/.tmp-x2zod-*/**",
+        "!$TURBO_ROOT$/**/.turbo/**",
+        "!$TURBO_ROOT$/**/coverage/**",
+        "!$TURBO_ROOT$/**/dist/**",
+        "!$TURBO_ROOT$/**/node_modules/**"
       ],
       "outputs": []
     },
@@ -34,20 +49,28 @@
       ],
       "outputs": []
     },
-    "//#format:check:toml": { "inputs": ["$TURBO_ROOT$/prek.toml"], "outputs": [] },
+    "//#format:check:toml": {
+      "inputs": ["$TURBO_ROOT$/bunfig.toml", "$TURBO_ROOT$/prek.toml"],
+      "outputs": []
+    },
     "//#format:workspace": {
       "cache": false,
       "inputs": [
+        "$TURBO_ROOT$/.bun-version",
+        "$TURBO_ROOT$/.changeset/**/*.md",
         "$TURBO_ROOT$/.github/workflows/**/*.yaml",
         "$TURBO_ROOT$/.github/workflows/**/*.yml",
         "$TURBO_ROOT$/.oxfmtrc.json",
         "$TURBO_ROOT$/.markdownlint-cli2.mjs",
         "$TURBO_ROOT$/.oxlintrc.jsonc",
         "$TURBO_ROOT$/.zed/**/*.json",
+        "$TURBO_ROOT$/.node-version",
+        "$TURBO_ROOT$/**/*.md",
         "$TURBO_ROOT$/AGENTS.md",
         "$TURBO_ROOT$/README.md",
         "$TURBO_ROOT$/apps/**/*.json",
         "$TURBO_ROOT$/apps/**/*.ts",
+        "$TURBO_ROOT$/bunfig.toml",
         "$TURBO_ROOT$/commitlint.config.ts",
         "$TURBO_ROOT$/docs/**/*.md",
         "$TURBO_ROOT$/package.json",
@@ -55,8 +78,18 @@
         "$TURBO_ROOT$/packages/**/*.ts",
         "$TURBO_ROOT$/prek.toml",
         "$TURBO_ROOT$/scripts/**/*.ts",
+        "$TURBO_ROOT$/test/**/*.ts",
         "$TURBO_ROOT$/tsconfig*.json",
-        "$TURBO_ROOT$/turbo.json"
+        "$TURBO_ROOT$/turbo.json",
+        "!$TURBO_ROOT$/**/.cache/**",
+        "!$TURBO_ROOT$/**/.dex/**",
+        "!$TURBO_ROOT$/**/.direnv/**",
+        "!$TURBO_ROOT$/**/.publish-tmp/**",
+        "!$TURBO_ROOT$/**/.tmp-x2zod-*/**",
+        "!$TURBO_ROOT$/**/.turbo/**",
+        "!$TURBO_ROOT$/**/coverage/**",
+        "!$TURBO_ROOT$/**/dist/**",
+        "!$TURBO_ROOT$/**/node_modules/**"
       ],
       "outputs": []
     },
@@ -69,14 +102,19 @@
       ],
       "outputs": []
     },
-    "//#format:toml": { "cache": false, "inputs": ["$TURBO_ROOT$/prek.toml"], "outputs": [] },
+    "//#format:toml": {
+      "cache": false,
+      "inputs": ["$TURBO_ROOT$/bunfig.toml", "$TURBO_ROOT$/prek.toml"],
+      "outputs": []
+    },
     "//#lint:actions": {
       "dependsOn": ["//#lint:shell"],
       "passThroughEnv": ["ACTIONLINT_BIN", "SHELLCHECK_BINARY"],
       "inputs": [
         "$TURBO_ROOT$/.github/workflows/**/*.yaml",
         "$TURBO_ROOT$/.github/workflows/**/*.yml",
-        "$TURBO_ROOT$/package.json"
+        "$TURBO_ROOT$/package.json",
+        "$TURBO_ROOT$/scripts/check-native-tools.ts"
       ],
       "outputs": []
     },
@@ -84,33 +122,99 @@
       "inputs": [
         "$TURBO_ROOT$/.markdownlint-cli2.mjs",
         "$TURBO_ROOT$/**/*.md",
-        "!$TURBO_ROOT$/node_modules/**",
-        "!$TURBO_ROOT$/**/.turbo/**"
+        "!$TURBO_ROOT$/**/.cache/**",
+        "!$TURBO_ROOT$/**/.dex/**",
+        "!$TURBO_ROOT$/**/.direnv/**",
+        "!$TURBO_ROOT$/**/.publish-tmp/**",
+        "!$TURBO_ROOT$/**/node_modules/**",
+        "!$TURBO_ROOT$/**/.turbo/**",
+        "!$TURBO_ROOT$/**/coverage/**",
+        "!$TURBO_ROOT$/**/dist/**"
       ],
       "outputs": []
     },
     "//#lint:repo": {
+      "passThroughEnv": ["X2ZOD_NODE_BINARY"],
       "inputs": [
         "$TURBO_ROOT$/package.json",
         "$TURBO_ROOT$/tsconfig.configs.json",
         "$TURBO_ROOT$/packages/tsconfig/base.json",
         "$TURBO_ROOT$/packages/eslint-plugins/package.json",
         "$TURBO_ROOT$/packages/eslint-plugins/src/**/*.ts",
+        "$TURBO_ROOT$/.oxfmtrc.json",
         "$TURBO_ROOT$/.oxlintrc.jsonc",
         "$TURBO_ROOT$/.markdownlint-cli2.mjs",
         "$TURBO_ROOT$/commitlint.config.ts",
-        "$TURBO_ROOT$/scripts/**/*.ts"
+        "$TURBO_ROOT$/scripts/**/*.ts",
+        "$TURBO_ROOT$/test/**/*.ts",
+        "$TURBO_ROOT$/tsconfig*.json",
+        "!$TURBO_ROOT$/**/.cache/**",
+        "!$TURBO_ROOT$/**/.dex/**",
+        "!$TURBO_ROOT$/**/.direnv/**",
+        "!$TURBO_ROOT$/**/.publish-tmp/**",
+        "!$TURBO_ROOT$/**/.tmp-x2zod-*/**",
+        "!$TURBO_ROOT$/**/.turbo/**",
+        "!$TURBO_ROOT$/**/coverage/**",
+        "!$TURBO_ROOT$/**/dist/**",
+        "!$TURBO_ROOT$/**/node_modules/**"
       ],
       "outputs": []
     },
     "//#lint:shell": {
-      "inputs": ["$TURBO_ROOT$/.envrc"],
+      "inputs": [
+        "$TURBO_ROOT$/.envrc",
+        "$TURBO_ROOT$/package.json",
+        "$TURBO_ROOT$/scripts/check-native-tools.ts"
+      ],
       "outputs": [],
       "passThroughEnv": ["SHELLCHECK_BINARY"]
     },
-    "//#lint:toml": { "inputs": ["$TURBO_ROOT$/prek.toml"], "outputs": [] },
+    "//#lint:suppressions": {
+      "inputs": [
+        "$TURBO_ROOT$/**",
+        "!$TURBO_ROOT$/**/.DS_Store",
+        "!$TURBO_ROOT$/**/.cache/**",
+        "!$TURBO_ROOT$/**/.dex/**",
+        "!$TURBO_ROOT$/**/.direnv/**",
+        "!$TURBO_ROOT$/**/.env",
+        "!$TURBO_ROOT$/**/.env.*",
+        "!$TURBO_ROOT$/**/.envrc.*",
+        "!$TURBO_ROOT$/**/.git/**",
+        "!$TURBO_ROOT$/**/.publish-tmp/**",
+        "!$TURBO_ROOT$/**/.tmp-x2zod-*/**",
+        "!$TURBO_ROOT$/**/.turbo/**",
+        "!$TURBO_ROOT$/**/coverage/**",
+        "!$TURBO_ROOT$/**/dist/**",
+        "!$TURBO_ROOT$/**/node_modules/**",
+        "!$TURBO_ROOT$/**/Thumbs.db",
+        "!$TURBO_ROOT$/**/*.log",
+        "!$TURBO_ROOT$/**/*.tsbuildinfo"
+      ],
+      "outputs": []
+    },
+    "//#lint:toml": {
+      "inputs": ["$TURBO_ROOT$/bunfig.toml", "$TURBO_ROOT$/prek.toml"],
+      "outputs": []
+    },
     "//#lint:hooks": {
-      "inputs": ["$TURBO_ROOT$/package.json", "$TURBO_ROOT$/prek.toml"],
+      "inputs": [
+        "$TURBO_ROOT$/bunfig.toml",
+        "$TURBO_ROOT$/package.json",
+        "$TURBO_ROOT$/prek.toml",
+        "$TURBO_ROOT$/scripts/install-hooks.ts"
+      ],
+      "outputs": []
+    },
+    "//#lockfile:check": {
+      "inputs": [
+        "$TURBO_ROOT$/.bun-version",
+        "$TURBO_ROOT$/.node-version",
+        "$TURBO_ROOT$/apps/*/package.json",
+        "$TURBO_ROOT$/bun.lock",
+        "$TURBO_ROOT$/bunfig.toml",
+        "$TURBO_ROOT$/package.json",
+        "$TURBO_ROOT$/packages/*/package.json"
+      ],
       "outputs": []
     },
     "//#test:repo": {
@@ -121,11 +225,25 @@
       ],
       "outputs": []
     },
+    "//#typecheck:configs": {
+      "inputs": [
+        "$TURBO_ROOT$/.markdownlint-cli2.mjs",
+        "$TURBO_ROOT$/commitlint.config.ts",
+        "$TURBO_ROOT$/package.json",
+        "$TURBO_ROOT$/packages/tsconfig/base.json",
+        "$TURBO_ROOT$/scripts/**/*.ts",
+        "$TURBO_ROOT$/tsconfig.configs.json"
+      ],
+      "outputs": []
+    },
     "gen:check": { "inputs": ["$TURBO_DEFAULT$"], "outputs": [] },
     "lint": {
+      "dependsOn": ["^lint"],
+      "passThroughEnv": ["X2ZOD_NODE_BINARY"],
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/package.json",
+        "$TURBO_ROOT$/.oxfmtrc.json",
         "$TURBO_ROOT$/.oxlintrc.jsonc",
         "$TURBO_ROOT$/packages/eslint-plugins/package.json",
         "$TURBO_ROOT$/packages/eslint-plugins/src/**/*.ts",
@@ -134,12 +252,24 @@
       ],
       "outputs": []
     },
-    "test": { "inputs": ["$TURBO_DEFAULT$"], "outputs": [] },
+    "test": {
+      "dependsOn": ["^test", "^typecheck", "typecheck"],
+      "passThroughEnv": ["X2ZOD_NODE_BINARY"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/package.json",
+        "$TURBO_ROOT$/packages/tsconfig/base.json",
+        "$TURBO_ROOT$/test/**/*.ts"
+      ],
+      "outputs": []
+    },
     "typecheck": {
+      "dependsOn": ["^typecheck"],
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.json",
-        "$TURBO_ROOT$/packages/tsconfig/base.json"
+        "$TURBO_ROOT$/packages/tsconfig/base.json",
+        "$TURBO_ROOT$/test/**/*.ts"
       ],
       "outputs": []
     }

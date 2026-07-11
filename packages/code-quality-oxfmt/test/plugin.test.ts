@@ -8,6 +8,8 @@ import type { X2ZodOutputCodeQualityConfig } from "@x2zod/config";
 import { oxfmtCodeQualityPlugin } from "../src";
 import type { OxfmtConfig } from "../src";
 
+type IsAssignable<TFrom, TTo> = [TFrom] extends [TTo] ? true : false;
+
 const codeQuality = { oxfmt: oxfmtCodeQualityPlugin } as const;
 const packageRoot = path.join(import.meta.dirname, "..");
 const repoRoot = path.join(packageRoot, "..", "..");
@@ -31,13 +33,15 @@ void test("oxfmtCodeQualityPlugin types inline oxfmt config only when selected",
     kind: "oxfmt",
     options: { config: { kind: "inline", value: oxfmtConfig } },
   } satisfies X2ZodOutputCodeQualityConfig<typeof codeQuality>;
-  const invalid = {
-    // @ts-expect-error only oxfmt is available in this registry.
-    kind: "oxlint",
-  } satisfies X2ZodOutputCodeQualityConfig<typeof codeQuality>;
+  const invalid = { kind: "oxlint" } as const;
+  const isAssignable: IsAssignable<
+    typeof invalid,
+    X2ZodOutputCodeQualityConfig<typeof codeQuality>
+  > = false;
 
   assert.equal(selected.kind, "oxfmt");
   assert.equal(invalid.kind, "oxlint");
+  assert.equal(isAssignable, false);
 });
 
 void test("oxfmtCodeQualityPlugin runs oxfmt through a subprocess with inline config", async () => {

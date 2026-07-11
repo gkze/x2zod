@@ -1,3 +1,5 @@
+import type { z } from "zod/v4";
+
 import type {
   InputDocument,
   InputPlugin,
@@ -7,7 +9,6 @@ import type {
   ZodEmissionModuleInput,
   ZodSourceOutputOptions,
 } from "@x2zod/core";
-import type { z } from "zod/v4";
 
 export type X2ZodInputPlugin<
   TKind extends string = string,

@@ -13,33 +13,33 @@ export type DirectoryMerkleFileMode = "644" | "755";
 export type DirectoryMerkleNode = DirectoryMerkleDirectoryNode | DirectoryMerkleFileNode;
 
 export interface DirectoryMerkleTreeOptions {
-  concurrency?: number;
+  readonly concurrency?: number;
 }
 
 export interface DirectoryMerkleTree {
-  directoryCount: number;
-  fileCount: number;
-  root: DirectoryMerkleDirectoryNode;
-  sha256: string;
-  totalSizeBytes: number;
+  readonly directoryCount: number;
+  readonly fileCount: number;
+  readonly root: DirectoryMerkleDirectoryNode;
+  readonly sha256: string;
+  readonly totalSizeBytes: number;
 }
 
 export interface DirectoryMerkleDirectoryNode {
-  children: readonly DirectoryMerkleNode[];
-  kind: "directory";
-  name: string;
-  relativePath: string;
-  sha256: string;
+  readonly children: readonly DirectoryMerkleNode[];
+  readonly kind: "directory";
+  readonly name: string;
+  readonly relativePath: string;
+  readonly sha256: string;
 }
 
 export interface DirectoryMerkleFileNode {
-  contentSha256: string;
-  kind: "file";
-  mode: DirectoryMerkleFileMode;
-  name: string;
-  relativePath: string;
-  sha256: string;
-  sizeBytes: number;
+  readonly contentSha256: string;
+  readonly kind: "file";
+  readonly mode: DirectoryMerkleFileMode;
+  readonly name: string;
+  readonly relativePath: string;
+  readonly sha256: string;
+  readonly sizeBytes: number;
 }
 
 interface CollectedDirectory {

@@ -23,8 +23,8 @@ exports shared TypeScript configuration JSON rather than JavaScript or TypeScrip
 Changesets owns release planning and package version writes:
 
 ```sh
-bun run changeset
-bun run release:version
+bun --no-env-file run changeset
+bun --no-env-file run release:version
 ```
 
 `release:version` runs `changeset version`, syncs JSR `name` and `version` metadata from each
@@ -35,10 +35,10 @@ package discovery, config loading, pre-release state, and skip policy, then publ
 generic registry adapters:
 
 ```sh
-bun run publish:packages -- --dry-run
-bun run publish:packages
-bun run publish:npm
-bun run publish:jsr
+bun --no-env-file run publish:packages -- --dry-run
+bun --no-env-file run publish:packages
+bun --no-env-file run publish:npm
+bun --no-env-file run publish:jsr
 ```
 
 The combined publish path runs all adapters and creates Changesets package tags only after every

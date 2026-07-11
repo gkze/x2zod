@@ -139,7 +139,7 @@ void describe("publishRegistryPackage", () => {
 void describe("npmRegistryHasVersion", () => {
   void test("falls back to npm dist-tags when package metadata is temporarily missing", async () => {
     const requestedUrls: string[] = [];
-    const registryFetch = (async (url: Parameters<typeof fetch>[0]): Promise<Response> => {
+    const registryFetch = async (url: Parameters<typeof fetch>[0]): Promise<Response> => {
       await Promise.resolve();
       const requestedUrl = requestUrl(url);
       requestedUrls.push(requestedUrl);
@@ -149,7 +149,7 @@ void describe("npmRegistryHasVersion", () => {
         return jsonResponse({ latest: "1.2.3" });
 
       throw new Error(`Unexpected registry URL: ${requestedUrl}`);
-    }) as typeof fetch;
+    };
 
     const published = await npmRegistryHasVersion("@x2zod/example", "1.2.3", registryFetch);
 

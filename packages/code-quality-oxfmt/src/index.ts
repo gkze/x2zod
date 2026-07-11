@@ -1,6 +1,10 @@
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import path from "node:path";
 
+import type { OxfmtConfig } from "oxfmt";
+import type { z } from "zod/v4";
+import { z as zod } from "zod/v4";
+
 import {
   codeQualityToolConfigSchema,
   configPathFor,
@@ -13,9 +17,6 @@ import type {
   X2ZodCodeQualityPlugin,
   X2ZodCodeQualityToolConfig,
 } from "@x2zod/config";
-import type { OxfmtConfig } from "oxfmt";
-import type { z } from "zod/v4";
-import { z as zod } from "zod/v4";
 
 export type { OxfmtConfig } from "oxfmt";
 

@@ -18,6 +18,7 @@ import {
   withDefault,
 } from "@optique/core";
 import type { Parser, RunOptions } from "@optique/core";
+
 import { loadX2ZodInputPluginRegistry } from "@x2zod/config";
 import type {
   X2ZodLoadedInputPluginRegistry,
@@ -201,7 +202,7 @@ const pluginSelectionParser = (
     option("-k", "--kind", choice(choices), { description: message`Input plugin kind.` }),
     pluginOptionBranches(plugins),
     emptyOptionsParser,
-  ) as Parser<"sync", PluginSelection>;
+  );
 };
 
 const createCommandParser = (
@@ -234,9 +235,7 @@ const parseCommand = (
   options: RunCLIOptions,
   pluginRegistry: X2ZodResolvedInputPluginRegistry<X2ZodLoadedInputPluginRegistry> | undefined,
 ): ParsedCommand | ParserExit =>
-  runParserSync(createCommandParser(pluginRegistry), programName, argv, runOptions(options)) as
-    | ParsedCommand
-    | ParserExit;
+  runParserSync(createCommandParser(pluginRegistry), programName, argv, runOptions(options));
 
 const compileBootstrapOptions = (argv: readonly string[]): CompileBootstrapOptions => {
   if (argv[0] !== "compile") return {};

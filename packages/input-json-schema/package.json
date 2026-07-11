@@ -22,9 +22,9 @@
     "access": "public"
   },
   "scripts": {
-    "check": "turbo run lint typecheck test --filter=@x2zod/input-json-schema",
-    "lint": "bun --cwd ../.. oxlint packages/input-json-schema",
-    "test": "bun test ./test --path-ignore-patterns test/opencode.e2e.test.ts && bun test ./test/opencode.e2e.test.ts",
+    "check": "bun --no-env-file run --cwd ../.. runtime:check && turbo run lint typecheck test --filter=@x2zod/input-json-schema",
+    "lint": "bun --no-env-file --cwd ../.. oxlint packages/input-json-schema",
+    "test": "bun --no-env-file test ./test --path-ignore-patterns test/opencode.e2e.test.ts && bun --no-env-file test ./test/opencode.e2e.test.ts",
     "typecheck": "tsgo --project tsconfig.json --noEmit"
   },
   "dependencies": {
@@ -35,7 +35,7 @@
     "zod": "4.4.3"
   },
   "devDependencies": {
-    "@typescript/native-preview": "7.0.0-dev.20260612.1",
+    "@typescript/native-preview": "7.0.0-dev.20260707.2",
     "@x2zod/build-inputs": "workspace:*",
     "@x2zod/tsconfig": "workspace:*",
     "opencode-ai": "1.17.4"

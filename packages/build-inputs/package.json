@@ -36,13 +36,13 @@
     "access": "public"
   },
   "scripts": {
-    "check": "turbo run lint typecheck gen:check test --filter=@x2zod/build-inputs",
-    "gen": "bun run gen:schema",
-    "gen:check": "bun run gen:check:schema",
-    "gen:check:schema": "bun ./src/generate-build-inputs-schema.ts --check",
-    "gen:schema": "bun ./src/generate-build-inputs-schema.ts",
-    "lint": "bun --cwd ../.. oxlint packages/build-inputs",
-    "test": "bun test ./src",
+    "check": "bun --no-env-file run --cwd ../.. runtime:check && turbo run lint typecheck gen:check test --filter=@x2zod/build-inputs",
+    "gen": "bun --no-env-file run gen:schema",
+    "gen:check": "bun --no-env-file run gen:check:schema",
+    "gen:check:schema": "bun --no-env-file ./src/generate-build-inputs-schema.ts --check",
+    "gen:schema": "bun --no-env-file ./src/generate-build-inputs-schema.ts",
+    "lint": "bun --no-env-file --cwd ../.. oxlint packages/build-inputs",
+    "test": "bun --no-env-file test ./src",
     "typecheck": "tsgo --project tsconfig.json --noEmit"
   },
   "dependencies": {

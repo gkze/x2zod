@@ -3,8 +3,9 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { test } from "node:test";
 
-import { jsonSchemaInputPlugin } from "@x2zod/input-json-schema";
 import { z } from "zod/v4";
+
+import { jsonSchemaInputPlugin } from "@x2zod/input-json-schema";
 
 import {
   X2ZodConfigError,
@@ -15,7 +16,15 @@ import {
   resolveX2ZodConfig,
   resolveX2ZodInputPluginRegistry,
 } from "../src";
-import type { X2ZodCodeQualityPlugin, X2ZodInputPluginKey, X2ZodTargetFor } from "../src";
+import type {
+  X2ZodAnyInputPlugin,
+  X2ZodCodeQualityPlugin,
+  X2ZodInputPluginKey,
+  X2ZodInputPluginRegistryFor,
+  X2ZodTargetFor,
+} from "../src";
+
+type IsAssignable<TFrom, TTo> = [TFrom] extends [TTo] ? true : false;
 
 const plugins = { "json-schema": jsonSchemaInputPlugin } as const;
 const codeQuality = {
@@ -169,12 +178,13 @@ void test("defineConfig rejects unknown target kinds at typecheck time", () => {
 
   const invalidTarget = {
     input: { path: "schema.json" },
-    // @ts-expect-error target kind must be one of the configured plugin keys.
     kind: "openapi",
     output: { path: "schema.ts", typeName: "User" },
-  } satisfies JsonSchemaTarget;
+  } as const;
+  const isAssignable: IsAssignable<typeof invalidTarget, JsonSchemaTarget> = false;
 
   assert.equal(invalidTarget.kind, "openapi");
+  assert.equal(isAssignable, false);
 });
 
 void test("defineConfig rejects invalid plugin options at typecheck time", () => {
@@ -183,65 +193,52 @@ void test("defineConfig rejects invalid plugin options at typecheck time", () =>
   const invalidTarget = {
     input: { path: "schema.json" },
     kind: "json-schema",
-    options: {
-      // @ts-expect-error dialect must come from the JSON Schema plugin option schema.
-      dialect: "draft-04",
-    },
+    options: { dialect: "draft-04" },
     output: { path: "schema.ts", typeName: "User" },
-  } satisfies JsonSchemaTarget;
+  } as const;
+  const isAssignable: IsAssignable<typeof invalidTarget, JsonSchemaTarget> = false;
 
   assert.equal(invalidTarget.options.dialect, "draft-04");
+  assert.equal(isAssignable, false);
 });
 
 void test("defineConfig rejects plugin entries whose kind does not match their key", () => {
-  assert.doesNotThrow(() =>
-    defineConfig({
-      plugins: {
-        input: {
-          // @ts-expect-error plugin keys must match plugin kind literals.
-          openapi: jsonSchemaInputPlugin,
-        },
-      },
-      targets: {},
-    }),
-  );
+  const mismatchedPlugins = { openapi: jsonSchemaInputPlugin } as const;
+  type MatchingRegistry = X2ZodInputPluginRegistryFor<typeof mismatchedPlugins>;
+  const isAssignable: IsAssignable<
+    (typeof mismatchedPlugins)["openapi"],
+    MatchingRegistry["openapi"]
+  > = false;
+
+  assert.equal(isAssignable, false);
 });
 
 void test("defineConfig rejects incomplete plugin registry entries at typecheck time", () => {
-  assert.doesNotThrow(() =>
-    defineConfig({
-      plugins: {
-        input: {
-          // @ts-expect-error config plugins must include the input plugin contract.
-          "json-schema": {
-            kind: "json-schema",
-            optionsSchema: jsonSchemaInputPlugin.optionsSchema,
-          },
-        },
-      },
-      targets: {},
-    }),
-  );
+  const incompletePlugin = {
+    kind: "json-schema",
+    optionsSchema: jsonSchemaInputPlugin.optionsSchema,
+  } as const;
+  const isAssignable: IsAssignable<
+    typeof incompletePlugin,
+    X2ZodAnyInputPlugin<"json-schema">
+  > = false;
+
+  assert.equal(isAssignable, false);
 });
 
 void test("defineConfig rejects malformed plugin hook types at typecheck time", () => {
-  assert.doesNotThrow(() =>
-    defineConfig({
-      plugins: {
-        input: {
-          "json-schema": {
-            kind: "json-schema",
-            // @ts-expect-error plugin lower must be callable.
-            lower: "not-a-function",
-            optionsSchema: jsonSchemaInputPlugin.optionsSchema,
-            // @ts-expect-error plugin prepare must be callable.
-            prepare: "not-a-function",
-          },
-        },
-      },
-      targets: {},
-    }),
-  );
+  const malformedPlugin = {
+    kind: "json-schema",
+    lower: "not-a-function",
+    optionsSchema: jsonSchemaInputPlugin.optionsSchema,
+    prepare: "not-a-function",
+  } as const;
+  const isAssignable: IsAssignable<
+    typeof malformedPlugin,
+    X2ZodAnyInputPlugin<"json-schema">
+  > = false;
+
+  assert.equal(isAssignable, false);
 });
 
 void test("resolveX2ZodConfig validates and resolves plugin options and output defaults", () => {
@@ -364,7 +361,8 @@ void test("resolveX2ZodInputPluginRegistry validates plugins without requiring t
 
 void test("resolveX2ZodInputPluginRegistry rejects unsupported CLI option schemas", () => {
   expectConfigError(resolveUnsupportedCLIOptionSchemaConfig, [
-    "plugins.input.bad.optionsSchema: unsupported CLI option schema: input: missing CLI option metadata",
+    "plugins.input.bad.optionsSchema: unsupported CLI option schema: input: " +
+      "missing CLI option metadata",
   ]);
 });
 

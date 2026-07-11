@@ -24,8 +24,8 @@ interface WritableFileSystem extends FileSystem {
 }
 
 export interface SourceContext {
-  project: Project;
-  sourceFile: SourceFile;
+  readonly project: Project;
+  readonly sourceFile: SourceFile;
 }
 
 type SyntheticCompilerOptions = Readonly<{

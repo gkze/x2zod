@@ -1,6 +1,7 @@
+import type { z } from "zod/v4";
+
 import { jsonPointerSchema } from "@x2zod/core";
 import type { JsonPointer } from "@x2zod/core";
-import type { z } from "zod/v4";
 
 import type { JsonSchemaValue } from "./document";
 import type { JsonSchemaInputPluginOptions } from "./options";

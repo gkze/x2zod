@@ -22,9 +22,9 @@
     "access": "public"
   },
   "scripts": {
-    "check": "turbo run lint typecheck test --filter=@x2zod/code-quality-oxlint",
-    "lint": "bun --cwd ../.. oxlint packages/code-quality-oxlint",
-    "test": "bun test ./test",
+    "check": "bun --no-env-file run --cwd ../.. runtime:check && turbo run lint typecheck test --filter=@x2zod/code-quality-oxlint",
+    "lint": "bun --no-env-file --cwd ../.. oxlint packages/code-quality-oxlint",
+    "test": "bun --no-env-file test ./test",
     "typecheck": "tsgo --project tsconfig.json --noEmit"
   },
   "dependencies": {
