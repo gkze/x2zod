@@ -12,12 +12,6 @@ const minimumItemCount = 0;
 type ArrayLoweringContext = JsonSchemaDiagnosticSink &
   Readonly<{ lowerSchema: (pointer: JsonPointer, schema: JsonSchemaValue) => ZodExpression }>;
 
-export const hasJsonSchemaArrayKeywords = (schema: JsonObject): boolean =>
-  schema[jsonSchemaKeywords.items] !== undefined ||
-  schema[jsonSchemaKeywords.maxItems] !== undefined ||
-  schema[jsonSchemaKeywords.minItems] !== undefined ||
-  schema[jsonSchemaKeywords.prefixItems] !== undefined;
-
 const isItemCount = (value: JsonValue | undefined): value is number =>
   typeof value === "number" && Number.isInteger(value) && value >= minimumItemCount;
 

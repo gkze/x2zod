@@ -304,11 +304,13 @@ export type ZodDeclarationNameHint = {
 };
 ```
 
-The escape hatch is helper-backed runtime semantics, not arbitrary plugin-owned source. Advanced
-JSON Schema constructs such as exact `oneOf`, `not`, `if` / `then` / `else`, `patternProperties`,
-deep `const`/`enum`, and `unevaluated*` should lower into ordinary planned Zod expressions plus
-helper requests. If a plugin needs raw TypeScript for a helper body, that raw source belongs in a
-typed helper request and must declare its dependencies and inferred structural boundary.
+The escape hatch is helper-backed runtime semantics, not arbitrary plugin-owned source. Semantics
+that native or planned Zod expressions cannot preserve, such as `not`, `if` / `then` / `else`,
+`patternProperties`, deep `const`/`enum`, and general `unevaluated*` bookkeeping, should lower into
+ordinary planned Zod expressions plus helper requests. Exact `oneOf` uses Zod's native exclusive
+union and does not require generated branch-counting code. If a plugin needs raw TypeScript for a
+helper body, that raw source belongs in a typed helper request and must declare its dependencies and
+inferred structural boundary.
 
 ## Helper ABI
 
@@ -327,11 +329,11 @@ export type ZodHelperRequest = {
 };
 ```
 
-`helper` selects a known implementation such as deep equality, deep unique array items, exact
-`oneOf` branch counting, `not`, conditionals, property-name validation, pattern-property validation,
-or `unevaluated*` bookkeeping. `key` is a deterministic dedupe key derived from the helper id and
-configuration. `args` must be IR-safe references, literals, or declarations; helper requests should
-not smuggle arbitrary TypeScript through argument strings.
+`helper` selects a known implementation such as deep equality, deep unique array items, `not`,
+conditionals, pattern-property validation, or `unevaluated*` bookkeeping. `key` is a deterministic
+dedupe key derived from the helper id and configuration. `args` must be IR-safe references,
+literals, or declarations; helper requests should not smuggle arbitrary TypeScript through argument
+strings.
 
 Plugin-provided helpers use the same request shape but add a typed source payload:
 
@@ -583,7 +585,8 @@ Generated modules should:
 - keep named ref declarations internal by default;
 - export all named declarations only when `declarationExportMode` is `"all"`;
 - emit module-level deduplicated helpers for advanced runtime semantics;
-- preserve JSON Schema metadata with Zod metadata and readable comments where useful;
+- emit JSON Schema metadata only when it is represented in the annotation IR; the current slice
+  recognizes validation-inert annotations but does not emit them;
 - format output through the TypeScript printer and Oxfmt in CLI/repo workflows.
 
 Generated modules should not import an `@x2zod/runtime` helper package in v1. Advanced helpers
@@ -607,12 +610,13 @@ V1 semantic target:
 - required format-assertion vocabulary overrides the default `format` metadata policy.
 - Unknown non-ref keywords are rejected unless the selected source profile marks them as inert
   compatibility metadata.
-- Profile-allowed unknown keywords are preserved as inert metadata and reported in diagnostics.
+- Profile-allowed unknown keywords are accepted as validation-inert input and reported in
+  diagnostics; emitting them requires the annotation IR.
 - Unknown required vocabularies fail.
 - `$dynamicAnchor` and `$dynamicRef` are supported for Draft 2020-12.
 - `patternProperties` is supported with runtime checks where needed.
-- `oneOf` preserves exact one-branch semantics, using generated counting/refinement helpers when
-  necessary.
+- `oneOf` preserves exact one-branch semantics, using ordinary unions only for statically disjoint
+  branches and Zod's native exclusive union otherwise.
 - `anyOf` uses clean Zod unions where possible and runtime logic where needed.
 - `allOf` uses object merging, intersections, or refinements as appropriate.
 - `not` is supported with runtime refinement.
@@ -625,12 +629,43 @@ Unsupported or unlowerable semantics should fail with diagnostics instead of sil
 Current implementation is narrower than the V1 semantic target. The implemented slice covers
 document parsing, JSON Pointer source-location mapping, Ajv preflight, dialect detection, unknown
 keyword policy, primitives, `const` / `enum`, arrays, objects, required and optional properties,
-`additionalProperties`, metadata-only `default` / `format`, local/external refs supplied through the
-explicit registry, selected composition lowering, and targeted OpenCode source-profile
-compatibility. Draft 2020-12 vocabularies, required format assertions, dynamic refs,
-`patternProperties`, full composition semantics, conditionals, and `unevaluated*` remain V1 target
-work and should land only with dependency-backed preparation, explicit lowering tests, and targeted
-runtime comparisons against JSON Schema tooling.
+`additionalProperties`, validation-inert recognition of `default` / `format` / `deprecated` /
+`readOnly` / `writeOnly`, local/external refs supplied through the explicit registry, representable
+sibling assertions, exact `oneOf` through ordinary unions for statically disjoint branches and Zod's
+native exclusive union otherwise, ordinary `anyOf` unions, and selected `allOf` object merging and
+intersections. Recognized annotations do not change validation and are not emitted until the
+annotation IR is implemented.
+
+Untyped object and array assertions retain their JSON Schema applicability: they constrain their own
+instance domains and accept the other JSON value domains, including when reached through refs or
+mixed in one schema. Schema-valued `unevaluatedProperties` uses the same lowering, so referenced
+untyped object and array schemas do not incorrectly reject primitive property values. External
+registry resources receive the same recursive unsupported- and unknown-keyword diagnostics before
+specialized composition merging. The implementation supports `unevaluatedProperties` directly on
+representable object schemas and across object-only, mergeable `allOf` trees, including properties
+contributed by refs. It also supports the bounded `anyOf` / `oneOf` object shape used by Mise when
+the root declares every property and branches add only required-key choices.
+
+This is not general evaluated-property annotation bookkeeping. Object merging accepts only metadata,
+`definitions` / `$defs`, `type`, `properties`, `required`, `$ref`, and nested `allOf`; a
+branch-local assertion such as `additionalProperties` fails with an
+`unrepresentable_schema_combination` diagnostic instead of being dropped. `unevaluatedProperties`
+beside a ref or property-evaluating `anyOf` / `oneOf` also fails unless it matches the bounded safe
+object shape above. The `allOf` merge path also fails when the root cannot be proven object-only.
+Plain ref/composition intersections containing closed or schema-valued object boundaries fail rather
+than relying on Zod intersections that can suppress one-sided unknown-key errors; `propertyNames`
+combined with a strict object boundary follows the same rule. `unevaluatedItems`, Draft 2020-12
+vocabularies, required format assertions, dynamic refs, `patternProperties`, conditionals, and the
+remaining composition surface remain V1 target work and require dependency-backed preparation plus
+targeted runtime comparison.
+
+The real-world acceptance corpus includes the OpenCode configuration schema and the Mise
+configuration schema from `v2026.7.5`, pinned to peeled commit
+`e47826c162671248d8a1726d7f3043e9b9c00092`. Mise is materialized through `@x2zod/build-inputs` with
+an immutable URL, normalized-content hash, and byte-size lock. Every generated-Zod matrix sample is
+compared with its dialect-matched Ajv validator, and generated modules must complete TypeScript
+declaration-only emit. The Mise samples include the exact xapi tool set: actionlint 1.7.12, Bun
+1.3.14, Node 26.5.0, prek 0.4.9, ripgrep 14.1.1, and shellcheck 0.11.0.
 
 ## Diagnostics
 
@@ -707,13 +742,13 @@ Mapper / expression-plan tests:
 - primitives and boolean schemas;
 - enums and consts;
 - objects, required properties, loose objects, strict objects, and catchalls;
-- metadata preservation;
-- local refs and external URI refs;
+- validation-inert annotation recognition;
+- local refs and external URI refs, including nested keyword diagnostics in external resources;
 - dynamic anchors and dynamic refs;
 - `patternProperties`;
-- `oneOf`, `anyOf`, `allOf`, `not`;
+- `oneOf`, including untyped applicability through refs, plus `anyOf`, `allOf`, and `not`;
 - conditionals;
-- `unevaluatedProperties` and `unevaluatedItems`.
+- schema-valued `unevaluatedProperties` parity and `unevaluatedItems` diagnostics.
 
 Emitter tests:
 
@@ -734,15 +769,21 @@ Runtime smoke tests:
 - validate behavior through Zod `safeParse`;
 - verify representative runtime-only helper semantics where TypeScript inference cannot encode
   constraints;
-- compare generated Zod behavior with Ajv on small targeted fixtures for tricky semantics, without
-  treating full JSON Schema Test Suite pass/fail as the product gate.
+- compare generated Zod behavior with dialect-matched Ajv validators on every generated-Zod target
+  sample and on small targeted fixtures for tricky semantics, without treating full JSON Schema Test
+  Suite pass/fail as the product gate;
+- run declaration-only TypeScript emit for every generated-Zod target module.
 
 Acceptance corpus:
 
 - compile the OpenCode schema;
+- compile and import the Mise `v2026.7.5` schema pinned to peeled commit
+  `e47826c162671248d8a1726d7f3043e9b9c00092`, then validate representative accepted and rejected
+  configurations, including the exact xapi tool set;
 - targeted synthetic fixtures for refs, composition, metadata, additional properties, pattern
   properties, conditionals, and unevaluated keywords;
-- smoke-level performance check that OpenCode compiles in reasonable time.
+- smoke-level performance check that OpenCode compiles in reasonable time;
+- a deterministic shared-reference-DAG regression that bounds memoized boundary-scan work.
 
 ## Implementation Order
 

@@ -13,6 +13,7 @@ export const zodFactoryNames = [
   "tuple",
   "union",
   "unknown",
+  "xor",
 ] as const;
 
 export type ZodFactoryName = (typeof zodFactoryNames)[number];
@@ -112,6 +113,7 @@ export const zodFactoryMetadata: Record<ZodFactoryName, ZodFactoryMetadata> = {
   tuple: { args: expressionArrayArgument(1, "an array of at least one expression argument") },
   union: { args: expressionArrayArgument(2, "an array of at least two expression arguments") },
   unknown: { args: noArguments },
+  xor: { args: expressionArrayArgument(2, "an array of at least two expression arguments") },
 };
 
 export const zodMethodNames = [

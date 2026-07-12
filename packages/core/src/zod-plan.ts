@@ -111,6 +111,7 @@ export type ZodFactoryArgumentsByName = Readonly<{
   tuple: readonly [ZodArrayArgument<ZodExpressionArgument>];
   union: readonly [ZodArrayArgument<ZodExpressionArgument>];
   unknown: readonly [];
+  xor: readonly [ZodArrayArgument<ZodExpressionArgument>];
 }>;
 
 export type ZodMethodArgumentsByName = Readonly<{
@@ -415,6 +416,8 @@ export const zodPlan = {
   union: (options: readonly [ZodExpression, ZodExpression, ...ZodExpression[]]): ZodExpression =>
     zodFactory("union", [zodArrayArgument(options.map((option) => zodExpressionArgument(option)))]),
   unknown: (): ZodExpression => zodFactory("unknown"),
+  xor: (options: readonly [ZodExpression, ZodExpression, ...ZodExpression[]]): ZodExpression =>
+    zodFactory("xor", [zodArrayArgument(options.map((option) => zodExpressionArgument(option)))]),
 } as const;
 
 export const parseZodEmissionModule = (

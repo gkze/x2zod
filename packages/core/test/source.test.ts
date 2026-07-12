@@ -171,6 +171,9 @@ void describe("buildZodSourceFile", () => {
           age: zodPlan.optional(zodPlan.number()),
           tags: zodPlan.array(zodPlan.string()),
           mode: zodPlan.union([zodPlan.literal("build"), zodPlan.literal("watch")]),
+          exclusiveMode: zodPlan.optional(
+            zodPlan.xor([zodPlan.literal("build"), zodPlan.literal("watch")]),
+          ),
           status: zodPlan.enum(["open", "closed"]),
           boundedTags: zodPlan.max(zodPlan.min(zodPlan.array(zodPlan.string()), 1), maximumCount),
           slug: zodPlan.regex(zodPlan.string(), "^[a-z]+$"),
@@ -203,6 +206,10 @@ void describe("buildZodSourceFile", () => {
     assert.equal(zodCallName(propertyInitializer(rootDeclaration, "name")), "string");
     assert.equal(zodCallName(propertyInitializer(rootDeclaration, "tags")), "array");
     assert.equal(zodCallName(propertyInitializer(rootDeclaration, "mode")), "union");
+    assert.equal(
+      zodCallName(zodCallReceiverExpression(propertyInitializer(rootDeclaration, "exclusiveMode"))),
+      "xor",
+    );
     assert.equal(zodCallName(propertyInitializer(rootDeclaration, "status")), "enum");
     assert.equal(zodCallName(propertyInitializer(rootDeclaration, "boundedTags")), "max");
     assert.equal(zodCallName(propertyInitializer(rootDeclaration, "slug")), "regex");

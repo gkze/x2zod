@@ -9,7 +9,7 @@ import type {
   ZodExpression,
 } from "@x2zod/core";
 
-import { hasJsonSchemaArrayKeywords, lowerJsonSchemaArray } from "./array";
+import { lowerJsonSchemaArray } from "./array";
 import { lowerJsonSchemaComposition } from "./composition-lower";
 import {
   applyJsonSchemaNumberBounds,
@@ -25,12 +25,14 @@ import type { JsonObject, JsonSchemaValue, JsonValue, ParsedJsonSchemaDocument }
 import { collectKeywordDiagnostics } from "./keyword-diagnostics";
 import { jsonSchemaKeywords } from "./metadata";
 import { jsonSchemaDeclarationNameHints } from "./name-hints";
-import { hasJsonSchemaObjectKeywords, lowerJsonSchemaObject } from "./object";
+import { lowerJsonSchemaObject } from "./object";
 import type { JsonSchemaInputPluginOptions } from "./options";
 import { emptyPointer, jsonSchemaPointerWithSegment } from "./pointer";
 import { jsonSchemaAddress, resolveJsonSchemaReference } from "./reference";
 import type { JsonSchemaAddress } from "./reference";
+import { jsonSchemaUntypedAssertionKind } from "./schema-applicability";
 import { hasUnsupportedSiblingAssertions } from "./sibling-assertions";
+import { lowerJsonSchemaSiblingIntersection } from "./sibling-intersection";
 import { oneOrUnion } from "./zod-expressions";
 
 const rootSymbol = "root";
@@ -72,8 +74,16 @@ const siblingAssertionContext = (
   context: LoweringContext,
 ): Readonly<{
   addDiagnostic: (input: JsonSchemaDiagnosticInput) => void;
+  dialect: JsonSchemaInputPluginOptions["dialect"];
+  resolveReference: (ref: string) => ReturnType<typeof resolveJsonSchemaReference>;
   sourceProfile: JsonSchemaInputPluginOptions["sourceProfile"];
-}> => ({ ...diagnosticSink(context), sourceProfile: context.options.sourceProfile });
+}> => ({
+  ...diagnosticSink(context),
+  dialect: context.options.dialect,
+  resolveReference: (reference): ReturnType<typeof resolveJsonSchemaReference> =>
+    resolveJsonSchemaReference(reference, context.document.schema, context.options),
+  sourceProfile: context.options.sourceProfile,
+});
 
 const symbolForAddress = (address: JsonSchemaAddress): string =>
   address === emptyPointer ? rootSymbol : `schema:${address}`;
@@ -286,6 +296,27 @@ const lowerUntypedConstraintSchema = (
   return zodPlan.unknown();
 };
 
+const anyJsonObject = (): ZodExpression => zodPlan.passthrough(zodPlan.object({}));
+
+const lowerUntypedApplicatorSchema = (
+  schema: JsonObject,
+  pointer: JsonPointer,
+  context: LoweringContext,
+): ZodExpression | undefined => {
+  const kind = jsonSchemaUntypedAssertionKind(schema);
+  if (kind === undefined) return undefined;
+
+  const expressions: ZodExpression[] = [];
+  if (kind === "array" || kind === "mixed")
+    expressions.push(lowerArraySchema(schema, pointer, context));
+  else expressions.push(zodPlan.array(zodPlan.unknown()));
+  if (kind === "object" || kind === "mixed")
+    expressions.push(lowerObjectSchema(schema, pointer, context));
+  else expressions.push(anyJsonObject());
+  expressions.push(zodPlan.boolean(), zodPlan.null(), zodPlan.number(), zodPlan.string());
+  return oneOrUnion(expressions);
+};
+
 const lowerReference = (
   ref: string,
   pointer: JsonPointer,
@@ -316,56 +347,63 @@ const lowerSchema = (
   if (schema === true) return zodPlan.unknown();
   if (schema === false) return zodPlan.never();
 
+  const withSiblingAssertions = (keyword: string, expression: ZodExpression): ZodExpression =>
+    lowerJsonSchemaSiblingIntersection(
+      { expression, keyword, pointer, schema },
+      {
+        ...siblingAssertionContext(context),
+        lowerSchema: (childPointer, childSchema) => lowerSchema(childPointer, childSchema, context),
+      },
+    );
+
   const ref = schema[jsonSchemaKeywords.ref];
   if (typeof ref === "string") {
     if (
+      context.options.dialect === "draft-7" &&
       hasUnsupportedSiblingAssertions(
         { keyword: jsonSchemaKeywords.ref, pointer, schema },
         siblingAssertionContext(context),
       )
     )
       return zodPlan.unknown();
-    return lowerReference(
-      ref,
-      jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.ref),
-      context,
+    return withSiblingAssertions(
+      jsonSchemaKeywords.ref,
+      lowerReference(ref, jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.ref), context),
     );
   }
   const constValue = schema[jsonSchemaKeywords.const];
-  if (constValue !== undefined) {
-    if (
-      hasUnsupportedSiblingAssertions(
-        { keyword: jsonSchemaKeywords.const, pointer, schema },
-        siblingAssertionContext(context),
-      )
-    )
-      return zodPlan.unknown();
-    return lowerLiteralValue(
-      constValue,
-      jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.const),
-      context,
+  if (constValue !== undefined)
+    return withSiblingAssertions(
+      jsonSchemaKeywords.const,
+      lowerLiteralValue(
+        constValue,
+        jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.const),
+        context,
+      ),
     );
-  }
   const enumValues = schema[jsonSchemaKeywords.enum];
-  if (enumValues !== undefined) {
-    if (
-      hasUnsupportedSiblingAssertions(
-        { keyword: jsonSchemaKeywords.enum, pointer, schema },
-        siblingAssertionContext(context),
-      )
-    )
-      return zodPlan.unknown();
-    return lowerEnum(
-      enumValues,
-      jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.enum),
-      context,
+  if (enumValues !== undefined)
+    return withSiblingAssertions(
+      jsonSchemaKeywords.enum,
+      lowerEnum(
+        enumValues,
+        jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.enum),
+        context,
+      ),
     );
-  }
   const compositionExpression = lowerJsonSchemaComposition(schema, pointer, {
     ...diagnosticSink(context),
     lowerSchema: (childPointer, childSchema) => lowerSchema(childPointer, childSchema, context),
-    resolveReference: (reference) =>
-      resolveJsonSchemaReference(reference, context.document.schema, context.options),
+    resolveReference: (reference) => {
+      const target = resolveJsonSchemaReference(
+        reference,
+        context.document.schema,
+        context.options,
+      );
+      if (target !== undefined) collectSchemaKeywordDiagnostics(target, context);
+      return target;
+    },
+    dialect: context.options.dialect,
     sourceProfile: context.options.sourceProfile,
   });
   if (compositionExpression !== undefined) return compositionExpression;
@@ -392,10 +430,10 @@ const lowerSchema = (
     });
     return zodPlan.unknown();
   }
-  if (hasJsonSchemaObjectKeywords(schema)) return lowerObjectSchema(schema, pointer, context);
-  if (hasJsonSchemaArrayKeywords(schema)) return lowerArraySchema(schema, pointer, context);
   const untypedConstraint = lowerUntypedConstraintSchema(schema, pointer, context);
   if (untypedConstraint !== undefined) return untypedConstraint;
+  const untypedApplicator = lowerUntypedApplicatorSchema(schema, pointer, context);
+  if (untypedApplicator !== undefined) return untypedApplicator;
 
   return zodPlan.unknown();
 };

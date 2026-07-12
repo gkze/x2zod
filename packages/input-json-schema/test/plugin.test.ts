@@ -311,29 +311,6 @@ void describe("jsonSchemaInputPlugin precise lower", () => {
     );
   });
 
-  void test("lowers required-only object schemas into required shape keys", async () => {
-    const prepared = expectOk(
-      await jsonSchemaInputPlugin.prepare(
-        fileDocument(JSON.stringify({ required: ["metadata"] })),
-        options({ validator: "none" }),
-      ),
-    );
-
-    const lowered = parseEmissionModule(
-      expectOk(await jsonSchemaInputPlugin.lower(prepared, options({ validator: "none" }))),
-    );
-    const root = rootExpression(lowered);
-    const metadata = objectPropertyExpression(root, "metadata");
-
-    assert.deepEqual(
-      root.calls.map((call) => String(call.method)),
-      ["required", "passthrough"],
-    );
-    assert.deepEqual(stringLiteralArrayArgumentValues(root, 0), ["metadata"]);
-    assert.equal(metadata.kind, "factory");
-    assert.equal(metadata.factory, "unknown");
-  });
-
   void test("allows redundant integer type siblings for integer const and enum literals", async () => {
     const cases = [
       { const: 1, type: "integer" },
@@ -417,28 +394,23 @@ void describe("jsonSchemaInputPlugin precise diagnostics", () => {
     assert.ok(diagnosticPointers(result).includes("/$defs/tags/uniqueItems"));
   });
 
-  void test("fails when keyword-specific lowerers would ignore sibling assertions", async () => {
-    const cases = [
-      { $defs: { value: { type: "string" } }, $ref: "#/$defs/value", type: "number" },
-      { const: "build", type: "number" },
-      { enum: ["build", "watch"], type: "number" },
-      { anyOf: [{ type: "string" }], type: "string" },
-    ];
-
-    const results = await Promise.all(
-      cases.map(async (schema) => {
-        const prepared = expectOk(
-          await jsonSchemaInputPlugin.prepare(
-            fileDocument(JSON.stringify(schema)),
-            options({ validator: "none" }),
-          ),
-        );
-
-        return jsonSchemaInputPlugin.lower(prepared, options({ validator: "none" }));
-      }),
+  void test("fails before ignoring Draft 7 ref sibling assertions", async () => {
+    const pluginOptions = options({ dialect: "draft-7", validator: "none" });
+    const prepared = expectOk(
+      await jsonSchemaInputPlugin.prepare(
+        fileDocument(
+          JSON.stringify({
+            definitions: { value: { type: "string" } },
+            $ref: "#/definitions/value",
+            type: "number",
+          }),
+        ),
+        pluginOptions,
+      ),
     );
+    const result = await jsonSchemaInputPlugin.lower(prepared, pluginOptions);
 
-    for (const result of results) expectErrCode(result, "unrepresentable_schema_combination");
+    expectErrCode(result, "unrepresentable_schema_combination");
   });
 });
 
