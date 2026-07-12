@@ -4,7 +4,8 @@
 
 ### Patch Changes
 
-- ceef406: Harden public readonly contracts, dependency declarations, and shared TypeScript compiler policy.
+- ceef406: Harden public readonly contracts, dependency declarations, and shared TypeScript compiler
+  policy.
 - Updated dependencies [21b996e]
 - Updated dependencies [ceef406]
   - @x2zod/core@0.2.0
