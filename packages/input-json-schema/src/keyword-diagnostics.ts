@@ -119,6 +119,11 @@ export const collectKeywordDiagnostics = (
     jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.additionalProperties),
     context,
   );
+  collectChildSchemaDiagnostics(
+    schema[jsonSchemaKeywords.unevaluatedProperties],
+    jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.unevaluatedProperties),
+    context,
+  );
   collectSchemaArrayDiagnostics(
     schema[jsonSchemaKeywords.allOf],
     jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.allOf),

@@ -263,6 +263,7 @@ void describe("JSON Schema public target E2E matrix", () => {
         { name: "Conductor repo settings", roundTripLevel: "generated-zod" },
         { name: "Codex config", roundTripLevel: "generated-zod" },
         { name: "Claude Code settings", roundTripLevel: "blocked-schema-features" },
+        { name: "Mise config", roundTripLevel: "generated-zod" },
         { name: "Cursor environment", roundTripLevel: "generated-zod" },
         { name: "Visual Studio Code settings", roundTripLevel: "schema-unavailable" },
         { name: "Zed settings", roundTripLevel: "schema-unavailable" },

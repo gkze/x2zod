@@ -611,8 +611,8 @@ V1 semantic target:
 - Unknown required vocabularies fail.
 - `$dynamicAnchor` and `$dynamicRef` are supported for Draft 2020-12.
 - `patternProperties` is supported with runtime checks where needed.
-- `oneOf` preserves exact one-branch semantics, using generated counting/refinement helpers when
-  necessary.
+- `oneOf` preserves exact one-branch semantics, using ordinary unions only for statically disjoint
+  branches and Zod's native exclusive union otherwise.
 - `anyOf` uses clean Zod unions where possible and runtime logic where needed.
 - `allOf` uses object merging, intersections, or refinements as appropriate.
 - `not` is supported with runtime refinement.
@@ -625,12 +625,32 @@ Unsupported or unlowerable semantics should fail with diagnostics instead of sil
 Current implementation is narrower than the V1 semantic target. The implemented slice covers
 document parsing, JSON Pointer source-location mapping, Ajv preflight, dialect detection, unknown
 keyword policy, primitives, `const` / `enum`, arrays, objects, required and optional properties,
-`additionalProperties`, metadata-only `default` / `format`, local/external refs supplied through the
-explicit registry, selected composition lowering, and targeted OpenCode source-profile
-compatibility. Draft 2020-12 vocabularies, required format assertions, dynamic refs,
-`patternProperties`, full composition semantics, conditionals, and `unevaluated*` remain V1 target
-work and should land only with dependency-backed preparation, explicit lowering tests, and targeted
-runtime comparisons against JSON Schema tooling.
+`additionalProperties`, metadata-only `default` / `format` / `deprecated` / `readOnly` /
+`writeOnly`, local/external refs supplied through the explicit registry, representable sibling
+assertions, exact `oneOf` through ordinary unions for statically disjoint branches and Zod's native
+exclusive union otherwise, ordinary `anyOf` unions, and selected `allOf` object merging and
+intersections. It supports `unevaluatedProperties` directly on representable object schemas and
+across object-only, mergeable `allOf` trees, including properties contributed by refs. It also
+supports the bounded `anyOf` / `oneOf` object shape used by Mise when the root declares every
+property and branches add only required-key choices.
+
+This is not general evaluated-property annotation bookkeeping. Object merging accepts only metadata,
+`definitions` / `$defs`, `type`, `properties`, `required`, `$ref`, and nested `allOf`; a
+branch-local assertion such as `additionalProperties` fails with an
+`unrepresentable_schema_combination` diagnostic instead of being dropped. `unevaluatedProperties`
+beside a ref or property-evaluating `anyOf` / `oneOf` also fails unless it matches the bounded safe
+object shape above. The `allOf` merge path also fails when the root cannot be proven object-only.
+Plain ref/composition intersections containing closed or schema-valued object boundaries fail rather
+than relying on Zod intersections that can suppress one-sided unknown-key errors; `propertyNames`
+combined with a strict object boundary follows the same rule. `unevaluatedItems`, Draft 2020-12
+vocabularies, required format assertions, dynamic refs, `patternProperties`, conditionals, and the
+remaining composition surface remain V1 target work and require dependency-backed preparation plus
+targeted runtime comparison.
+
+The real-world acceptance corpus includes the OpenCode configuration schema and the Mise
+configuration schema pinned to `v2026.7.5`. Mise is materialized through `@x2zod/build-inputs` with
+a URL, normalized-content hash, and byte-size lock, then compiled to importable Zod source and
+exercised with representative valid and invalid configurations.
 
 ## Diagnostics
 
@@ -740,6 +760,8 @@ Runtime smoke tests:
 Acceptance corpus:
 
 - compile the OpenCode schema;
+- compile and import the pinned Mise `v2026.7.5` schema, then validate representative accepted and
+  rejected configurations;
 - targeted synthetic fixtures for refs, composition, metadata, additional properties, pattern
   properties, conditionals, and unevaluated keywords;
 - smoke-level performance check that OpenCode compiles in reasonable time.

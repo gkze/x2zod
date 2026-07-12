@@ -417,28 +417,23 @@ void describe("jsonSchemaInputPlugin precise diagnostics", () => {
     assert.ok(diagnosticPointers(result).includes("/$defs/tags/uniqueItems"));
   });
 
-  void test("fails when keyword-specific lowerers would ignore sibling assertions", async () => {
-    const cases = [
-      { $defs: { value: { type: "string" } }, $ref: "#/$defs/value", type: "number" },
-      { const: "build", type: "number" },
-      { enum: ["build", "watch"], type: "number" },
-      { anyOf: [{ type: "string" }], type: "string" },
-    ];
-
-    const results = await Promise.all(
-      cases.map(async (schema) => {
-        const prepared = expectOk(
-          await jsonSchemaInputPlugin.prepare(
-            fileDocument(JSON.stringify(schema)),
-            options({ validator: "none" }),
-          ),
-        );
-
-        return jsonSchemaInputPlugin.lower(prepared, options({ validator: "none" }));
-      }),
+  void test("fails before ignoring Draft 7 ref sibling assertions", async () => {
+    const pluginOptions = options({ dialect: "draft-7", validator: "none" });
+    const prepared = expectOk(
+      await jsonSchemaInputPlugin.prepare(
+        fileDocument(
+          JSON.stringify({
+            definitions: { value: { type: "string" } },
+            $ref: "#/definitions/value",
+            type: "number",
+          }),
+        ),
+        pluginOptions,
+      ),
     );
+    const result = await jsonSchemaInputPlugin.lower(prepared, pluginOptions);
 
-    for (const result of results) expectErrCode(result, "unrepresentable_schema_combination");
+    expectErrCode(result, "unrepresentable_schema_combination");
   });
 });
 

@@ -90,6 +90,11 @@ const cursorEnvironmentSchema = fixtureSource(
   "cursor-environment.schema.json",
   "https://cursor.com/schemas/environment.schema.json",
 );
+const miseConfigSchema = fixtureSource(
+  "mise-config-schema",
+  "mise-config.schema.json",
+  "https://raw.githubusercontent.com/jdx/mise/v2026.7.5/schema/mise.json",
+);
 
 const conductorSettingsSample = {
   $schema: conductorSettingsSchema.sourceUrl,
@@ -164,6 +169,15 @@ const cursorEnvironmentSample = {
   terminals: [{ command: "bun dev", name: "dev server" }],
 } as const;
 
+const miseToolObjectSample = { extra: "supported", version: "24" } as const;
+const miseTaskToolObjectSample = { extra: "supported", version: "24" } as const;
+
+const miseConfigSample = {
+  min_version: "2026.7.5",
+  tasks: { build: { run: "echo build", tools: { node: miseTaskToolObjectSample } } },
+  tools: { bun: "1.3.14", node: miseToolObjectSample },
+} as const;
+
 const targetMatrixEntries = [
   {
     name: "OpenCode config",
@@ -228,6 +242,47 @@ const targetMatrixEntries = [
     name: "Claude Code settings",
     pluginOptions: { dialect: "draft-7", validator: "none" },
     roundTripLevel: "blocked-schema-features",
+  },
+  {
+    ...miseConfigSchema,
+    exportName: "miseConfigSchema",
+    invalidSamples: [
+      {
+        label: "rejects a non-semver minimum Mise version",
+        value: { ...miseConfigSample, min_version: "latest" },
+      },
+      {
+        label: "rejects unknown Mise settings",
+        value: { ...miseConfigSample, settings: { unexpected: true } },
+      },
+      {
+        label: "rejects invalid unevaluated tool options",
+        value: {
+          ...miseConfigSample,
+          tools: { ...miseConfigSample.tools, node: { ...miseToolObjectSample, extra: null } },
+        },
+      },
+      {
+        label: "rejects invalid unevaluated task tool options",
+        value: {
+          ...miseConfigSample,
+          tasks: {
+            build: {
+              ...miseConfigSample.tasks.build,
+              tools: { node: { ...miseTaskToolObjectSample, extra: 1 } },
+            },
+          },
+        },
+      },
+    ],
+    name: "Mise config",
+    pluginOptions: { dialect: "draft-2020-12", validator: "ajv" },
+    roundTripLevel: "generated-zod",
+    typeName: "MiseConfig",
+    validSample: {
+      label: "pinned toolchain with global and task tool options",
+      value: miseConfigSample,
+    },
   },
   {
     ...cursorEnvironmentSchema,

@@ -26,6 +26,11 @@
       "id": "cursor-environment-schema",
       "path": "cursor-environment.schema.json",
       "url": "https://cursor.com/schemas/environment.schema.json"
+    },
+    {
+      "id": "mise-config-schema",
+      "path": "mise-config.schema.json",
+      "url": "https://raw.githubusercontent.com/jdx/mise/v2026.7.5/schema/mise.json"
     }
   ]
 }

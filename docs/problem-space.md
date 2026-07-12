@@ -340,11 +340,12 @@ The design discussion after this landscape pass resolved the initial open questi
   JSON Schema tool owns validation and dialect evidence; source-map parsers own JSON Pointer spans;
   ref and dynamic-ref behavior should be dependency-backed where possible. `x2zod` owns the emission
   lowerer, diagnostics, generated helper ABI, and deterministic TypeScript source.
-- The first JSON Schema implementation slice is narrower than the V1 semantic target: start with
-  parser/source spans, Ajv preflight, dialect detection, unknown-keyword policy, primitives, enums,
-  arrays, objects, `additionalProperties`, metadata-only `default` / `format`, and local refs; land
-  dynamic refs, required format assertions, composition, `patternProperties`, and `unevaluated*`
-  after the dependency spike proves the preparation strategy.
+- The implemented JSON Schema slice remains narrower than the V1 semantic target, but now includes
+  exact `oneOf`, representable composition and ref sibling assertions, and bounded
+  `unevaluatedProperties` lowering for direct objects, mergeable object-only `allOf` trees, and the
+  required-key-only `anyOf` / `oneOf` shape exercised by Mise. Dynamic refs, required format
+  assertions, `patternProperties`, general evaluated-property bookkeeping, `unevaluatedItems`, and
+  conditionals still require the corresponding dependency and runtime proof.
 - URI refs are supported through the selected reference strategy. Remote fetching requires explicit
   opt-in; external schemas can be provided through a registry.
 - Generated output imports only Zod by default, with generated helpers deduplicated at module scope.
@@ -360,14 +361,19 @@ The design discussion after this landscape pass resolved the initial open questi
   metadata. The default profile is strict; the first named profile is `opencode`.
 - Refs emit named schema declarations and use those declarations at reference sites; plugins supply
   ordered name hints, while core owns final TypeScript identifier selection.
-- `patternProperties`, exact `oneOf`, `anyOf`, `allOf`, `not`, conditionals, and `unevaluated*`
-  remain V1 semantic targets. They should be treated as unsupported until each feature has
-  dependency-backed preparation, lowering tests, and targeted runtime comparisons.
-- The acceptance corpus is OpenCode plus targeted synthetic fixtures.
+- Exact `oneOf` uses ordinary unions for statically disjoint branches and Zod's native exclusive
+  union otherwise. `anyOf`, `allOf`, `not`, and `unevaluatedProperties` are supported only in their
+  explicitly tested slices. Shapes that require annotation bookkeeping, contain branch assertions
+  the object merger cannot preserve, require a plain ref/composition intersection across closed or
+  schema-valued object boundaries, or combine `propertyNames` with a strict boundary fail with
+  `unrepresentable_schema_combination`; `patternProperties`, conditionals, and `unevaluatedItems`
+  remain V1 targets.
+- The acceptance corpus includes OpenCode, the Mise schema pinned to `v2026.7.5`, other locked
+  public configuration-schema fixtures, and targeted synthetic semantics fixtures.
 
-## First Real-World Corpus
+## Real-World Corpora
 
-The first real target remains the OpenCode config schema:
+The first real target was the OpenCode config schema:
 
 - Source: <https://opencode.ai/config.json>
 - Fetched on 2026-05-10 for this brief.
@@ -388,6 +394,18 @@ mistakes. The selected policy is source profiles:
 - reject unknown keys that appear to contain subschemas or alter evaluation unless the active
   profile has an exact documented compatibility rule;
 - report all ignored profile keys in diagnostics.
+
+The Mise config schema pinned to `v2026.7.5` is a second real-world acceptance corpus:
+
+- Source: <https://raw.githubusercontent.com/jdx/mise/v2026.7.5/schema/mise.json>.
+- `@x2zod/build-inputs` normalizes the JSON and locks its source URL, SHA-256 digest, and
+  110,820-byte materialized size.
+- The schema exercises Draft 2020-12 refs, annotation keywords, exact `oneOf`, composition sibling
+  assertions, strict objects, and both boolean and schema-valued `unevaluatedProperties`.
+- The acceptance test compiles the complete fixture to importable Zod source, accepts a pinned Bun
+  and Node toolchain configuration, and rejects an invalid `min_version`.
+- Any Mise construct outside the explicit safe composition and evaluated-property slices remains a
+  diagnostic boundary rather than being silently weakened.
 
 ## Product Boundary
 

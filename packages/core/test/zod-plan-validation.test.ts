@@ -90,6 +90,19 @@ void describe("parseZodEmissionModule method validation", () => {
 });
 
 void describe("parseZodEmissionModule receiver validation", () => {
+  void test("accepts exclusive unions with at least two branches", () => {
+    const result = parseZodEmissionModule(
+      rootModule(zodPlan.xor([zodPlan.string(), zodPlan.number()])),
+    );
+
+    assert.equal(result.ok, true);
+    expectInvalidRoot({
+      args: [{ elements: [{ expression: zodPlan.string(), kind: "expression" }], kind: "array" }],
+      factory: "xor",
+      kind: "factory",
+    });
+  });
+
   void test("rejects invalid enum and tuple factory arguments", () => {
     expectInvalidModule(
       {

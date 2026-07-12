@@ -30,6 +30,10 @@ type ObjectSchemaSummary = Readonly<{
 }>;
 type FiniteLiterals = ReadonlyMap<string, JsonPrimitive>;
 
+const integerTypeName = "integer";
+const numberTypeName = "number";
+const objectTypeName = "object";
+
 const schemaArrayExpressions = (
   request: SchemaArrayRequest,
   context: CompositionLoweringContext,
@@ -115,6 +119,16 @@ const disjointLiteralSets = (
   right: FiniteLiterals | undefined,
 ): boolean => left !== undefined && right !== undefined && !literalMapsOverlap(left, right);
 
+const schemaTypeSetsOverlap = (left: ReadonlySet<string>, right: ReadonlySet<string>): boolean =>
+  setsOverlap(left, right) ||
+  (left.has(integerTypeName) && right.has(numberTypeName)) ||
+  (left.has(numberTypeName) && right.has(integerTypeName));
+
+const disjointSchemaTypes = (
+  left: ReadonlySet<string> | undefined,
+  right: ReadonlySet<string> | undefined,
+): boolean => left !== undefined && right !== undefined && !schemaTypeSetsOverlap(left, right);
+
 const stringLiteralValues = (schema: JsonSchemaValue): ReadonlySet<string> | undefined => {
   const literals = finiteLiterals(schema);
   if (literals === undefined) return undefined;
@@ -130,7 +144,7 @@ const stringLiteralValues = (schema: JsonSchemaValue): ReadonlySet<string> | und
 const objectSchemaSummary = (schema: JsonSchemaValue): ObjectSchemaSummary | undefined => {
   if (!isJsonObject(schema)) return undefined;
   const types = schemaTypeNames(schema);
-  if (types !== undefined && !types.has("object")) return undefined;
+  if (types?.size !== 1 || !types.has(objectTypeName)) return undefined;
 
   const properties = schema[jsonSchemaKeywords.properties];
   const required = schema[jsonSchemaKeywords.required];
@@ -191,7 +205,7 @@ const schemasAreDefinitelyDisjoint = (left: JsonSchemaValue, right: JsonSchemaVa
   if (left === false || right === false) return true;
   if (left === true || right === true) return false;
   if (disjointLiteralSets(finiteLiterals(left), finiteLiterals(right))) return true;
-  if (disjointSets(schemaTypeNames(left), schemaTypeNames(right))) return true;
+  if (disjointSchemaTypes(schemaTypeNames(left), schemaTypeNames(right))) return true;
   return disjointObjectSchemas(left, right);
 };
 
@@ -246,19 +260,16 @@ export const lowerJsonSchemaOneOf = (
   context: CompositionLoweringContext,
 ): ZodExpression => {
   const schemas = schemaArrayValues(values);
-  if (schemas !== undefined && !schemasArePairwiseDisjoint(schemas))
-    context.addDiagnostic({
-      code: "unrepresentable_schema_combination",
-      message:
-        "JSON Schema oneOf can only be lowered when branch exclusivity is statically provable.",
-      pointer,
-    });
-
   const expressions = schemaArrayExpressions(
     { keyword: jsonSchemaKeywords.oneOf, pointer, values },
     context,
   );
-  return expressions === undefined ? zodPlan.unknown() : oneOrUnion(expressions);
+  if (expressions === undefined) return zodPlan.unknown();
+  if (schemas !== undefined && schemasArePairwiseDisjoint(schemas)) return oneOrUnion(expressions);
+
+  const [first, second, ...remaining] = expressions;
+  if (first === undefined) return zodPlan.never();
+  return second === undefined ? first : zodPlan.xor([first, second, ...remaining]);
 };
 
 export const lowerJsonSchemaNot = (

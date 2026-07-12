@@ -31,6 +31,7 @@ import { emptyPointer, jsonSchemaPointerWithSegment } from "./pointer";
 import { jsonSchemaAddress, resolveJsonSchemaReference } from "./reference";
 import type { JsonSchemaAddress } from "./reference";
 import { hasUnsupportedSiblingAssertions } from "./sibling-assertions";
+import { lowerJsonSchemaSiblingIntersection } from "./sibling-intersection";
 import { oneOrUnion } from "./zod-expressions";
 
 const rootSymbol = "root";
@@ -72,8 +73,16 @@ const siblingAssertionContext = (
   context: LoweringContext,
 ): Readonly<{
   addDiagnostic: (input: JsonSchemaDiagnosticInput) => void;
+  dialect: JsonSchemaInputPluginOptions["dialect"];
+  resolveReference: (ref: string) => ReturnType<typeof resolveJsonSchemaReference>;
   sourceProfile: JsonSchemaInputPluginOptions["sourceProfile"];
-}> => ({ ...diagnosticSink(context), sourceProfile: context.options.sourceProfile });
+}> => ({
+  ...diagnosticSink(context),
+  dialect: context.options.dialect,
+  resolveReference: (reference): ReturnType<typeof resolveJsonSchemaReference> =>
+    resolveJsonSchemaReference(reference, context.document.schema, context.options),
+  sourceProfile: context.options.sourceProfile,
+});
 
 const symbolForAddress = (address: JsonSchemaAddress): string =>
   address === emptyPointer ? rootSymbol : `schema:${address}`;
@@ -316,56 +325,56 @@ const lowerSchema = (
   if (schema === true) return zodPlan.unknown();
   if (schema === false) return zodPlan.never();
 
+  const withSiblingAssertions = (keyword: string, expression: ZodExpression): ZodExpression =>
+    lowerJsonSchemaSiblingIntersection(
+      { expression, keyword, pointer, schema },
+      {
+        ...siblingAssertionContext(context),
+        lowerSchema: (childPointer, childSchema) => lowerSchema(childPointer, childSchema, context),
+      },
+    );
+
   const ref = schema[jsonSchemaKeywords.ref];
   if (typeof ref === "string") {
     if (
+      context.options.dialect === "draft-7" &&
       hasUnsupportedSiblingAssertions(
         { keyword: jsonSchemaKeywords.ref, pointer, schema },
         siblingAssertionContext(context),
       )
     )
       return zodPlan.unknown();
-    return lowerReference(
-      ref,
-      jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.ref),
-      context,
+    return withSiblingAssertions(
+      jsonSchemaKeywords.ref,
+      lowerReference(ref, jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.ref), context),
     );
   }
   const constValue = schema[jsonSchemaKeywords.const];
-  if (constValue !== undefined) {
-    if (
-      hasUnsupportedSiblingAssertions(
-        { keyword: jsonSchemaKeywords.const, pointer, schema },
-        siblingAssertionContext(context),
-      )
-    )
-      return zodPlan.unknown();
-    return lowerLiteralValue(
-      constValue,
-      jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.const),
-      context,
+  if (constValue !== undefined)
+    return withSiblingAssertions(
+      jsonSchemaKeywords.const,
+      lowerLiteralValue(
+        constValue,
+        jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.const),
+        context,
+      ),
     );
-  }
   const enumValues = schema[jsonSchemaKeywords.enum];
-  if (enumValues !== undefined) {
-    if (
-      hasUnsupportedSiblingAssertions(
-        { keyword: jsonSchemaKeywords.enum, pointer, schema },
-        siblingAssertionContext(context),
-      )
-    )
-      return zodPlan.unknown();
-    return lowerEnum(
-      enumValues,
-      jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.enum),
-      context,
+  if (enumValues !== undefined)
+    return withSiblingAssertions(
+      jsonSchemaKeywords.enum,
+      lowerEnum(
+        enumValues,
+        jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.enum),
+        context,
+      ),
     );
-  }
   const compositionExpression = lowerJsonSchemaComposition(schema, pointer, {
     ...diagnosticSink(context),
     lowerSchema: (childPointer, childSchema) => lowerSchema(childPointer, childSchema, context),
     resolveReference: (reference) =>
       resolveJsonSchemaReference(reference, context.document.schema, context.options),
+    dialect: context.options.dialect,
     sourceProfile: context.options.sourceProfile,
   });
   if (compositionExpression !== undefined) return compositionExpression;

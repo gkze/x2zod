@@ -25,6 +25,13 @@ type PropertyNamesRequest = Readonly<{
   schema: JsonObject;
 }>;
 
+type UnevaluatedPropertiesRequest = Readonly<{
+  context: ObjectLoweringContext;
+  object: ZodExpression;
+  pointer: JsonPointer;
+  schema: JsonObject;
+}>;
+
 export const hasJsonSchemaObjectKeywords = (schema: JsonObject): boolean =>
   schema[jsonSchemaKeywords.additionalProperties] !== undefined ||
   schema[jsonSchemaKeywords.properties] !== undefined ||
@@ -99,26 +106,6 @@ const propertyNamesPointer = (pointer: JsonPointer): JsonPointer =>
 const unevaluatedPropertiesPointer = (pointer: JsonPointer): JsonPointer =>
   jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.unevaluatedProperties);
 
-const addUnsupportedUnevaluatedPropertiesDiagnostic = (
-  schema: JsonObject,
-  pointer: JsonPointer,
-  context: ObjectLoweringContext,
-): void => {
-  const unevaluatedProperties = schema[jsonSchemaKeywords.unevaluatedProperties];
-  if (
-    unevaluatedProperties === undefined ||
-    typeof unevaluatedProperties === "boolean" ||
-    schema[jsonSchemaKeywords.additionalProperties] !== undefined
-  )
-    return;
-
-  context.addDiagnostic({
-    code: "unrepresentable_schema_combination",
-    message: "JSON Schema unevaluatedProperties schemas are not supported by this lowering slice.",
-    pointer: unevaluatedPropertiesPointer(pointer),
-  });
-};
-
 const lowerAdditionalPropertyValue = (
   schema: JsonObject,
   pointer: JsonPointer,
@@ -134,6 +121,29 @@ const lowerAdditionalPropertyValue = (
     context,
     additionalPropertiesPointer(pointer),
     "JSON Schema additionalProperties must be a boolean or schema object.",
+  );
+  return zodPlan.unknown();
+};
+
+const lowerRequiredUndeclaredPropertyValue = (
+  schema: JsonObject,
+  pointer: JsonPointer,
+  context: ObjectLoweringContext,
+): ZodExpression => {
+  if (schema[jsonSchemaKeywords.additionalProperties] !== undefined)
+    return lowerAdditionalPropertyValue(schema, pointer, context);
+
+  const unevaluatedProperties = schema[jsonSchemaKeywords.unevaluatedProperties];
+  if (unevaluatedProperties === false) return zodPlan.never();
+  if (unevaluatedProperties === undefined || unevaluatedProperties === true)
+    return zodPlan.unknown();
+  if (isJsonObject(unevaluatedProperties))
+    return context.lowerSchema(unevaluatedPropertiesPointer(pointer), unevaluatedProperties);
+
+  addInvalidSchemaDiagnostic(
+    context,
+    unevaluatedPropertiesPointer(pointer),
+    "JSON Schema unevaluatedProperties must be a boolean or schema object.",
   );
   return zodPlan.unknown();
 };
@@ -166,7 +176,8 @@ const objectShape = ({
           "JSON Schema property values must be boolean schemas or schema objects.",
         );
 
-  for (const key of required) shape[key] ??= lowerAdditionalPropertyValue(schema, pointer, context);
+  for (const key of required)
+    shape[key] ??= lowerRequiredUndeclaredPropertyValue(schema, pointer, context);
 
   return shape;
 };
@@ -222,27 +233,71 @@ const applyPropertyNames = ({
   return expression;
 };
 
+const applyUnevaluatedProperties = (request: UnevaluatedPropertiesRequest): ZodExpression => {
+  const { context, object, pointer, schema } = request;
+  const unevaluatedProperties = schema[jsonSchemaKeywords.unevaluatedProperties];
+  if (unevaluatedProperties === undefined || unevaluatedProperties === true)
+    return zodPlan.passthrough(object);
+  if (unevaluatedProperties === false) return zodPlan.strict(object);
+  if (isJsonObject(unevaluatedProperties))
+    return zodPlan.catchall(
+      object,
+      context.lowerSchema(unevaluatedPropertiesPointer(pointer), unevaluatedProperties),
+    );
+
+  addInvalidSchemaDiagnostic(
+    context,
+    unevaluatedPropertiesPointer(pointer),
+    "JSON Schema unevaluatedProperties must be a boolean or schema object.",
+  );
+  return object;
+};
+
+const hasUnsupportedPropertyNamesStrictBoundary = (
+  schema: JsonObject,
+  pointer: JsonPointer,
+  context: ObjectLoweringContext,
+): boolean => {
+  const propertyNames = schema[jsonSchemaKeywords.propertyNames];
+  if (propertyNames !== false && !isJsonObject(propertyNames)) return false;
+
+  const additionalProperties = schema[jsonSchemaKeywords.additionalProperties];
+  const hasStrictBoundary =
+    additionalProperties === false ||
+    (additionalProperties === undefined &&
+      schema[jsonSchemaKeywords.unevaluatedProperties] === false);
+  if (!hasStrictBoundary) return false;
+
+  context.addDiagnostic({
+    code: "unrepresentable_schema_combination",
+    message: [
+      "JSON Schema propertyNames with a strict object boundary",
+      "cannot be preserved by a plain Zod intersection.",
+    ].join(" "),
+    pointer: propertyNamesPointer(pointer),
+  });
+  return true;
+};
+
 export const lowerJsonSchemaObject = (
   schema: JsonObject,
   pointer: JsonPointer,
   context: ObjectLoweringContext,
 ): ZodExpression => {
+  if (hasUnsupportedPropertyNamesStrictBoundary(schema, pointer, context)) return zodPlan.unknown();
+
   const requiredKeys = requiredProperties(schema, pointer, context);
   const object = applyJsonSchemaRequiredKeys(
     zodPlan.object(objectShape({ context, pointer, required: new Set(requiredKeys), schema })),
     requiredKeys,
   );
   const additionalProperties = schema[jsonSchemaKeywords.additionalProperties];
-  const unevaluatedProperties = schema[jsonSchemaKeywords.unevaluatedProperties];
   const withPropertyNames = (expression: ZodExpression): ZodExpression =>
     applyPropertyNames({ context, expression, pointer, schema });
-  addUnsupportedUnevaluatedPropertiesDiagnostic(schema, pointer, context);
 
   if (additionalProperties === false) return withPropertyNames(zodPlan.strict(object));
   if (additionalProperties === undefined)
-    return withPropertyNames(
-      unevaluatedProperties === false ? zodPlan.strict(object) : zodPlan.passthrough(object),
-    );
+    return withPropertyNames(applyUnevaluatedProperties({ context, object, pointer, schema }));
   if (additionalProperties === true) return withPropertyNames(zodPlan.passthrough(object));
   if (isJsonSchemaValue(additionalProperties))
     return withPropertyNames(
