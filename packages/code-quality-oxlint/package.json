@@ -1,6 +1,6 @@
 {
   "name": "@x2zod/code-quality-oxlint",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Oxlint code quality plugin for x2zod.",
   "license": "MIT",
   "repository": {
