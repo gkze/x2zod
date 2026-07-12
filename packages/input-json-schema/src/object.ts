@@ -32,13 +32,6 @@ type UnevaluatedPropertiesRequest = Readonly<{
   schema: JsonObject;
 }>;
 
-export const hasJsonSchemaObjectKeywords = (schema: JsonObject): boolean =>
-  schema[jsonSchemaKeywords.additionalProperties] !== undefined ||
-  schema[jsonSchemaKeywords.properties] !== undefined ||
-  schema[jsonSchemaKeywords.propertyNames] !== undefined ||
-  schema[jsonSchemaKeywords.required] !== undefined ||
-  schema[jsonSchemaKeywords.unevaluatedProperties] !== undefined;
-
 const addInvalidSchemaDiagnostic = (
   context: ObjectLoweringContext,
   pointer: JsonPointer,

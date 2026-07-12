@@ -99,6 +99,47 @@ void describe("JSON Schema composition diagnostics", () => {
   });
 });
 
+void describe("JSON Schema external composition diagnostics", () => {
+  void test("diagnoses unsupported keywords in external schemas merged through allOf", async () => {
+    const externalSchemaUri = "https://schemas.example.test/base.json";
+    const result = await compileToZodSource({
+      document: {
+        source: { id: "external-merged-schema", kind: "inline" },
+        text: JSON.stringify({
+          allOf: [{ $ref: `${externalSchemaUri}#/$defs/base` }],
+          type: "object",
+          unevaluatedProperties: { type: "number" },
+        }),
+      },
+      output: { typeName: "ExternalMergedSchema" },
+      plugin: jsonSchemaInputPlugin,
+      pluginOptions: {
+        externalSchemas: {
+          [externalSchemaUri]: {
+            $defs: {
+              base: {
+                properties: {
+                  tags: { items: { type: "string" }, type: "array", uniqueItems: true },
+                },
+                type: "object",
+              },
+            },
+          },
+        },
+        validator: "none",
+      },
+    });
+
+    assert.equal(result.ok, false);
+    assert.ok(result.diagnostics.some((diagnostic) => diagnostic.code === "unsupported_keyword"));
+    assert.ok(
+      result.diagnostics.some(
+        (diagnostic) => diagnostic.location?.pointer === "/$defs/base/properties/tags/uniqueItems",
+      ),
+    );
+  });
+});
+
 void describe("JSON Schema composition validation diagnostics", () => {
   void test("recursively diagnoses unsupported unevaluatedProperties schemas", async () => {
     await assertCompileDiagnostic(

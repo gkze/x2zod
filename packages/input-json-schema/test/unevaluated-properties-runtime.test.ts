@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 
+import AjvDraft2020 from "ajv/dist/2020.js";
+
 import { compileToZodSource } from "@x2zod/core";
 
 import { jsonSchemaInputPlugin } from "../src";
@@ -32,6 +34,26 @@ const fixtureSchema = (): JsonSchemaValue => ({
   type: "object",
   unevaluatedProperties: { type: "number" },
 });
+
+type UnevaluatedPropertiesParityRequest = Readonly<{
+  schema: JsonSchemaValue;
+  values: readonly unknown[];
+}>;
+
+const assertUnevaluatedPropertiesParity = async ({
+  schema,
+  values,
+}: UnevaluatedPropertiesParityRequest): Promise<void> => {
+  const validate = new AjvDraft2020({ logger: false, strict: false }).compile(schema);
+  const { generatedSchema } = await compileGeneratedSchema(schema);
+
+  for (const value of values)
+    assert.equal(
+      generatedSchema.safeParse(value).success,
+      validate(value),
+      `generated schema should match Ajv for ${JSON.stringify(value)}`,
+    );
+};
 
 void describe("JSON Schema unevaluatedProperties required keys", () => {
   void test("applies direct unevaluatedProperties to required undeclared keys", async () => {
@@ -65,6 +87,46 @@ void describe("JSON Schema unevaluatedProperties required keys", () => {
 
     assert.equal(generatedSchema.safeParse({ retries: 2 }).success, true);
     assert.equal(generatedSchema.safeParse({ retries: "two" }).success, false);
+  });
+});
+
+void describe("JSON Schema unevaluatedProperties value applicability", () => {
+  void test("preserves primitive values with untyped object assertions", async () => {
+    const schema: JsonSchemaValue = {
+      type: "object",
+      unevaluatedProperties: { properties: { nested: { type: "string" } } },
+    };
+    await assertUnevaluatedPropertiesParity({
+      schema,
+      values: [
+        { value: 42 },
+        { value: { nested: "ok" } },
+        { value: { nested: 42 } },
+        { value: [1] },
+      ],
+    });
+  });
+
+  void test("preserves primitive values with untyped array assertions", async () => {
+    const schema: JsonSchemaValue = {
+      type: "object",
+      unevaluatedProperties: { items: { type: "string" } },
+    };
+    await assertUnevaluatedPropertiesParity({
+      schema,
+      values: [{ value: 42 }, { value: ["ok"] }, { value: [1] }, { value: {} }],
+    });
+  });
+
+  void test("preserves catchall applicability after merged lowering", async () => {
+    const schema: JsonSchemaValue = {
+      allOf: [{ type: "object" }],
+      unevaluatedProperties: { properties: { nested: { type: "string" } } },
+    };
+    await assertUnevaluatedPropertiesParity({
+      schema,
+      values: [{ value: 42 }, { value: { nested: "ok" } }, { value: { nested: 42 } }],
+    });
   });
 });
 

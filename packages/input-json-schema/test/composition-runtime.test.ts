@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 
+import Ajv2020 from "ajv/dist/2020.js";
+
 import { compileToZodSource } from "@x2zod/core";
 
 import { jsonSchemaInputPlugin } from "../src";
@@ -76,6 +78,52 @@ void describe("JSON Schema composition with unevaluatedProperties", () => {
 });
 
 void describe("JSON Schema oneOf exactness", () => {
+  void test("oneOf preserves untyped object-keyword applicability", async () => {
+    const schema = {
+      oneOf: [{ properties: { value: { type: "string" } } }, { type: "number" }],
+    } as const;
+    const validate = new Ajv2020({ strict: false }).compile(schema);
+    const { generatedSchema } = await compileGeneratedSchema(schema);
+
+    for (const value of [1, "value", { value: "ok" }, { value: 1 }])
+      assert.equal(
+        generatedSchema.safeParse(value).success,
+        validate(value),
+        `generated schema should match Ajv for ${JSON.stringify(value)}`,
+      );
+  });
+
+  void test("oneOf preserves untyped array-keyword applicability", async () => {
+    const schema = { oneOf: [{ items: { type: "string" } }, { type: "number" }] } as const;
+    const validate = new Ajv2020({ strict: false }).compile(schema);
+    const { generatedSchema } = await compileGeneratedSchema(schema);
+
+    for (const value of [1, "value", ["ok"], [1]])
+      assert.equal(
+        generatedSchema.safeParse(value).success,
+        validate(value),
+        `generated schema should match Ajv for ${JSON.stringify(value)}`,
+      );
+  });
+
+  void test("oneOf preserves mixed untyped applicator applicability", async () => {
+    const schema = {
+      oneOf: [
+        { items: { type: "string" }, properties: { value: { type: "string" } } },
+        { type: "number" },
+      ],
+    } as const;
+    const validate = new Ajv2020({ logger: false, strict: false }).compile(schema);
+    const { generatedSchema } = await compileGeneratedSchema(schema);
+
+    for (const value of [1, false, "value", ["ok"], [1], { value: "ok" }, { value: 1 }])
+      assert.equal(
+        generatedSchema.safeParse(value).success,
+        validate(value),
+        `generated schema should match Ajv for ${JSON.stringify(value)}`,
+      );
+  });
+
   void test("oneOf rejects values accepted by more than one branch", async () => {
     const { generatedSchema, source } = await compileGeneratedSchema({
       oneOf: [

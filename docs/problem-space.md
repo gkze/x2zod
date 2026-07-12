@@ -208,8 +208,8 @@ Implication:
 - `format` must be a policy choice, not an unconditional Zod check.
 - Known safe mappings such as `email`, `uuid`, `uri`, `date-time`, `date`, `duration`, `ipv4`, and
   `ipv6` can emit Zod helpers in an assertion mode.
-- Default balanced mode should likely preserve format as metadata unless a caller asks for assertion
-  behavior.
+- Default balanced mode should keep format validation-inert unless a caller asks for assertion
+  behavior; emitting format metadata requires the annotation IR.
 
 ### Metadata and comments
 
@@ -293,15 +293,16 @@ The balanced policy should be:
 > Emit the strongest Zod source that preserves honest `z.infer` output, and add runtime checks only
 > when they do not misrepresent the inferred type.
 
-This implies four lowering classes:
+This implies five lowering classes:
 
 1. Direct emit: the JSON Schema construct maps cleanly to a Zod constructor.
 2. Emit with checks: the base type maps cleanly and validation checks refine at runtime without
    changing static shape.
 3. Normalize/evaluate first: the construct can be supported after dereferencing, merging,
    simplifying, branch-counting, or building runtime evaluation bookkeeping.
-4. Metadata-only: the construct is an annotation and should not change parse behavior unless the
-   input plugin exposes an explicit opt-in option.
+4. Validation-inert: the construct is an annotation and should not change parse behavior unless the
+   input plugin exposes an explicit opt-in option. The current slice recognizes these annotations
+   but does not emit them until the annotation IR exists.
 5. Unsupported: the construct cannot be lowered honestly yet and must produce a diagnostic.
 
 ## Resolved V1 Direction
@@ -343,7 +344,9 @@ The design discussion after this landscape pass resolved the initial open questi
 - The implemented JSON Schema slice remains narrower than the V1 semantic target, but now includes
   exact `oneOf`, representable composition and ref sibling assertions, and bounded
   `unevaluatedProperties` lowering for direct objects, mergeable object-only `allOf` trees, and the
-  required-key-only `anyOf` / `oneOf` shape exercised by Mise. Dynamic refs, required format
+  required-key-only `anyOf` / `oneOf` shape exercised by Mise. Untyped object and array assertions
+  preserve their vacuous applicability to other JSON value domains, including through refs, mixed
+  applicator schemas, and schema-valued `unevaluatedProperties`. Dynamic refs, required format
   assertions, `patternProperties`, general evaluated-property bookkeeping, `unevaluatedItems`, and
   conditionals still require the corresponding dependency and runtime proof.
 - URI refs are supported through the selected reference strategy. Remote fetching requires explicit
@@ -356,20 +359,27 @@ The design discussion after this landscape pass resolved the initial open questi
   traversal-order suffixes.
 - Absent or `true` `additionalProperties` emits loose object behavior; `additionalProperties: false`
   emits strict object behavior.
-- `format` and `default` are metadata-only by default.
+- `format`, `default`, `deprecated`, `readOnly`, and `writeOnly` are recognized as validation-inert
+  by default and are not emitted until the annotation IR exists.
 - Unknown non-ref keywords fail unless the selected source profile marks them as inert producer
   metadata. The default profile is strict; the first named profile is `opencode`.
 - Refs emit named schema declarations and use those declarations at reference sites; plugins supply
   ordered name hints, while core owns final TypeScript identifier selection.
+- External registry resources receive the same recursive unsupported- and unknown-keyword
+  diagnostics as the root document before specialized composition lowering.
 - Exact `oneOf` uses ordinary unions for statically disjoint branches and Zod's native exclusive
-  union otherwise. `anyOf`, `allOf`, `not`, and `unevaluatedProperties` are supported only in their
-  explicitly tested slices. Shapes that require annotation bookkeeping, contain branch assertions
-  the object merger cannot preserve, require a plain ref/composition intersection across closed or
-  schema-valued object boundaries, or combine `propertyNames` with a strict boundary fail with
+  union otherwise, while preserving type-specific keyword applicability in each branch. `anyOf`,
+  `allOf`, `not`, and `unevaluatedProperties` are supported only in their explicitly tested slices.
+  Shapes that require annotation bookkeeping, contain branch assertions the object merger cannot
+  preserve, require a plain ref/composition intersection across closed or schema-valued object
+  boundaries, or combine `propertyNames` with a strict boundary fail with
   `unrepresentable_schema_combination`; `patternProperties`, conditionals, and `unevaluatedItems`
   remain V1 targets.
-- The acceptance corpus includes OpenCode, the Mise schema pinned to `v2026.7.5`, other locked
-  public configuration-schema fixtures, and targeted synthetic semantics fixtures.
+- The acceptance corpus includes OpenCode, the Mise `v2026.7.5` schema pinned to peeled commit
+  `e47826c162671248d8a1726d7f3043e9b9c00092`, other locked public configuration-schema fixtures, and
+  targeted synthetic semantics fixtures. Generated-Zod matrix samples are compared with
+  dialect-matched Ajv validators and complete declaration-only emit. `isolatedDeclarations` remains
+  a design target that requires explicit generated type annotations.
 
 ## Real-World Corpora
 
@@ -397,13 +407,15 @@ mistakes. The selected policy is source profiles:
 
 The Mise config schema pinned to `v2026.7.5` is a second real-world acceptance corpus:
 
-- Source: <https://raw.githubusercontent.com/jdx/mise/v2026.7.5/schema/mise.json>.
+- Source:
+  <https://raw.githubusercontent.com/jdx/mise/e47826c162671248d8a1726d7f3043e9b9c00092/schema/mise.json>.
 - `@x2zod/build-inputs` normalizes the JSON and locks its source URL, SHA-256 digest, and
   110,820-byte materialized size.
-- The schema exercises Draft 2020-12 refs, annotation keywords, exact `oneOf`, composition sibling
-  assertions, strict objects, and both boolean and schema-valued `unevaluatedProperties`.
-- The acceptance test compiles the complete fixture to importable Zod source, accepts a pinned Bun
-  and Node toolchain configuration, and rejects an invalid `min_version`.
+- The schema exercises Draft 2020-12 refs, validation-inert annotations, exact `oneOf`, composition
+  sibling assertions, strict objects, and both boolean and schema-valued `unevaluatedProperties`.
+- The acceptance test compiles the complete fixture to importable, declaration-emittable Zod source
+  and compares all samples with Ajv. It accepts the exact xapi tool set: actionlint 1.7.12, Bun
+  1.3.14, Node 26.5.0, prek 0.4.9, ripgrep 14.1.1, and shellcheck 0.11.0.
 - Any Mise construct outside the explicit safe composition and evaluated-property slices remains a
   diagnostic boundary rather than being silently weakened.
 

@@ -1,8 +1,14 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { readFileSync, rmSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import nodePath from "node:path";
 import { describe, test } from "node:test";
+
+import AjvDraft7 from "ajv";
+import type { Options, ValidateFunction } from "ajv";
+import AjvDraft2019 from "ajv/dist/2019.js";
+import AjvDraft2020 from "ajv/dist/2020.js";
 
 import { buildInputs } from "@x2zod/build-inputs";
 import type { Diagnostic, InputDocument } from "@x2zod/core";
@@ -16,7 +22,11 @@ import {
   nativePreviewExternals,
   runNode,
 } from "../../../test/native-source-harness";
-import { jsonSchemaInputPlugin, jsonSchemaInputPluginOptionsSchema } from "../src";
+import {
+  jsonSchemaInputPlugin,
+  jsonSchemaInputPluginOptionsSchema,
+  jsonSchemaValueSchema,
+} from "../src";
 import type { JsonSchemaInputPluginOptions, JsonSchemaInputPluginOptionsInput } from "../src";
 import { targetMatrix } from "./target-matrix";
 import type {
@@ -38,9 +48,19 @@ const generatedModuleFileName = "target.generated.ts";
 const optionsFileName = "plugin-options.json";
 const jsonSchemaNativePreviewExternals = [...nativePreviewExternals, "jsonc-parser"] as const;
 const lastArrayItemOffset = 1;
+const ajvOptions = { allErrors: true, logger: false, strict: false } satisfies Options;
+const typeScriptBinary = nodePath.resolve(packageRootDirectory, "../../node_modules/.bin/tsgo");
 
 type TargetZodParseResult = Readonly<{ success: boolean }>;
 type TargetZodSchema = Readonly<{ safeParse: (value: unknown) => TargetZodParseResult }>;
+type TargetRuntimeSample = Readonly<{ label: string; value: unknown }>;
+type RuntimeSampleParityRequest = Readonly<{
+  ajvValidate: ValidateFunction;
+  expected: boolean;
+  sample: TargetRuntimeSample;
+  target: GeneratedZodTarget;
+  zodSchema: TargetZodSchema;
+}>;
 type PrintTargetSourceRequest = Readonly<{
   bundleFile: string;
   optionsFile: string;
@@ -94,6 +114,31 @@ const printTargetSource = ({
     args: [bundleFile, schemaFile, typeName, optionsFile],
     cwd: packageRootDirectory,
   });
+
+const emitGeneratedDeclarations = (generatedFile: string, outputDirectory: string): void => {
+  const result = spawnSync(
+    typeScriptBinary,
+    [
+      "--declaration",
+      "--emitDeclarationOnly",
+      "--ignoreConfig",
+      "--module",
+      "nodenext",
+      "--moduleResolution",
+      "nodenext",
+      "--outDir",
+      outputDirectory,
+      "--skipLibCheck",
+      "--strict",
+      "--target",
+      "es2022",
+      generatedFile,
+    ],
+    { cwd: packageRootDirectory, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
+  );
+
+  assert.equal(result.status, 0, [result.stdout, result.stderr].join("\n"));
+};
 
 const targetDocument = (schemaFile: string): InputDocument => ({
   source: { kind: "file", path: schemaFile },
@@ -166,11 +211,84 @@ const resultBuildInputs = async (): Promise<readonly BuildInputProvenance[]> => 
     .toSorted(compareBuildInputProvenance);
 };
 
-const assertInvalidSamplesFail = (target: GeneratedZodTarget, schema: TargetZodSchema): void => {
-  for (const invalidSample of target.invalidSamples) {
-    const parsed = schema.safeParse(invalidSample.value);
-    if (parsed.success)
-      throw new Error(`${target.name} accepted invalid sample: ${invalidSample.label}`);
+const targetAjvValidator = (target: GeneratedZodTarget): ValidateFunction => {
+  const schema = jsonSchemaValueSchema.parse(
+    JSON.parse(readFileSync(targetSchemaFile(target), "utf8")),
+  );
+  const dialect = target.pluginOptions.dialect ?? "draft-2020-12";
+  if (dialect === "draft-7") return new AjvDraft7(ajvOptions).compile(schema);
+  if (dialect === "draft-2019-09") return new AjvDraft2019(ajvOptions).compile(schema);
+  return new AjvDraft2020(ajvOptions).compile(schema);
+};
+
+const assertRuntimeSampleParity = ({
+  ajvValidate,
+  expected,
+  sample,
+  target,
+  zodSchema,
+}: RuntimeSampleParityRequest): void => {
+  const ajvAccepted = ajvValidate(sample.value);
+  assert.equal(
+    ajvAccepted,
+    expected,
+    `${target.name} Ajv result disagreed for ${sample.label}: ${JSON.stringify(ajvValidate.errors)}`,
+  );
+  assert.equal(
+    zodSchema.safeParse(sample.value).success,
+    ajvAccepted,
+    `${target.name} generated Zod disagreed with Ajv for ${sample.label}`,
+  );
+};
+
+const assertGeneratedTarget = async (target: GeneratedZodTarget): Promise<void> => {
+  const directory = createTemporaryDirectory({
+    prefix: tempDirectoryPrefix,
+    rootDirectory: tempRootDirectory,
+  });
+  const bundleFile = nodePath.join(directory, bundledPrinterFileName);
+  const generatedFile = nodePath.join(directory, generatedModuleFileName);
+  const declarationDirectory = nodePath.join(directory, "declarations");
+  const optionsFile = nodePath.join(directory, optionsFileName);
+
+  try {
+    await writeFile(optionsFile, JSON.stringify(target.pluginOptions));
+    buildPrinterBundle(bundleFile);
+    await writeFile(
+      generatedFile,
+      printTargetSource({
+        bundleFile,
+        optionsFile,
+        schemaFile: targetSchemaFile(target),
+        typeName: target.typeName,
+      }),
+    );
+    emitGeneratedDeclarations(generatedFile, declarationDirectory);
+
+    const zodSchema = await importGeneratedExport(
+      generatedFile,
+      target.exportName,
+      isTargetZodSchema,
+    );
+    const ajvValidate = targetAjvValidator(target);
+    for (const validSample of target.validSamples)
+      assertRuntimeSampleParity({
+        ajvValidate,
+        expected: true,
+        sample: validSample,
+        target,
+        zodSchema,
+      });
+    for (const invalidSample of target.invalidSamples)
+      assertRuntimeSampleParity({
+        ajvValidate,
+        expected: false,
+        sample: invalidSample,
+        target,
+        zodSchema,
+      });
+  } finally {
+    rmSync(directory, { force: true, recursive: true });
   }
 };
 
@@ -183,39 +301,9 @@ void describe("JSON Schema public target E2E matrix", () => {
     isGeneratedZodTarget(candidate),
   ))
     void test(
-      [target.name, "emits importable Zod source for a valid fixture"].join(" "),
+      [target.name, "emits Zod declarations with Ajv runtime parity"].join(" "),
       async () => {
-        const directory = createTemporaryDirectory({
-          prefix: tempDirectoryPrefix,
-          rootDirectory: tempRootDirectory,
-        });
-        const bundleFile = nodePath.join(directory, bundledPrinterFileName);
-        const generatedFile = nodePath.join(directory, generatedModuleFileName);
-        const optionsFile = nodePath.join(directory, optionsFileName);
-
-        try {
-          await writeFile(optionsFile, JSON.stringify(target.pluginOptions));
-          buildPrinterBundle(bundleFile);
-          await writeFile(
-            generatedFile,
-            printTargetSource({
-              bundleFile,
-              optionsFile,
-              schemaFile: targetSchemaFile(target),
-              typeName: target.typeName,
-            }),
-          );
-
-          const schema = await importGeneratedExport(
-            generatedFile,
-            target.exportName,
-            isTargetZodSchema,
-          );
-          assert.equal(schema.safeParse(target.validSample.value).success, true);
-          assertInvalidSamplesFail(target, schema);
-        } finally {
-          rmSync(directory, { force: true, recursive: true });
-        }
+        await assertGeneratedTarget(target);
       },
     );
 

@@ -20,7 +20,7 @@
       "sha256": "2be1348a0f1ec479fef62fea22c4b4eb0c9aebd1926c784a58db6a1e0095f20e",
       "sizeBytes": 4618
     },
-    "https://raw.githubusercontent.com/jdx/mise/v2026.7.5/schema/mise.json": {
+    "https://raw.githubusercontent.com/jdx/mise/e47826c162671248d8a1726d7f3043e9b9c00092/schema/mise.json": {
       "sha256": "587f3a906c4d6c3a860cf0c50ac87046487395cb3e0ff1ba13ffcc7e0e083102",
       "sizeBytes": 110820
     }

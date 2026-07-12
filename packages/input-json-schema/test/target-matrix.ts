@@ -31,7 +31,7 @@ export type GeneratedZodTarget = TargetMatrixBase &
     pluginOptions: JsonSchemaInputPluginOptionsInput;
     roundTripLevel: "generated-zod";
     typeName: string;
-    validSample: TargetRuntimeSample;
+    validSamples: readonly TargetRuntimeSample[];
   }>;
 
 export type BlockedTarget = TargetMatrixBase &
@@ -90,10 +90,11 @@ const cursorEnvironmentSchema = fixtureSource(
   "cursor-environment.schema.json",
   "https://cursor.com/schemas/environment.schema.json",
 );
+const miseSchemaCommit = "e47826c162671248d8a1726d7f3043e9b9c00092";
 const miseConfigSchema = fixtureSource(
   "mise-config-schema",
   "mise-config.schema.json",
-  "https://raw.githubusercontent.com/jdx/mise/v2026.7.5/schema/mise.json",
+  `https://raw.githubusercontent.com/jdx/mise/${miseSchemaCommit}/schema/mise.json`,
 );
 
 const conductorSettingsSample = {
@@ -178,6 +179,18 @@ const miseConfigSample = {
   tools: { bun: "1.3.14", node: miseToolObjectSample },
 } as const;
 
+const xapiMiseConfigSample = {
+  min_version: "2026.7.5",
+  tools: {
+    actionlint: "1.7.12",
+    bun: "1.3.14",
+    node: "26.5.0",
+    prek: "0.4.9",
+    ripgrep: "14.1.1",
+    shellcheck: "0.11.0",
+  },
+} as const;
+
 const targetMatrixEntries = [
   {
     name: "OpenCode config",
@@ -198,7 +211,7 @@ const targetMatrixEntries = [
     pluginOptions: { validator: "ajv" },
     roundTripLevel: "generated-zod",
     typeName: "ConductorSettings",
-    validSample: { label: "minimal real user settings", value: conductorSettingsSample },
+    validSamples: [{ label: "minimal real user settings", value: conductorSettingsSample }],
   },
   {
     ...conductorRepoSettingsSchema,
@@ -213,7 +226,7 @@ const targetMatrixEntries = [
     pluginOptions: { validator: "none" },
     roundTripLevel: "generated-zod",
     typeName: "ConductorRepoSettings",
-    validSample: { label: "minimal real repo settings", value: conductorRepoSettingsSample },
+    validSamples: [{ label: "minimal real repo settings", value: conductorRepoSettingsSample }],
   },
   {
     ...codexConfigSchema,
@@ -232,7 +245,7 @@ const targetMatrixEntries = [
     pluginOptions: { dialect: "draft-7", validator: "none" },
     roundTripLevel: "generated-zod",
     typeName: "CodexConfig",
-    validSample: { label: "minimal real Codex config", value: codexConfigSample },
+    validSamples: [{ label: "minimal real Codex config", value: codexConfigSample }],
   },
   {
     ...claudeCodeSettingsSchema,
@@ -279,10 +292,10 @@ const targetMatrixEntries = [
     pluginOptions: { dialect: "draft-2020-12", validator: "ajv" },
     roundTripLevel: "generated-zod",
     typeName: "MiseConfig",
-    validSample: {
-      label: "pinned toolchain with global and task tool options",
-      value: miseConfigSample,
-    },
+    validSamples: [
+      { label: "pinned toolchain with global and task tool options", value: miseConfigSample },
+      { label: "xapi locked host toolchain", value: xapiMiseConfigSample },
+    ],
   },
   {
     ...cursorEnvironmentSchema,
@@ -301,7 +314,7 @@ const targetMatrixEntries = [
     pluginOptions: { dialect: "draft-2019-09", validator: "none" },
     roundTripLevel: "generated-zod",
     typeName: "CursorEnvironment",
-    validSample: { label: "minimal real Cursor environment", value: cursorEnvironmentSample },
+    validSamples: [{ label: "minimal real Cursor environment", value: cursorEnvironmentSample }],
   },
   {
     name: "Visual Studio Code settings",

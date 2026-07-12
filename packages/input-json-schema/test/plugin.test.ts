@@ -311,29 +311,6 @@ void describe("jsonSchemaInputPlugin precise lower", () => {
     );
   });
 
-  void test("lowers required-only object schemas into required shape keys", async () => {
-    const prepared = expectOk(
-      await jsonSchemaInputPlugin.prepare(
-        fileDocument(JSON.stringify({ required: ["metadata"] })),
-        options({ validator: "none" }),
-      ),
-    );
-
-    const lowered = parseEmissionModule(
-      expectOk(await jsonSchemaInputPlugin.lower(prepared, options({ validator: "none" }))),
-    );
-    const root = rootExpression(lowered);
-    const metadata = objectPropertyExpression(root, "metadata");
-
-    assert.deepEqual(
-      root.calls.map((call) => String(call.method)),
-      ["required", "passthrough"],
-    );
-    assert.deepEqual(stringLiteralArrayArgumentValues(root, 0), ["metadata"]);
-    assert.equal(metadata.kind, "factory");
-    assert.equal(metadata.factory, "unknown");
-  });
-
   void test("allows redundant integer type siblings for integer const and enum literals", async () => {
     const cases = [
       { const: 1, type: "integer" },

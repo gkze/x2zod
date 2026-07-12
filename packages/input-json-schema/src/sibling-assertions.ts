@@ -36,6 +36,10 @@ type SiblingAssertionRequest = Readonly<{
   schema: JsonObject;
 }>;
 
+const visitingReference = Symbol("visitingReference");
+
+type ReferenceScanResult = boolean | typeof visitingReference;
+
 const integerTypeName = "integer";
 const numberTypeName = "number";
 const knownTypeNames: ReadonlySet<string> = new Set([
@@ -245,10 +249,10 @@ export const hasUnsupportedUnevaluatedPropertiesSibling = (
 };
 
 class UnsafeObjectBoundaryScanner {
-  private readonly arrayOnlyVisiting = new Set<string>();
+  private readonly arrayOnlyByAddress = new Map<string, ReferenceScanResult>();
+  private readonly boundaryByAddress = new Map<string, ReferenceScanResult>();
   private readonly context: ReferenceResolutionContext;
-  private readonly objectOnlyVisiting = new Set<string>();
-  private readonly visiting = new Set<string>();
+  private readonly objectOnlyByAddress = new Map<string, ReferenceScanResult>();
 
   public constructor(context: ReferenceResolutionContext) {
     this.context = context;
@@ -347,39 +351,42 @@ class UnsafeObjectBoundaryScanner {
   }
 
   private referenceHasBoundary(schema: JsonObject): boolean {
-    const ref = schema[jsonSchemaKeywords.ref];
-    if (typeof ref !== "string") return false;
-
-    const target = this.context.resolveReference(ref);
-    if (target === undefined || this.visiting.has(target.address)) return false;
-    this.visiting.add(target.address);
-    const unsafe = this.scan(target.schema);
-    this.visiting.delete(target.address);
-    return unsafe;
+    return this.referenceResult(schema, this.boundaryByAddress, (targetSchema) =>
+      this.scan(targetSchema),
+    );
   }
 
   private referenceProvesObjectOnly(schema: JsonObject): boolean {
-    const ref = schema[jsonSchemaKeywords.ref];
-    if (typeof ref !== "string") return false;
-
-    const target = this.context.resolveReference(ref);
-    if (target === undefined || this.objectOnlyVisiting.has(target.address)) return false;
-    this.objectOnlyVisiting.add(target.address);
-    const proves = this.provesObjectOnly(target.schema);
-    this.objectOnlyVisiting.delete(target.address);
-    return proves;
+    return this.referenceResult(schema, this.objectOnlyByAddress, (targetSchema) =>
+      this.provesObjectOnly(targetSchema),
+    );
   }
 
   private referenceProvesArrayOnly(schema: JsonObject): boolean {
+    return this.referenceResult(schema, this.arrayOnlyByAddress, (targetSchema) =>
+      this.provesArrayOnly(targetSchema),
+    );
+  }
+
+  private referenceResult(
+    schema: JsonObject,
+    results: Map<string, ReferenceScanResult>,
+    scan: (targetSchema: JsonSchemaValue) => boolean,
+  ): boolean {
     const ref = schema[jsonSchemaKeywords.ref];
     if (typeof ref !== "string") return false;
 
     const target = this.context.resolveReference(ref);
-    if (target === undefined || this.arrayOnlyVisiting.has(target.address)) return false;
-    this.arrayOnlyVisiting.add(target.address);
-    const proves = this.provesArrayOnly(target.schema);
-    this.arrayOnlyVisiting.delete(target.address);
-    return proves;
+    if (target === undefined) return false;
+
+    const previousResult = results.get(target.address);
+    if (previousResult !== undefined)
+      return previousResult === visitingReference ? false : previousResult;
+
+    results.set(target.address, visitingReference);
+    const result = scan(target.schema);
+    results.set(target.address, result);
+    return result;
   }
 
   private schemaArrayHasBoundary(value: JsonValue | undefined): boolean {

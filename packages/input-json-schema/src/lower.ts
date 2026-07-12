@@ -9,7 +9,7 @@ import type {
   ZodExpression,
 } from "@x2zod/core";
 
-import { hasJsonSchemaArrayKeywords, lowerJsonSchemaArray } from "./array";
+import { lowerJsonSchemaArray } from "./array";
 import { lowerJsonSchemaComposition } from "./composition-lower";
 import {
   applyJsonSchemaNumberBounds,
@@ -25,11 +25,12 @@ import type { JsonObject, JsonSchemaValue, JsonValue, ParsedJsonSchemaDocument }
 import { collectKeywordDiagnostics } from "./keyword-diagnostics";
 import { jsonSchemaKeywords } from "./metadata";
 import { jsonSchemaDeclarationNameHints } from "./name-hints";
-import { hasJsonSchemaObjectKeywords, lowerJsonSchemaObject } from "./object";
+import { lowerJsonSchemaObject } from "./object";
 import type { JsonSchemaInputPluginOptions } from "./options";
 import { emptyPointer, jsonSchemaPointerWithSegment } from "./pointer";
 import { jsonSchemaAddress, resolveJsonSchemaReference } from "./reference";
 import type { JsonSchemaAddress } from "./reference";
+import { jsonSchemaUntypedAssertionKind } from "./schema-applicability";
 import { hasUnsupportedSiblingAssertions } from "./sibling-assertions";
 import { lowerJsonSchemaSiblingIntersection } from "./sibling-intersection";
 import { oneOrUnion } from "./zod-expressions";
@@ -295,6 +296,27 @@ const lowerUntypedConstraintSchema = (
   return zodPlan.unknown();
 };
 
+const anyJsonObject = (): ZodExpression => zodPlan.passthrough(zodPlan.object({}));
+
+const lowerUntypedApplicatorSchema = (
+  schema: JsonObject,
+  pointer: JsonPointer,
+  context: LoweringContext,
+): ZodExpression | undefined => {
+  const kind = jsonSchemaUntypedAssertionKind(schema);
+  if (kind === undefined) return undefined;
+
+  const expressions: ZodExpression[] = [];
+  if (kind === "array" || kind === "mixed")
+    expressions.push(lowerArraySchema(schema, pointer, context));
+  else expressions.push(zodPlan.array(zodPlan.unknown()));
+  if (kind === "object" || kind === "mixed")
+    expressions.push(lowerObjectSchema(schema, pointer, context));
+  else expressions.push(anyJsonObject());
+  expressions.push(zodPlan.boolean(), zodPlan.null(), zodPlan.number(), zodPlan.string());
+  return oneOrUnion(expressions);
+};
+
 const lowerReference = (
   ref: string,
   pointer: JsonPointer,
@@ -372,8 +394,15 @@ const lowerSchema = (
   const compositionExpression = lowerJsonSchemaComposition(schema, pointer, {
     ...diagnosticSink(context),
     lowerSchema: (childPointer, childSchema) => lowerSchema(childPointer, childSchema, context),
-    resolveReference: (reference) =>
-      resolveJsonSchemaReference(reference, context.document.schema, context.options),
+    resolveReference: (reference) => {
+      const target = resolveJsonSchemaReference(
+        reference,
+        context.document.schema,
+        context.options,
+      );
+      if (target !== undefined) collectSchemaKeywordDiagnostics(target, context);
+      return target;
+    },
     dialect: context.options.dialect,
     sourceProfile: context.options.sourceProfile,
   });
@@ -401,10 +430,10 @@ const lowerSchema = (
     });
     return zodPlan.unknown();
   }
-  if (hasJsonSchemaObjectKeywords(schema)) return lowerObjectSchema(schema, pointer, context);
-  if (hasJsonSchemaArrayKeywords(schema)) return lowerArraySchema(schema, pointer, context);
   const untypedConstraint = lowerUntypedConstraintSchema(schema, pointer, context);
   if (untypedConstraint !== undefined) return untypedConstraint;
+  const untypedApplicator = lowerUntypedApplicatorSchema(schema, pointer, context);
+  if (untypedApplicator !== undefined) return untypedApplicator;
 
   return zodPlan.unknown();
 };

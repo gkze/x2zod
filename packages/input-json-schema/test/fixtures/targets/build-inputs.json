@@ -30,7 +30,7 @@
     {
       "id": "mise-config-schema",
       "path": "mise-config.schema.json",
-      "url": "https://raw.githubusercontent.com/jdx/mise/v2026.7.5/schema/mise.json"
+      "url": "https://raw.githubusercontent.com/jdx/mise/e47826c162671248d8a1726d7f3043e9b9c00092/schema/mise.json"
     }
   ]
 }
