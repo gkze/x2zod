@@ -1,6 +1,6 @@
 {
   "name": "@x2zod/build-inputs",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Pinned external build input materialization for x2zod tests and fixtures.",
   "license": "MIT",
   "repository": {

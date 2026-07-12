@@ -1,5 +1,21 @@
 # @x2zod/input-json-schema
 
+## 0.2.0
+
+### Minor Changes
+
+- 21b996e: Add public Zod exclusive-union emission support in core.
+
+  Extend JSON Schema lowering with exact `oneOf`, representable sibling assertions, bounded
+  `unevaluatedProperties` object composition, validation-inert recognition of `deprecated`,
+  `readOnly`, and `writeOnly`, and a pinned Mise `v2026.7.5` acceptance corpus.
+
+### Patch Changes
+
+- Updated dependencies [21b996e]
+- Updated dependencies [ceef406]
+  - @x2zod/core@0.2.0
+
 ## 0.1.3
 
 ### Patch Changes

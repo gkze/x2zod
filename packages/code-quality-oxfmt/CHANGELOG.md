@@ -1,5 +1,12 @@
 # @x2zod/code-quality-oxfmt
 
+## 0.1.4
+
+### Patch Changes
+
+- Updated dependencies [ceef406]
+  - @x2zod/config@0.1.4
+
 ## 0.1.3
 
 ### Patch Changes

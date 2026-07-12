@@ -1,5 +1,14 @@
 # @x2zod/config
 
+## 0.1.4
+
+### Patch Changes
+
+- ceef406: Harden public readonly contracts, dependency declarations, and shared TypeScript compiler policy.
+- Updated dependencies [21b996e]
+- Updated dependencies [ceef406]
+  - @x2zod/core@0.2.0
+
 ## 0.1.3
 
 ### Patch Changes
