@@ -1,5 +1,21 @@
 # @x2zod/config
 
+## 0.2.0
+
+### Minor Changes
+
+- 90f1136: Add ordered, schema-language-agnostic emission transforms to library compilation and reusable
+  targets.
+
+  Introduce a generic property-mapping transform that emits bidirectional Zod codecs, decodes declared
+  snake_case keys as camelCase, rejects compile-time and runtime key collisions, and encodes values
+  back to their original wire keys.
+
+### Patch Changes
+
+- Updated dependencies [90f1136]
+  - @x2zod/core@0.3.0
+
 ## 0.1.4
 
 ### Patch Changes

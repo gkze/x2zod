@@ -1,6 +1,6 @@
 {
   "name": "@x2zod/cli",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Command-line interface for x2zod.",
   "license": "MIT",
   "repository": {

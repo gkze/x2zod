@@ -1,5 +1,12 @@
 # @x2zod/input-json-schema
 
+## 0.2.1
+
+### Patch Changes
+
+- Updated dependencies [90f1136]
+  - @x2zod/core@0.3.0
+
 ## 0.2.0
 
 ### Minor Changes
