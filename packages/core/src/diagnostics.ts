@@ -12,7 +12,9 @@ export type CoreDiagnosticCode =
   | "cyclic_reference"
   | "dialect_conflict"
   | "emitter_failure"
+  | "emission_transform_key_collision"
   | "invalid_diagnostic_code"
+  | "invalid_emission_transforms"
   | "invalid_input_document"
   | "invalid_json_pointer"
   | "invalid_output_options"
@@ -24,6 +26,7 @@ export type CoreDiagnosticCode =
   | "unrepresentable_schema_combination"
   | "unresolved_reference"
   | "unsupported_dialect"
+  | "unsupported_emission_transform"
   | "unsupported_keyword"
   | "unsupported_vocabulary"
   | "unknown_keyword";
@@ -66,7 +69,9 @@ const coreDiagnosticCodeSchemaValue: z.ZodType<CoreDiagnosticCode, CoreDiagnosti
   "cyclic_reference",
   "dialect_conflict",
   "emitter_failure",
+  "emission_transform_key_collision",
   "invalid_diagnostic_code",
+  "invalid_emission_transforms",
   "invalid_input_document",
   "invalid_json_pointer",
   "invalid_output_options",
@@ -78,6 +83,7 @@ const coreDiagnosticCodeSchemaValue: z.ZodType<CoreDiagnosticCode, CoreDiagnosti
   "unrepresentable_schema_combination",
   "unresolved_reference",
   "unsupported_dialect",
+  "unsupported_emission_transform",
   "unsupported_keyword",
   "unsupported_vocabulary",
   "unknown_keyword",

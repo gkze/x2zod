@@ -67,6 +67,36 @@ export default defineConfig({
 });
 ```
 
+Targets can apply ordered, core-owned emission transforms after input lowering and before source
+construction:
+
+```ts
+targets: {
+  user: {
+    kind: "json-schema",
+    input: { path: "schema.json" },
+    transforms: [
+      {
+        kind: "map-properties",
+        options: {
+          keys: { kind: "case", decodedCase: "camelCase" },
+        },
+      },
+    ],
+    output: { path: "src/generated/user.ts", typeName: "User" },
+  },
+},
+```
+
+`map-properties` is the traversal operation and `case` is its key projection. It emits bidirectional
+Zod codecs: `z.input` keeps original keys such as `user_id`, while `z.output` and `z.infer` expose
+`userId`; `z.encode` maps the decoded value back to its original wire keys. Only declared object
+property names are projected. Dynamic keys remain unchanged, and collisions or compositions that
+cannot remain bidirectional fail with diagnostics.
+
+Emission transforms change schema value semantics. `output.codeQuality` only processes the printed
+source.
+
 Generated source can optionally run through code quality plugins. Register the plugins once, then
 select the ordered tools per output:
 

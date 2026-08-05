@@ -41,23 +41,22 @@ import {
 import { z } from "zod/v4";
 
 import { createDiagnostic, formatZodError } from "./diagnostics";
+import { resolveZodEmissionTransforms } from "./emission-transform-config";
+import type { ZodEmissionTransformInput } from "./emission-transform-config";
+import { applyZodEmissionTransforms } from "./emission-transforms";
 import { err, ok } from "./result";
 import type { Result } from "./result";
+import { createRemapPropertiesHelper, createSourceCodecExpression } from "./source-codecs";
 import { resolveZodDeclarationNames } from "./source-declarations";
 import type { NamedZodDeclaration } from "./source-declarations";
+import { sourceExpressionUsesPropertyMap } from "./source-model";
+import type { SourceArgument, SourceExpression, SourceMethodCall } from "./source-model";
 import {
   isTypeScriptIdentifier,
   typeScriptIdentifierSchema as typeScriptIdentifierSchemaValue,
 } from "./typescript-identifiers";
 import type { TypeScriptIdentifier as TypeScriptIdentifierValue } from "./typescript-identifiers";
-import type {
-  ZodArgument,
-  ZodEmissionModule,
-  ZodExpression,
-  ZodLiteralValue,
-  ZodMethodCall,
-  ZodSymbol,
-} from "./zod-plan";
+import type { ZodEmissionModule, ZodLiteralValue, ZodSymbol } from "./zod-plan";
 import { zodMethodMetadataFor } from "./zod-plan-metadata";
 import { validateZodEmissionModule } from "./zod-plan-validation";
 
@@ -178,7 +177,7 @@ const createLiteralExpression = (value: ZodLiteralValue): Expression => {
 };
 
 const createArgumentExpression = (
-  argument: ZodArgument,
+  argument: SourceArgument,
   schemaConstNames: ReadonlyMap<ZodSymbol, string>,
 ): Expression => {
   switch (argument.kind) {
@@ -211,14 +210,14 @@ const createArgumentExpression = (
   }
 };
 
-const createRegexArgumentExpression = (argument: ZodArgument): Expression | undefined => {
+const createRegexArgumentExpression = (argument: SourceArgument): Expression | undefined => {
   if (argument.kind !== "literal" || typeof argument.value !== "string") return undefined;
   return createNewExpression(createIdentifier("RegExp"), undefined, [
     createStringLiteral(argument.value, noTokenFlags),
   ]);
 };
 
-const createRequiredKeysArgumentExpression = (argument: ZodArgument): Expression | undefined => {
+const createRequiredKeysArgumentExpression = (argument: SourceArgument): Expression | undefined => {
   if (argument.kind !== "array") return undefined;
 
   const properties: PropertyAssignment[] = [];
@@ -236,8 +235,8 @@ const createRequiredKeysArgumentExpression = (argument: ZodArgument): Expression
 };
 
 const createMethodArgumentExpression = (
-  argument: ZodArgument,
-  call: ZodMethodCall,
+  argument: SourceArgument,
+  call: SourceMethodCall,
   schemaConstNames: ReadonlyMap<ZodSymbol, string>,
 ): Expression => {
   const printArgument = zodMethodMetadataFor(call.method)?.printArgument;
@@ -257,7 +256,7 @@ const createMethodArgumentExpression = (
 
 const createCalledExpression = (
   expression: Expression,
-  call: ZodMethodCall,
+  call: SourceMethodCall,
   schemaConstNames: ReadonlyMap<ZodSymbol, string>,
 ): Expression =>
   createCallExpression(
@@ -274,11 +273,29 @@ const createCalledExpression = (
   );
 
 const createBaseZodExpression = (
-  expression: ZodExpression,
+  expression: SourceExpression,
   schemaConstNames: ReadonlyMap<ZodSymbol, string>,
 ): Expression => {
-  if (expression.kind === "reference")
-    return createIdentifier(schemaConstNames.get(expression.symbol) ?? expression.symbol);
+  if (expression.kind === "reference") {
+    const reference = createIdentifier(
+      schemaConstNames.get(expression.symbol) ?? expression.symbol,
+    );
+    return expression.outputView
+      ? createPropertyAccessExpression(
+          reference,
+          undefined,
+          createIdentifier("out"),
+          NodeFlags.None,
+        )
+      : reference;
+  }
+
+  if (expression.kind === "codec")
+    return createSourceCodecExpression({
+      createExpression: (nestedExpression) =>
+        createZodExpression(nestedExpression, schemaConstNames),
+      expression,
+    });
 
   return createCallExpression(
     createPropertyAccessExpression(
@@ -295,7 +312,7 @@ const createBaseZodExpression = (
 };
 
 const createZodExpression = (
-  expression: ZodExpression,
+  expression: SourceExpression,
   schemaConstNames: ReadonlyMap<ZodSymbol, string>,
 ): Expression => {
   let called = createBaseZodExpression(expression, schemaConstNames);
@@ -306,6 +323,7 @@ const createZodExpression = (
 
 const createSchemaStatementWithNames = (
   namedDeclaration: NamedZodDeclaration,
+  expression: SourceExpression,
   schemaConstNames: ReadonlyMap<ZodSymbol, string>,
 ): VariableStatement =>
   createVariableStatement(
@@ -316,7 +334,7 @@ const createSchemaStatementWithNames = (
           createIdentifier(namedDeclaration.schemaConstName),
           undefined,
           undefined,
-          createZodExpression(namedDeclaration.declaration.expression, schemaConstNames),
+          createZodExpression(expression, schemaConstNames),
         ),
       ],
       NodeFlags.Const,
@@ -348,9 +366,16 @@ const createSourceFile = (statements: readonly Statement[]): SourceFile =>
 export const buildZodSourceFile = (
   module: ZodEmissionModule,
   options: ZodSourceOutputOptions,
+  transforms: readonly ZodEmissionTransformInput[] = [],
 ): Result<ZodSourceFile> => {
   const validModule = validateZodEmissionModule(module);
   if (!validModule.ok) return validModule;
+
+  const resolvedTransforms = resolveZodEmissionTransforms(transforms);
+  if (!resolvedTransforms.ok) return resolvedTransforms;
+
+  const sourceModule = applyZodEmissionTransforms(validModule.value, resolvedTransforms.value);
+  if (!sourceModule.ok) return sourceModule;
 
   const output = resolveZodSourceOutputOptions(options);
   if (!output.ok) return output;
@@ -358,11 +383,29 @@ export const buildZodSourceFile = (
   const namedModule = resolveZodDeclarationNames(validModule.value, output.value);
   if (!namedModule.ok) return namedModule;
 
+  const sourceDeclarations = new Map(
+    sourceModule.value.declarations.map((declaration) => [declaration.symbol, declaration]),
+  );
+  const expressionFor = (symbol: ZodSymbol): SourceExpression => {
+    const declaration = sourceDeclarations.get(symbol);
+    if (declaration === undefined)
+      throw new Error(`Missing transformed source declaration for symbol: ${symbol}`);
+    return declaration.expression;
+  };
+  const needsRemapHelper = sourceModule.value.declarations.some((declaration) =>
+    sourceExpressionUsesPropertyMap(declaration.expression),
+  );
+
   return ok({
     sourceFile: createSourceFile([
       createZodImport(output.value.zodImportPath),
+      ...(needsRemapHelper ? [createRemapPropertiesHelper()] : []),
       ...namedModule.value.declarations.map((declaration) =>
-        createSchemaStatementWithNames(declaration, namedModule.value.schemaConstNames),
+        createSchemaStatementWithNames(
+          declaration,
+          expressionFor(declaration.declaration.symbol),
+          namedModule.value.schemaConstNames,
+        ),
       ),
       createRootTypeStatement(output.value.typeName, namedModule.value.rootSchemaConstName),
     ]),

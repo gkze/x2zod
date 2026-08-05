@@ -28,6 +28,21 @@ export type {
   SourceSpan,
   SourceSpanInput,
 } from "./diagnostics";
+export {
+  casePropertyKeyTransformSchema,
+  mapPropertiesTransformSchema,
+  propertyKeyCaseSchema,
+  resolveZodEmissionTransforms,
+  zodEmissionTransformSchema,
+  zodEmissionTransformsSchema,
+} from "./emission-transform-config";
+export type {
+  ZodCasePropertyKeyTransform,
+  ZodEmissionTransform,
+  ZodEmissionTransformInput,
+  ZodMapPropertiesTransform,
+  ZodPropertyKeyCase,
+} from "./emission-transform-config";
 export { inputDocumentSchema, inputDocumentSourceSchema, parseInputDocument } from "./input";
 export type {
   FileInputDocumentSource,
