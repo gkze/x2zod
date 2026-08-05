@@ -6,7 +6,8 @@
 layer, not a JSON Schema-specific validator. It calls an input plugin that owns its input kind end
 to end: declaring whether and how source validation occurs, resolving that input language's
 references, and lowering the input language's constructs into a Zod-oriented emission model. The
-core then renders the lowered model into a finalized raw TypeScript compiler `SourceFile`.
+core then validates the lowered model, applies ordered schema-language-agnostic emission transforms,
+and renders it into a finalized raw TypeScript compiler `SourceFile`.
 
 Generated modules import only Zod. When JSON Schema semantics cannot be represented directly by Zod
 constructors, `x2zod` emits deduplicated helper code into the generated module.
@@ -17,13 +18,15 @@ The v1 implementation should use separate packages so the compiler architecture 
 start:
 
 - `@x2zod/core`: shared result and diagnostic types, input plugin contracts, an aligned `ts`
-  namespace re-export, source-file construction and printing internals, and the Zod emission model.
+  namespace re-export, source-file construction and printing internals, the Zod emission model, and
+  core-owned emission transforms.
 - `@x2zod/input-json-schema`: JSON Schema input plugin plus its typed option schema. This package
   owns JSON Schema dialect selection, schema-document validation policy, ref resolution, and JSON
   Schema-to-Zod lowering. Validator and resolver bridge code is internal to this package.
 - `@x2zod/config`: project configuration contracts, `defineConfig`, config file loading, plugin
-  registry validation, target option resolution, and target output resolution. This package lets
-  library callers share the same config surface as the CLI without importing the CLI binary module.
+  registry validation, target option and transform resolution, and target output resolution. This
+  package lets library callers share the same config surface as the CLI without importing the CLI
+  binary module.
 - `@x2zod/code-quality-oxfmt`: optional Oxfmt code-quality plugin, including its typed config
   re-exports and subprocess adapter.
 - `@x2zod/code-quality-oxlint`: optional Oxlint code-quality plugin, including its typed config
@@ -212,6 +215,11 @@ Targets select input plugins through `target.kind`. Outputs select code-quality 
 `output.codeQuality.kind`. Both selections are type-level constrained by the matching configured
 registry.
 
+`target.transforms` is an ordered, core-owned pipeline and a sibling of `input`, `options`, and
+`output`. It is not part of an input plugin's options and is distinct from `output.codeQuality`:
+emission transforms change schema value semantics, while code-quality plugins process printed
+source.
+
 Per-kind help and shell completion use the same conditional parser. Shell completion scripts
 delegate back into the JavaScript runtime through Optique's completion command, so dynamic plugin
 options are completed from the user's current config rather than from static shell script logic.
@@ -312,6 +320,32 @@ union and does not require generated branch-counting code. If a plugin needs raw
 helper body, that raw source belongs in a typed helper request and must declare its dependencies and
 inferred structural boundary.
 
+## Emission Transform Pipeline
+
+Core applies emission transforms at one explicit compiler stage:
+
+```text
+prepare -> lower -> validate emission module -> apply ordered transforms -> emit SourceFile
+```
+
+`ZodEmissionTransformInput` is a serializable discriminated union so the same descriptors work in
+library requests and reusable targets. The first transform is `map-properties`, a generic recursive
+property traversal and lifting operation. Its first key projection is `case` with
+`decodedCase: "camelCase"`; future property transforms can extend the same object without becoming
+JSON Schema plugin options.
+
+Property casing emits bidirectional Zod codecs. For each finite object shape, core derives an exact
+forward and reverse key map instead of pretending camel casing has a global inverse. Declared-key
+collisions fail compilation. A collision with a dynamic passthrough or catchall key becomes a Zod
+codec issue at runtime. Missing optional properties stay missing, and dynamic record, passthrough,
+and catchall keys remain unchanged.
+
+Transforms recurse through supported container and reference shapes. If a composition cannot remain
+bidirectional, compilation fails with an unsupported-transform diagnostic rather than emitting a
+one-way or ambiguous schema. A third-party transform registry is deferred until a concrete external
+transform requires it; the initial discriminated union keeps the public surface small while leaving
+room for more core-owned transform kinds.
+
 ## Helper ABI
 
 Helpers use a hybrid model. Core provides a built-in helper catalog for v1 JSON Schema semantics,
@@ -375,6 +409,7 @@ export type CompileToZodSourceRequest<TPreparedInput, TPluginOptions> = {
   readonly plugin: InputPlugin<TPreparedInput, TPluginOptions>;
   readonly pluginOptions: TPluginOptions;
   readonly output: ZodSourceOutputOptions;
+  readonly transforms?: readonly ZodEmissionTransformInput[];
 };
 
 export type ZodSourceOutputOptions = {
@@ -410,6 +445,9 @@ await compileToZodSource({
   plugin: jsonSchemaInputPlugin,
   pluginOptions: jsonSchemaOptions,
   output: { typeName: "UserConfig", declarationExportMode: "root" },
+  transforms: [
+    { kind: "map-properties", options: { keys: { kind: "case", decodedCase: "camelCase" } } },
+  ],
 });
 ```
 
@@ -585,6 +623,8 @@ Generated modules should:
 - keep named ref declarations internal by default;
 - export all named declarations only when `declarationExportMode` is `"all"`;
 - emit module-level deduplicated helpers for advanced runtime semantics;
+- expose encoded wire properties through `z.input` and decoded application properties through
+  `z.output` and `z.infer` when an emission transform produces a codec-backed schema;
 - emit JSON Schema metadata only when it is represented in the annotation IR; the current slice
   recognizes validation-inert annotations but does not emit them;
 - format output through the TypeScript printer and Oxfmt in CLI/repo workflows.
@@ -705,7 +745,9 @@ Diagnostic classes should include:
 - unsupported keyword;
 - ambiguous schema;
 - unrepresentable schema combination;
-- emitter failure.
+- emitter failure;
+- invalid or unsupported emission transform;
+- emission-transform property-key collision.
 
 ## Documentation
 
@@ -762,6 +804,15 @@ Emitter tests:
 - configurable Zod import path;
 - Oxfmt-compatible output.
 
+Emission transform tests:
+
+- descriptor validation and ordered target resolution;
+- recursive declared-property mapping through nested objects, arrays, and references;
+- compile-time declared-key collisions and runtime extra-key collisions;
+- absent and explicitly undefined optional properties;
+- bidirectional decode/encode round trips with dynamic keys left unchanged;
+- declaration emission proving encoded `z.input` and decoded `z.output` / `z.infer` types.
+
 Runtime smoke tests:
 
 - write generated source to temp modules;
@@ -797,6 +848,8 @@ Acceptance corpus:
 5. Implement direct Zod expression planning for primitives, objects, enums, arrays, tuples,
    metadata, and refs.
 6. Add generated helper registry and advanced semantic support.
-7. Build the CLI compile command and formatter/write path.
-8. Add golden, runtime, adapter, and acceptance tests.
-9. Add `CONTEXT.md` and an ADR once the core contract is concrete enough to avoid documenting churn.
+7. Add the ordered emission-transform pipeline and its first generic property-mapping transform.
+8. Build the CLI compile command and formatter/write path.
+9. Add golden, runtime, adapter, and acceptance tests.
+10. Add `CONTEXT.md` and an ADR once the core contract is concrete enough to avoid documenting
+    churn.

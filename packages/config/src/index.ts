@@ -85,5 +85,9 @@ export type {
   X2ZodTarget,
   X2ZodTargetFor,
   X2ZodTargetMap,
+  X2ZodTargetTransformConfig,
+  X2ZodTargetTransformConfigItem,
+  X2ZodResolvedTargetTransformConfig,
+  X2ZodResolvedTargetTransformConfigItem,
   X2ZodUriInputConfig,
 } from "./types";

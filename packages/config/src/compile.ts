@@ -4,6 +4,7 @@ import type {
   DeclarationExportMode,
   InputDocumentInput,
   InputPlugin,
+  ZodEmissionTransformInput,
   ZodSourceOutputOptions,
 } from "@x2zod/core";
 
@@ -39,6 +40,7 @@ export type X2ZodCompilableTarget = Readonly<{
   options: unknown;
   output: X2ZodCompilableOutput;
   plugin: X2ZodLoadedInputPlugin;
+  transforms?: readonly ZodEmissionTransformInput[] | undefined;
 }>;
 
 export type X2ZodCompileTargetOverrides = Readonly<{
@@ -66,6 +68,7 @@ export type CompileX2ZodTargetRequest = Readonly<{
   loadInputDocument?: X2ZodTargetInputLoader | undefined;
   output?: ZodSourceOutputOptions | undefined;
   pluginOptions?: unknown;
+  transforms?: readonly ZodEmissionTransformInput[] | undefined;
   target:
     | X2ZodCompilableTarget
     | X2ZodResolvedTarget<X2ZodLoadedInputPluginRegistry, X2ZodLoadedCodeQualityRegistry>;
@@ -183,6 +186,7 @@ const resolveAnonymousCompilableTarget = async ({
       options: pluginOptions,
       output: outputFromAnonymousOverrides(overrides),
       plugin,
+      transforms: [],
     },
   };
 };
@@ -254,12 +258,13 @@ export const resolveX2ZodCompilableTarget = async (
 export const compileX2ZodTarget = async (
   request: CompileX2ZodTargetRequest,
 ): Promise<CompileToZodSourceResult> => {
-  const { output, pluginOptions, target } = request;
+  const { output, pluginOptions, target, transforms } = request;
   const document = await inputDocumentForTarget(request);
   return compileToZodSource({
     document,
     output: output ?? zodSourceOutputOptionsForConfig(target.output),
     plugin: asExecutablePlugin(target.plugin),
     pluginOptions: pluginOptions ?? target.options,
+    transforms: transforms ?? target.transforms ?? [],
   });
 };

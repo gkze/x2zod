@@ -3,7 +3,11 @@ import type { LoadConfigOptions } from "c12";
 import type { z } from "zod/v4";
 import { z as zod } from "zod/v4";
 
-import { declarationExportModeSchema, resolveZodSourceOutputOptions } from "@x2zod/core";
+import {
+  declarationExportModeSchema,
+  resolveZodSourceOutputOptions,
+  zodEmissionTransformsSchema,
+} from "@x2zod/core";
 
 import { X2ZodConfigError } from "./errors";
 import type { X2ZodConfigIssue, X2ZodConfigPathSegment } from "./errors";
@@ -87,6 +91,7 @@ const targetConfigSchema: z.ZodType<
     kind: nonEmptyStringSchema,
     options: zod.unknown().optional(),
     output: outputConfigSchema,
+    transforms: zodEmissionTransformsSchema.optional(),
   })
   .readonly();
 
@@ -465,7 +470,7 @@ const readResolvedTarget = (
     return undefined;
   }
 
-  const { input, kind, options, output } = parsed.data;
+  const { input, kind, options, output, transforms } = parsed.data;
   const plugin = plugins[kind];
   if (plugin === undefined) {
     issues.push(createIssue([...path, "kind"], `unknown plugin kind ${kind}`));
@@ -486,7 +491,15 @@ const readResolvedTarget = (
   });
   if (resolvedOutput === undefined || resolvedOptions === undefined) return undefined;
 
-  return { input, kind, name, options: resolvedOptions, output: resolvedOutput, plugin };
+  return {
+    input,
+    kind,
+    name,
+    options: resolvedOptions,
+    output: resolvedOutput,
+    plugin,
+    transforms: transforms ?? [],
+  };
 };
 
 const readResolvedTargets = ({

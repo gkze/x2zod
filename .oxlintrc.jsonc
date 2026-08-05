@@ -182,6 +182,7 @@
         "packages/config/src/zod-to-optique.ts",
         "packages/config/test/config.test.ts",
         "packages/core/src/diagnostics.ts",
+        "packages/core/src/source-codecs.ts",
         "packages/core/src/source.ts",
         "packages/core/src/typescript-identifiers.ts",
         "packages/core/src/zod-plan.ts",

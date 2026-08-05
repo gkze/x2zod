@@ -1,6 +1,7 @@
 import type { SourceFile } from "@typescript/native-preview/unstable/ast";
 
 import { createDiagnostic, formatZodError } from "./diagnostics";
+import type { ZodEmissionTransformInput } from "./emission-transform-config";
 import type { InputDocumentInput, InputPlugin, PluginOptionsSchema, PreparedInput } from "./input";
 import { parseInputDocument } from "./input";
 import { collectResultDiagnostics, err, ok } from "./result";
@@ -20,6 +21,7 @@ export type CompileToZodSourceRequest<
   plugin: InputPlugin<TPreparedInput, TPluginOptions, TPluginOptionsInput, TPluginKind>;
   pluginOptions: TPluginOptionsInput;
   output: ZodSourceOutputOptions;
+  transforms?: readonly ZodEmissionTransformInput[] | undefined;
 }>;
 
 export type CompileToZodSourceResult = Result<Readonly<{ sourceFile: SourceFile }>>;
@@ -84,6 +86,7 @@ export const compileToZodSource = async <
   output,
   plugin,
   pluginOptions,
+  transforms,
 }: CompileToZodSourceRequest<
   TPreparedInput,
   TPluginOptions,
@@ -117,7 +120,7 @@ export const compileToZodSource = async <
   const lowered = parseZodEmissionModule(loweredInput.value);
   if (!lowered.ok) return lowered;
 
-  const source = buildZodSourceFile(lowered.value, output);
+  const source = buildZodSourceFile(lowered.value, output, transforms);
   if (!source.ok) return source;
 
   return mergeSuccess(

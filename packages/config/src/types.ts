@@ -6,6 +6,8 @@ import type {
   PreparedInput,
   ResolvedZodSourceOutputOptions,
   Result,
+  ZodEmissionTransform,
+  ZodEmissionTransformInput,
   ZodEmissionModuleInput,
   ZodSourceOutputOptions,
 } from "@x2zod/core";
@@ -148,6 +150,11 @@ export type X2ZodUriInputConfig = Readonly<{ mediaType?: string | undefined; uri
 
 export type X2ZodInputConfig = X2ZodFileInputConfig | X2ZodInlineInputConfig | X2ZodUriInputConfig;
 
+export type X2ZodTargetTransformConfigItem = ZodEmissionTransformInput;
+export type X2ZodTargetTransformConfig = readonly X2ZodTargetTransformConfigItem[];
+export type X2ZodResolvedTargetTransformConfigItem = ZodEmissionTransform;
+export type X2ZodResolvedTargetTransformConfig = readonly X2ZodResolvedTargetTransformConfigItem[];
+
 export type X2ZodOutputConfig<
   TCodeQuality extends X2ZodCodeQualityRegistry = X2ZodEmptyCodeQualityRegistry,
 > = Readonly<
@@ -175,6 +182,7 @@ export type X2ZodTargetFor<
   kind: TKind;
   options?: z.input<TPlugins[TKind]["optionsSchema"]> | undefined;
   output: X2ZodOutputConfig<TCodeQuality>;
+  transforms?: X2ZodTargetTransformConfig | undefined;
 }>;
 
 export type X2ZodTarget<
@@ -208,6 +216,7 @@ export type X2ZodResolvedTargetFor<
   options: z.output<TPlugins[TKind]["optionsSchema"]>;
   output: X2ZodResolvedOutputConfig<TCodeQuality>;
   plugin: TPlugins[TKind];
+  transforms: X2ZodResolvedTargetTransformConfig;
 }>;
 
 export type X2ZodResolvedTarget<

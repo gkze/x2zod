@@ -22,6 +22,7 @@ type CoreModule = Readonly<{
 }>;
 
 const coreBundlePathArgumentIndex = 2;
+const sourceModeArgumentIndex = 3;
 const maximumCount = 10;
 const coreModuleFunctionKeys = [
   "buildZodSourceFile",
@@ -32,6 +33,7 @@ const coreModuleFunctionKeys = [
 ] as const satisfies readonly (keyof CoreModule)[];
 const zodPlanFunctionKeys = [
   "array",
+  "catchall",
   "enum",
   "gt",
   "integer",
@@ -40,6 +42,9 @@ const zodPlanFunctionKeys = [
   "min",
   "number",
   "object",
+  "optional",
+  "passthrough",
+  "reference",
   "regex",
   "required",
   "string",
@@ -67,23 +72,58 @@ const importCoreModule = async (file: string): Promise<CoreModule> => {
 const coreBundleFile = requiredArgument(coreBundlePathArgumentIndex, "core bundle");
 const core = await importCoreModule(coreBundleFile);
 const root = core.zodSymbol("root");
-const module = core.zodModule(root, [
-  core.zodDeclaration(
-    root,
-    core.zodPlan.object({
-      ["__proto__"]: core.zodPlan.string(),
-      count: core.zodPlan.lte(core.zodPlan.gt(core.zodPlan.integer(), 0), maximumCount),
-      pair: core.zodPlan.tuple([core.zodPlan.string(), core.zodPlan.number()]),
-      payload: core.zodPlan.required(core.zodPlan.object({ value: core.zodPlan.unknown() }), [
-        "value",
-      ]),
-      slug: core.zodPlan.regex(core.zodPlan.string(), "^[a-z]+$"),
-      status: core.zodPlan.enum(["open", "closed"]),
-      tags: core.zodPlan.max(core.zodPlan.min(core.zodPlan.array(core.zodPlan.string()), 1), 2),
-    }),
-  ),
-]);
-const result = core.buildZodSourceFile(module, { typeName: "User" });
+const sourceMode = process.argv[sourceModeArgumentIndex];
+const propertyTransformMode = sourceMode === "property-transform";
+const address = core.zodSymbol("address");
+const module = propertyTransformMode
+  ? core.zodModule(root, [
+      core.zodDeclaration(address, core.zodPlan.object({ postal_code: core.zodPlan.string() })),
+      core.zodDeclaration(
+        root,
+        core.zodPlan.passthrough(
+          core.zodPlan.object({
+            metadata_map: core.zodPlan.catchall(
+              core.zodPlan.object({}),
+              core.zodPlan.object({ nested_value: core.zodPlan.string() }),
+            ),
+            profile_data: core.zodPlan.optional(
+              core.zodPlan.object({
+                addresses_list: core.zodPlan.array(core.zodPlan.reference(address)),
+                display_name: core.zodPlan.optional(core.zodPlan.string()),
+              }),
+            ),
+            settings_data: core.zodPlan.required(
+              core.zodPlan.object({ display_name: core.zodPlan.optional(core.zodPlan.string()) }),
+              ["display_name"],
+            ),
+            user_id: core.zodPlan.string(),
+          }),
+        ),
+      ),
+    ])
+  : core.zodModule(root, [
+      core.zodDeclaration(
+        root,
+        core.zodPlan.object({
+          ["__proto__"]: core.zodPlan.string(),
+          count: core.zodPlan.lte(core.zodPlan.gt(core.zodPlan.integer(), 0), maximumCount),
+          pair: core.zodPlan.tuple([core.zodPlan.string(), core.zodPlan.number()]),
+          payload: core.zodPlan.required(core.zodPlan.object({ value: core.zodPlan.unknown() }), [
+            "value",
+          ]),
+          slug: core.zodPlan.regex(core.zodPlan.string(), "^[a-z]+$"),
+          status: core.zodPlan.enum(["open", "closed"]),
+          tags: core.zodPlan.max(core.zodPlan.min(core.zodPlan.array(core.zodPlan.string()), 1), 2),
+        }),
+      ),
+    ]);
+const result = core.buildZodSourceFile(
+  module,
+  { typeName: "User" },
+  propertyTransformMode
+    ? [{ kind: "map-properties", options: { keys: { decodedCase: "camelCase", kind: "case" } } }]
+    : [],
+);
 
 if (!result.ok) throw new Error(diagnosticText(result.diagnostics));
 
