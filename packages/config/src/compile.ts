@@ -10,7 +10,7 @@ import type {
 
 import type {
   X2ZodInputConfig,
-  X2ZodLoadedCodeQualityRegistry,
+  X2ZodLoadedOutputProcessorRegistry,
   X2ZodLoadedInputPlugin,
   X2ZodLoadedInputPluginRegistry,
   X2ZodResolvedConfig,
@@ -28,8 +28,8 @@ type ExecutableInputPlugin = InputPlugin<unknown, unknown, unknown>;
 
 export type X2ZodCompilableOutput = Readonly<
   ZodSourceOutputOptions & {
-    codeQuality?: X2ZodResolvedOutputConfig<X2ZodLoadedCodeQualityRegistry>["codeQuality"];
     path: string;
+    processors?: X2ZodResolvedOutputConfig<X2ZodLoadedOutputProcessorRegistry>["processors"];
   }
 >;
 
@@ -71,12 +71,12 @@ export type CompileX2ZodTargetRequest = Readonly<{
   transforms?: readonly ZodEmissionTransformInput[] | undefined;
   target:
     | X2ZodCompilableTarget
-    | X2ZodResolvedTarget<X2ZodLoadedInputPluginRegistry, X2ZodLoadedCodeQualityRegistry>;
+    | X2ZodResolvedTarget<X2ZodLoadedInputPluginRegistry, X2ZodLoadedOutputProcessorRegistry>;
 }>;
 
 export type ResolveX2ZodCompilableTargetRequest = Readonly<{
   config?:
-    | X2ZodResolvedConfig<X2ZodLoadedInputPluginRegistry, X2ZodLoadedCodeQualityRegistry>
+    | X2ZodResolvedConfig<X2ZodLoadedInputPluginRegistry, X2ZodLoadedOutputProcessorRegistry>
     | undefined;
   optionTransformContext: ZodCLIOptionTransformContext;
   overrides: X2ZodCompileTargetOverrides;
@@ -135,12 +135,12 @@ const outputFromAnonymousOverrides = (
 });
 
 const outputWithOverrides = (
-  output: X2ZodResolvedOutputConfig<X2ZodLoadedCodeQualityRegistry>,
+  output: X2ZodResolvedOutputConfig<X2ZodLoadedOutputProcessorRegistry>,
   overrides: X2ZodCompileTargetOverrides,
 ): X2ZodCompilableOutput => ({
-  ...(output.codeQuality === undefined ? {} : { codeQuality: output.codeQuality }),
   declarationExportMode: overrides.declarationExportMode ?? output.declarationExportMode,
   path: overrides.outputPath ?? output.path,
+  ...(output.processors === undefined ? {} : { processors: output.processors }),
   typeName: overrides.typeName ?? output.typeName,
   zodImportPath: overrides.zodImportPath ?? output.zodImportPath,
 });
@@ -159,7 +159,7 @@ const requireAnonymousPlugin = (
 };
 
 const targetNames = (
-  config: X2ZodResolvedConfig<X2ZodLoadedInputPluginRegistry, X2ZodLoadedCodeQualityRegistry>,
+  config: X2ZodResolvedConfig<X2ZodLoadedInputPluginRegistry, X2ZodLoadedOutputProcessorRegistry>,
 ): string => Object.keys(config.targets).join(", ");
 
 const resolveAnonymousCompilableTarget = async ({
@@ -197,7 +197,7 @@ const resolveConfiguredCompilableTarget = async ({
   overrides,
 }: ResolveX2ZodCompilableTargetRequest &
   Readonly<{
-    config: X2ZodResolvedConfig<X2ZodLoadedInputPluginRegistry, X2ZodLoadedCodeQualityRegistry>;
+    config: X2ZodResolvedConfig<X2ZodLoadedInputPluginRegistry, X2ZodLoadedOutputProcessorRegistry>;
   }>): Promise<ResolveX2ZodCompilableTargetResult> => {
   const targetName = requireValue(overrides.targetName, "--target");
   const target = config.targets[targetName];

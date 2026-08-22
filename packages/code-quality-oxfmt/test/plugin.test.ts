@@ -3,14 +3,14 @@ import { mkdtemp, rm } from "node:fs/promises";
 import path from "node:path";
 import { test } from "node:test";
 
-import type { X2ZodOutputCodeQualityConfig } from "@x2zod/config";
+import type { X2ZodOutputProcessorConfig } from "@x2zod/config";
 
 import { oxfmtCodeQualityPlugin } from "../src";
 import type { OxfmtConfig } from "../src";
 
 type IsAssignable<TFrom, TTo> = [TFrom] extends [TTo] ? true : false;
 
-const codeQuality = { oxfmt: oxfmtCodeQualityPlugin } as const;
+const outputProcessors = { oxfmt: oxfmtCodeQualityPlugin } as const;
 const packageRoot = path.join(import.meta.dirname, "..");
 const repoRoot = path.join(packageRoot, "..", "..");
 const toolBin = (name: string): string =>
@@ -32,11 +32,11 @@ void test("oxfmtCodeQualityPlugin types inline oxfmt config only when selected",
   const selected = {
     kind: "oxfmt",
     options: { config: { kind: "inline", value: oxfmtConfig } },
-  } satisfies X2ZodOutputCodeQualityConfig<typeof codeQuality>;
+  } satisfies X2ZodOutputProcessorConfig<typeof outputProcessors>;
   const invalid = { kind: "oxlint" } as const;
   const isAssignable: IsAssignable<
     typeof invalid,
-    X2ZodOutputCodeQualityConfig<typeof codeQuality>
+    X2ZodOutputProcessorConfig<typeof outputProcessors>
   > = false;
 
   assert.equal(selected.kind, "oxfmt");

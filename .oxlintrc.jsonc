@@ -139,9 +139,9 @@
       },
     },
     {
-      "files": ["packages/config/src/code-quality.ts", "scripts/publish.ts"],
+      "files": ["packages/config/src/output-processors.ts", "scripts/publish.ts"],
       "rules": {
-        // These loops intentionally serialize transforms and registry publishes.
+        // These loops intentionally serialize output processors and registry publishes.
         "no-await-in-loop": "off",
       },
     },
@@ -164,7 +164,10 @@
       },
     },
     {
-      "files": ["packages/config/test/config.test.ts"],
+      "files": [
+        "packages/config/test/config.test.ts",
+        "packages/config/test/output-processors.test.ts",
+      ],
       "rules": {
         // Runtime validation tests intentionally pass statically invalid fixtures through public APIs.
         "typescript/no-unnecessary-type-assertion": "off",
@@ -174,13 +177,14 @@
       "files": [
         "apps/cli/src/cli.ts",
         "apps/cli/test/zod-to-optique.test.ts",
-        "packages/config/src/code-quality.ts",
         "packages/config/src/compile.ts",
         "packages/config/src/load.ts",
+        "packages/config/src/output-processors.ts",
         "packages/config/src/zod-cli-metadata.ts",
         "packages/config/src/zod-introspection.ts",
         "packages/config/src/zod-to-optique.ts",
         "packages/config/test/config.test.ts",
+        "packages/config/test/output-processors.test.ts",
         "packages/core/src/diagnostics.ts",
         "packages/core/src/source-codecs.ts",
         "packages/core/src/source.ts",

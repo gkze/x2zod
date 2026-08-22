@@ -24,17 +24,21 @@ start:
   owns JSON Schema dialect selection, schema-document validation policy, ref resolution, and JSON
   Schema-to-Zod lowering. Validator and resolver bridge code is internal to this package.
 - `@x2zod/config`: project configuration contracts, `defineConfig`, config file loading, plugin
-  registry validation, target option and transform resolution, and target output resolution. This
-  package lets library callers share the same config surface as the CLI without importing the CLI
-  binary module.
-- `@x2zod/code-quality-oxfmt`: optional Oxfmt code-quality plugin, including its typed config
-  re-exports and subprocess adapter.
-- `@x2zod/code-quality-oxlint`: optional Oxlint code-quality plugin, including its typed config
-  re-exports and subprocess adapter.
+  registry validation, target option and transform resolution, output processor resolution, and
+  target output resolution. This package lets library callers share the same config surface as the
+  CLI without importing the CLI binary module.
+- `@x2zod/code-quality-oxfmt`: optional Oxfmt code-quality output processor plugin, including its
+  typed config re-exports and subprocess adapter.
+- `@x2zod/code-quality-oxlint`: optional Oxlint code-quality output processor plugin, including its
+  typed config re-exports and subprocess adapter.
 - `@x2zod/cli`: CLI package, located at `apps/cli` and exposing the `x2zod` binary.
 
 Supporting workspace packages such as `@x2zod/build-inputs`, `@x2zod/eslint-plugins`, and
-`@x2zod/tsconfig` remain separate packages; they are not input or code-quality plugins.
+`@x2zod/tsconfig` remain separate packages; they are not input or output processor plugins.
+
+The Oxfmt and Oxlint package and export names remain code-quality-specific because they identify
+those concrete tool integrations. `plugins.output` is the general output processor registry role
+that they implement.
 
 There should not be standalone validator packages in v1. The core plugin interface does not expose a
 generic schema-language validation extension point, so validator selection is a JSON Schema plugin
@@ -75,6 +79,28 @@ The exact names can evolve, but the boundary should stay stable:
 For JSON Schema, `@x2zod/input-json-schema` is the first input plugin. Ajv and any future validator
 or resolver adapters are internal tools used by that plugin, not global core behavior and not
 separately published package boundaries.
+
+## Output Processor Plugin Contract
+
+Output processor plugins operate on generated TypeScript after a finalized compiler `SourceFile` has
+been printed and before the result is written. Conceptually:
+
+```ts
+export type X2ZodOutputProcessorPlugin<TOptions> = {
+  readonly kind: string;
+  readonly optionsSchema: PluginOptionsSchema<TOptions>;
+  readonly transform: (
+    sourceText: string,
+    options: TOptions,
+    context: X2ZodOutputProcessorContext,
+  ) => Promise<string> | string;
+};
+```
+
+Each processor is a string-to-string transform, processors run in configured order, and each owns
+its typed option schema. This contract does not model renderers, file writers, or multi-artifact
+outputs. Core-owned emission transforms remain separate: they change schema value semantics before
+source construction, while output processor plugins only transform printed source text.
 
 ## Dependency Strategy
 
@@ -205,20 +231,20 @@ Project config has role-scoped plugin registries:
 defineConfig({
   plugins: {
     input: { "json-schema": jsonSchemaInputPlugin },
-    codeQuality: { oxlint: oxlintCodeQualityPlugin },
+    output: { oxlint: oxlintCodeQualityPlugin },
   },
   targets: {},
 });
 ```
 
-Targets select input plugins through `target.kind`. Outputs select code-quality plugins through
-`output.codeQuality.kind`. Both selections are type-level constrained by the matching configured
-registry.
+Targets select input plugins through `target.kind`. Each `output.processors` entry selects an output
+processor plugin through its `kind`. Both selections are type-level constrained by the matching
+configured registry.
 
 `target.transforms` is an ordered, core-owned pipeline and a sibling of `input`, `options`, and
-`output`. It is not part of an input plugin's options and is distinct from `output.codeQuality`:
-emission transforms change schema value semantics, while code-quality plugins process printed
-source.
+`output`. It is not part of an input plugin's options and is distinct from `output.processors`:
+emission transforms change schema value semantics before source construction, while output processor
+plugins transform printed source post-print and pre-write.
 
 Per-kind help and shell completion use the same conditional parser. Shell completion scripts
 delegate back into the JavaScript runtime through Optique's completion command, so dynamic plugin

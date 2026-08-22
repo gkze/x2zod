@@ -1,7 +1,7 @@
 import nodePath from "node:path";
 
 import {
-  applyX2ZodCodeQuality,
+  applyX2ZodOutputProcessors,
   compileX2ZodTarget,
   loadX2ZodConfig,
   loadX2ZodInputPluginRegistry,
@@ -196,7 +196,7 @@ const compileTarget = async ({
   if (!result.ok) throw new CLICompileError(formatDiagnostics(result.diagnostics));
 
   const sourceText = await printSourceFile(result.value.sourceFile, { cwd: context.cwd });
-  const qualitySourceText = await applyX2ZodCodeQuality({
+  const processedSourceText = await applyX2ZodOutputProcessors({
     context: {
       baseDirectory: context.baseDirectory,
       outputPath: outputPathFor(target.output, context),
@@ -205,7 +205,7 @@ const compileTarget = async ({
     sourceText,
   });
 
-  await writeGeneratedSource(target.output, qualitySourceText, context);
+  await writeGeneratedSource(target.output, processedSourceText, context);
 };
 
 export const compileFromCLI = async (
