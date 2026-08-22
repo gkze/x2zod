@@ -13,8 +13,8 @@ import {
   runCommand,
 } from "@x2zod/config";
 import type {
-  X2ZodCodeQualityContext,
-  X2ZodCodeQualityPlugin,
+  X2ZodOutputProcessorContext,
+  X2ZodOutputProcessorPlugin,
   X2ZodCodeQualityToolConfig,
 } from "@x2zod/config";
 
@@ -40,7 +40,7 @@ const oxfmtCodeQualityOptionsSchemaValue: z.ZodType<
   })
   .readonly();
 
-const oxfmtArgs = (context: X2ZodCodeQualityContext, configPath?: string): string[] => [
+const oxfmtArgs = (context: X2ZodOutputProcessorContext, configPath?: string): string[] => [
   "--stdin-filepath",
   context.outputPath ?? outputFileName(context),
   ...(configPath === undefined ? [] : ["--config", configPath]),
@@ -52,7 +52,7 @@ const oxfmtFailureMessage = (result: Readonly<{ stderr: string; stdout: string }
 const runOxfmt = async (
   sourceText: string,
   options: OxfmtCodeQualityOptions,
-  context: X2ZodCodeQualityContext,
+  context: X2ZodOutputProcessorContext,
 ): Promise<string> => {
   const tempParent = outputDirectory(context);
   await mkdir(tempParent, { recursive: true });
@@ -81,7 +81,7 @@ export const oxfmtCodeQualityOptionsSchema: z.ZodType<
   OxfmtCodeQualityOptionsInput
 > = oxfmtCodeQualityOptionsSchemaValue;
 
-export const oxfmtCodeQualityPlugin: X2ZodCodeQualityPlugin<
+export const oxfmtCodeQualityPlugin: X2ZodOutputProcessorPlugin<
   OxfmtCodeQualityOptions,
   OxfmtCodeQualityOptionsInput,
   "oxfmt"

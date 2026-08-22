@@ -7,19 +7,7 @@ import path from "node:path";
 import { z as zod } from "zod/v4";
 import type { z } from "zod/v4";
 
-import type {
-  X2ZodCodeQualityContext,
-  X2ZodLoadedCodeQualityRegistry,
-  X2ZodResolvedOutputConfig,
-} from "./types";
-
-export type ApplyX2ZodCodeQualityRequest = Readonly<{
-  context: X2ZodCodeQualityContext;
-  output: Readonly<{
-    codeQuality?: X2ZodResolvedOutputConfig<X2ZodLoadedCodeQualityRegistry>["codeQuality"];
-  }>;
-  sourceText: string;
-}>;
+import type { X2ZodOutputProcessorContext } from "./types";
 
 export type X2ZodCodeQualityToolConfig<TConfig> =
   | Readonly<{ kind: "auto" }>
@@ -34,7 +22,7 @@ export type RunCommandOptions = Readonly<{ cwd: string; input?: string | undefin
 
 export type ConfigPathForRequest<TConfig> = Readonly<{
   config: X2ZodCodeQualityToolConfig<TConfig>;
-  context: X2ZodCodeQualityContext;
+  context: X2ZodOutputProcessorContext;
   tempDirectory: string;
   toolName: string;
 }>;
@@ -66,13 +54,16 @@ export const runCommand = (
   };
 };
 
-export const outputDirectory = (context: X2ZodCodeQualityContext): string =>
+export const outputDirectory = (context: X2ZodOutputProcessorContext): string =>
   context.outputPath === undefined ? os.tmpdir() : path.dirname(context.outputPath);
 
-export const outputFileName = (context: X2ZodCodeQualityContext): string =>
+export const outputFileName = (context: X2ZodOutputProcessorContext): string =>
   context.outputPath === undefined ? "generated.ts" : path.basename(context.outputPath);
 
-export const resolveConfigPath = (context: X2ZodCodeQualityContext, configPath: string): string =>
+export const resolveConfigPath = (
+  context: X2ZodOutputProcessorContext,
+  configPath: string,
+): string =>
   path.isAbsolute(configPath) ? configPath : path.join(context.baseDirectory, configPath);
 
 export const codeQualityToolConfigSchema = <TConfig>(): z.ZodType<
@@ -100,16 +91,4 @@ export const configPathFor = async <TConfig>({
   await mkdir(tempDirectory, { recursive: true });
   await writeFile(configPath, `${JSON.stringify(config.value, undefined, 2)}\n`);
   return configPath;
-};
-
-export const applyX2ZodCodeQuality = async ({
-  context,
-  output,
-  sourceText,
-}: ApplyX2ZodCodeQualityRequest): Promise<string> => {
-  if (output.codeQuality === undefined) return sourceText;
-  let transformed = sourceText;
-  for (const step of output.codeQuality)
-    transformed = await step.plugin.transform(transformed, step.options as never, context);
-  return transformed;
 };

@@ -168,7 +168,7 @@ export const writeDynamicUserTarget = async (directory: string): Promise<void> =
   );
 };
 
-export const writeQualityUserTarget = async (directory: string): Promise<void> => {
+export const writeOutputProcessorUserTarget = async (directory: string): Promise<void> => {
   await mkdir(path.join(directory, "schemas"), { recursive: true });
   await writeFile(path.join(directory, "schemas", "user.schema.json"), schemaText);
   await writeFile(
@@ -178,13 +178,13 @@ export const writeQualityUserTarget = async (directory: string): Promise<void> =
       'import { jsonSchemaInputPlugin } from "@x2zod/input-json-schema";',
       'import { z } from "zod/v4";',
       "",
-      "const bannerTool = {",
+      "const bannerProcessor = {",
       '  kind: "banner",',
       '  optionsSchema: z.strictObject({ prefix: z.string().default("// prepared") }),',
       String.raw`  transform: (sourceText, options) => [options.prefix, sourceText].join('\n'),`,
       "};",
       "",
-      "const markerTool = {",
+      "const markerProcessor = {",
       '  kind: "marker",',
       '  optionsSchema: z.strictObject({ suffix: z.string().default("// quality") }),',
       String.raw`  transform: (sourceText, options) => [sourceText, options.suffix, ''].join('\n'),`,
@@ -192,19 +192,19 @@ export const writeQualityUserTarget = async (directory: string): Promise<void> =
       "",
       "export default defineConfig({",
       "  plugins: {",
-      "    codeQuality: { banner: bannerTool, marker: markerTool },",
       '    input: { "json-schema": jsonSchemaInputPlugin },',
+      "    output: { banner: bannerProcessor, marker: markerProcessor },",
       "  },",
       "  targets: {",
       "    user: {",
       '      kind: "json-schema",',
       '      input: { path: "schemas/user.schema.json" },',
       "      output: {",
-      "        codeQuality: [",
+      '        path: "generated/user.ts",',
+      "        processors: [",
       '          { kind: "banner", options: { prefix: "// prepared" } },',
       '          { kind: "marker", options: { suffix: "// checked" } },',
       "        ],",
-      '        path: "generated/user.ts",',
       '        typeName: "User",',
       "      },",
       "    },",

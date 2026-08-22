@@ -37,12 +37,15 @@ The V1 architecture is library-first:
 - [`@x2zod/config`](packages/config) owns typed project config, plugin registry loading, target
   resolution, and the `defineConfig` helper for library and CLI callers.
 - [`@x2zod/code-quality-oxfmt`](packages/code-quality-oxfmt) and
-  [`@x2zod/code-quality-oxlint`](packages/code-quality-oxlint) provide optional generated-source
-  quality plugins.
+  [`@x2zod/code-quality-oxlint`](packages/code-quality-oxlint) provide optional code-quality output
+  processors for generated source.
 - [`@x2zod/cli`](apps/cli) exposes the `x2zod` binary and should stay thin over the library API.
 - Supporting packages such as [`@x2zod/build-inputs`](packages/build-inputs),
   [`@x2zod/eslint-plugins`](packages/eslint-plugins), and [`@x2zod/tsconfig`](packages/tsconfig)
   remain separate workspace packages.
+
+The Oxfmt and Oxlint package and export names remain code-quality-specific because they identify
+those concrete tool integrations; their plugin role is the general output processor role.
 
 Core should stay schema-language agnostic. Plugins validate and lower their own input languages;
 core coordinates compilation and emits a finalized TypeScript compiler `SourceFile`.
@@ -94,11 +97,11 @@ Zod codecs: `z.input` keeps original keys such as `user_id`, while `z.output` an
 property names are projected. Dynamic keys remain unchanged, and collisions or compositions that
 cannot remain bidirectional fail with diagnostics.
 
-Emission transforms change schema value semantics. `output.codeQuality` only processes the printed
-source.
+Emission transforms change schema value semantics before source construction. Output processors are
+a separate post-print, pre-write string-to-string pipeline.
 
-Generated source can optionally run through code quality plugins. Register the plugins once, then
-select the ordered tools per output:
+Generated source can optionally run through output processor plugins. Register the plugins once,
+then select the ordered processors per output:
 
 ```ts
 import { defineConfig } from "@x2zod/config";
@@ -108,15 +111,15 @@ import { jsonSchemaInputPlugin } from "@x2zod/input-json-schema";
 
 export default defineConfig({
   plugins: {
-    codeQuality: { oxfmt: oxfmtCodeQualityPlugin, oxlint: oxlintCodeQualityPlugin },
     input: { "json-schema": jsonSchemaInputPlugin },
+    output: { oxfmt: oxfmtCodeQualityPlugin, oxlint: oxlintCodeQualityPlugin },
   },
   targets: {
     user: {
       kind: "json-schema",
       input: { path: "schema.json" },
       output: {
-        codeQuality: [
+        processors: [
           {
             kind: "oxlint",
             // Optional: omit options to let oxlint find local config.
@@ -137,9 +140,10 @@ export default defineConfig({
 });
 ```
 
-Code quality plugins run in the order listed. Each plugin owns its own typed options. Both bundled
-plugins can use local tool config discovery, an explicit config path, or an inline typed config
-value.
+Output processors run in the order listed, transforming one generated TypeScript string into the
+next before the result is written. Each processor owns its own typed options. The bundled Oxfmt and
+Oxlint processors are code-quality-specific and can use local tool config discovery, an explicit
+config path, or an inline typed config value.
 
 Running `x2zod` with no arguments runs every configured target. `x2zod run` does the same
 explicitly. `x2zod compile -g user` runs one named target, and compile flags are ephemeral overrides

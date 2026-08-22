@@ -18,7 +18,6 @@ import {
 } from "../src";
 import type {
   X2ZodAnyInputPlugin,
-  X2ZodCodeQualityPlugin,
   X2ZodInputPluginKey,
   X2ZodInputPluginRegistryFor,
   X2ZodTargetFor,
@@ -27,26 +26,6 @@ import type {
 type IsAssignable<TFrom, TTo> = [TFrom] extends [TTo] ? true : false;
 
 const plugins = { "json-schema": jsonSchemaInputPlugin } as const;
-const codeQuality = {
-  banner: {
-    kind: "banner",
-    optionsSchema: z.strictObject({ prefix: z.string().default("// prepared") }).readonly(),
-    transform: (sourceText, options): string => [options.prefix, sourceText].join("\n"),
-  } satisfies X2ZodCodeQualityPlugin<
-    Readonly<{ prefix: string }>,
-    Readonly<{ prefix?: string | undefined }>,
-    "banner"
-  >,
-  marker: {
-    kind: "marker",
-    optionsSchema: z.strictObject({ suffix: z.string().default("// quality") }).readonly(),
-    transform: (sourceText, options): string => [sourceText, options.suffix, ""].join("\n"),
-  } satisfies X2ZodCodeQualityPlugin<
-    Readonly<{ suffix: string }>,
-    Readonly<{ suffix?: string | undefined }>,
-    "marker"
-  >,
-} as const;
 const configPackageRoot = path.join(import.meta.dirname, "..");
 const schemaText = JSON.stringify(
   { properties: { name: { type: "string" } }, required: ["name"], type: "object" },
@@ -153,26 +132,6 @@ void test("defineConfig types target kinds and plugin option inputs from the plu
   assert.equal(config.targets["user"]?.kind, "json-schema");
 });
 
-void test("defineConfig types target code quality options from the code quality registry", () => {
-  const target = {
-    input: { path: "schema.json" },
-    kind: "json-schema",
-    output: {
-      codeQuality: { kind: "marker", options: { suffix: "// checked" } },
-      path: "schema.ts",
-      typeName: "User",
-    },
-  } satisfies X2ZodTargetFor<typeof plugins, "json-schema", typeof codeQuality>;
-
-  const config = defineConfig({
-    plugins: { codeQuality, input: plugins },
-    targets: { user: target },
-  });
-
-  assert.equal(target.output.codeQuality.kind, "marker");
-  assert.equal(config.targets["user"]?.kind, "json-schema");
-});
-
 void test("defineConfig rejects unknown target kinds at typecheck time", () => {
   type JsonSchemaTarget = X2ZodTargetFor<typeof plugins, "json-schema">;
 
@@ -275,82 +234,6 @@ void test("resolveX2ZodConfig validates and resolves plugin options and output d
     zodImportPath: "zod/v4",
   });
   assert.equal(userTarget.plugin, jsonSchemaInputPlugin);
-});
-
-void test("resolveX2ZodConfig validates and resolves code quality options", () => {
-  const resolved = resolveX2ZodConfig(
-    defineConfig({
-      plugins: { codeQuality, input: plugins },
-      targets: {
-        user: {
-          input: { path: "schema.json" },
-          kind: "json-schema",
-          output: { codeQuality: { kind: "marker" }, path: "generated/user.ts", typeName: "User" },
-        },
-      },
-    }),
-  );
-
-  const userTarget = resolved.targets["user"];
-  assert.ok(userTarget !== undefined);
-  assert.ok(userTarget.output.codeQuality !== undefined);
-  assert.equal(userTarget.output.codeQuality[0]?.kind, "marker");
-  assert.deepEqual(userTarget.output.codeQuality[0].options, { suffix: "// quality" });
-});
-
-void test("resolveX2ZodConfig validates and resolves ordered code quality pipelines", () => {
-  const resolved = resolveX2ZodConfig(
-    defineConfig({
-      plugins: { codeQuality, input: plugins },
-      targets: {
-        user: {
-          input: { path: "schema.json" },
-          kind: "json-schema",
-          output: {
-            codeQuality: [
-              { kind: "banner" },
-              { kind: "marker", options: { suffix: "// checked" } },
-            ],
-            path: "generated/user.ts",
-            typeName: "User",
-          },
-        },
-      },
-    }),
-  );
-
-  const userTarget = resolved.targets["user"];
-  assert.ok(userTarget !== undefined);
-  const pipeline = userTarget.output.codeQuality;
-  assert.ok(pipeline !== undefined);
-  assert.deepEqual(
-    pipeline.map(({ kind, options }) => ({ kind, options })),
-    [
-      { kind: "banner", options: { prefix: "// prepared" } },
-      { kind: "marker", options: { suffix: "// checked" } },
-    ],
-  );
-});
-
-void test("resolveX2ZodConfig reports unknown code quality kinds", () => {
-  expectConfigError(
-    () =>
-      resolveX2ZodConfig({
-        plugins: { codeQuality, input: plugins },
-        targets: {
-          badQuality: {
-            input: { path: "schema.json" },
-            kind: "json-schema",
-            output: {
-              codeQuality: [{ kind: "unknown" }],
-              path: "generated/user.ts",
-              typeName: "User",
-            },
-          },
-        },
-      } as never),
-    ["targets.badQuality.output.codeQuality.0.kind: unknown code quality kind unknown"],
-  );
 });
 
 void test("resolveX2ZodInputPluginRegistry validates plugins without requiring targets", () => {

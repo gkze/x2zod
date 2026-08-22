@@ -17,18 +17,18 @@ import type {
   LoadX2ZodConfigOptions,
   ResolveX2ZodConfigOptions,
   X2ZodConfig,
-  X2ZodCodeQualityRegistry,
+  X2ZodOutputProcessorRegistry,
   X2ZodInputConfig,
-  X2ZodLoadedCodeQualityRegistry,
-  X2ZodLoadedCodeQualityPlugin,
+  X2ZodLoadedOutputProcessorRegistry,
+  X2ZodLoadedOutputProcessorPlugin,
   X2ZodLoadedInputPlugin,
   X2ZodLoadedInputPluginRegistry,
-  X2ZodOutputCodeQualityConfigItem,
+  X2ZodOutputProcessorConfigItem,
   X2ZodOutputConfig,
   X2ZodInputPluginRegistry,
   X2ZodInputPluginRegistryFor,
   X2ZodResolvedConfig,
-  X2ZodResolvedOutputCodeQualityConfigItem,
+  X2ZodResolvedOutputProcessorConfigItem,
   X2ZodResolvedOutputConfig,
   X2ZodResolvedInputPluginRegistry,
   X2ZodResolvedTarget,
@@ -61,30 +61,30 @@ const inputConfigSchema: z.ZodType<X2ZodInputConfig, X2ZodInputConfig> = zod.uni
     .readonly(),
 ]);
 
-const outputCodeQualityConfigSchema = zod
+const outputProcessorConfigSchema = zod
   .strictObject({ kind: nonEmptyStringSchema, options: zod.unknown().optional() })
   .readonly();
-const outputCodeQualityPipelineConfigSchema = zod.union([
-  outputCodeQualityConfigSchema,
-  outputCodeQualityConfigSchema.array().readonly(),
+const outputProcessorPipelineConfigSchema = zod.union([
+  outputProcessorConfigSchema,
+  outputProcessorConfigSchema.array().readonly(),
 ]);
 
 const outputConfigSchema: z.ZodType<
-  X2ZodOutputConfig<X2ZodLoadedCodeQualityRegistry>,
-  X2ZodOutputConfig<X2ZodLoadedCodeQualityRegistry>
+  X2ZodOutputConfig<X2ZodLoadedOutputProcessorRegistry>,
+  X2ZodOutputConfig<X2ZodLoadedOutputProcessorRegistry>
 > = zod
   .strictObject({
-    codeQuality: outputCodeQualityPipelineConfigSchema.optional(),
     declarationExportMode: declarationExportModeSchema.optional(),
     path: nonEmptyStringSchema,
+    processors: outputProcessorPipelineConfigSchema.optional(),
     typeName: nonEmptyStringSchema,
     zodImportPath: nonEmptyStringSchema.optional(),
   })
   .readonly();
 
 const targetConfigSchema: z.ZodType<
-  X2ZodTarget<X2ZodLoadedInputPluginRegistry, X2ZodLoadedCodeQualityRegistry>,
-  X2ZodTarget<X2ZodLoadedInputPluginRegistry, X2ZodLoadedCodeQualityRegistry>
+  X2ZodTarget<X2ZodLoadedInputPluginRegistry, X2ZodLoadedOutputProcessorRegistry>,
+  X2ZodTarget<X2ZodLoadedInputPluginRegistry, X2ZodLoadedOutputProcessorRegistry>
 > = zod
   .strictObject({
     input: inputConfigSchema,
@@ -103,44 +103,44 @@ type ReadPluginOptionsContext = Readonly<{
 }>;
 
 type ReadResolvedTargetContext = Readonly<{
-  codeQuality: X2ZodLoadedCodeQualityRegistry;
   issues: X2ZodConfigIssue[];
   name: string;
+  outputProcessors: X2ZodLoadedOutputProcessorRegistry;
   plugins: X2ZodLoadedInputPluginRegistry;
   value: unknown;
 }>;
 
 type ReadResolvedOutputContext = Readonly<{
-  codeQuality: X2ZodLoadedCodeQualityRegistry;
   issues: X2ZodConfigIssue[];
-  output: X2ZodOutputConfig<X2ZodLoadedCodeQualityRegistry>;
+  output: X2ZodOutputConfig<X2ZodLoadedOutputProcessorRegistry>;
+  outputProcessors: X2ZodLoadedOutputProcessorRegistry;
   path: readonly X2ZodConfigPathSegment[];
 }>;
 
-type ReadResolvedCodeQualityContext = Readonly<{
-  codeQuality: X2ZodLoadedCodeQualityRegistry;
+type ReadResolvedOutputProcessorsContext = Readonly<{
   issues: X2ZodConfigIssue[];
+  outputProcessors: X2ZodLoadedOutputProcessorRegistry;
   path: readonly X2ZodConfigPathSegment[];
-  value: X2ZodOutputConfig<X2ZodLoadedCodeQualityRegistry>["codeQuality"];
+  value: X2ZodOutputConfig<X2ZodLoadedOutputProcessorRegistry>["processors"];
 }>;
 
-type ReadResolvedCodeQualityItemContext = Readonly<{
-  codeQuality: X2ZodLoadedCodeQualityRegistry;
+type ReadResolvedOutputProcessorItemContext = Readonly<{
   issues: X2ZodConfigIssue[];
+  outputProcessors: X2ZodLoadedOutputProcessorRegistry;
   path: readonly X2ZodConfigPathSegment[];
-  value: X2ZodOutputCodeQualityConfigItem<X2ZodLoadedCodeQualityRegistry>;
+  value: X2ZodOutputProcessorConfigItem<X2ZodLoadedOutputProcessorRegistry>;
 }>;
 
 type ReadResolvedTargetsContext = Readonly<{
-  codeQuality: X2ZodLoadedCodeQualityRegistry;
   issues: X2ZodConfigIssue[];
+  outputProcessors: X2ZodLoadedOutputProcessorRegistry;
   plugins: X2ZodLoadedInputPluginRegistry;
   value: unknown;
 }>;
 
 type LoadedPluginConfig = Readonly<{
-  codeQuality: X2ZodLoadedCodeQualityRegistry;
   input: X2ZodLoadedInputPluginRegistry;
+  output: X2ZodLoadedOutputProcessorRegistry;
 }>;
 
 const isZodSchema = (value: unknown): value is z.ZodType =>
@@ -272,28 +272,28 @@ const readPluginRegistryEntry = ({
     : undefined;
 };
 
-const readCodeQualityRegistry = (
+const readOutputProcessorRegistry = (
   value: unknown,
   issues: X2ZodConfigIssue[],
   path: readonly X2ZodConfigPathSegment[],
-): X2ZodLoadedCodeQualityRegistry => {
+): X2ZodLoadedOutputProcessorRegistry => {
   if (value === undefined) return {};
   if (!isRecord(value)) {
-    issues.push(createIssue(path, "expected a code quality plugin registry object"));
+    issues.push(createIssue(path, "expected an output processor registry object"));
     return {};
   }
 
-  const codeQuality: Record<string, X2ZodLoadedCodeQualityPlugin> = {};
+  const outputProcessors: Record<string, X2ZodLoadedOutputProcessorPlugin> = {};
 
   for (const [key, pluginValue] of Object.entries(value)) {
-    const plugin = readCodeQualityRegistryEntry({ issues, key, path, value: pluginValue });
-    if (plugin !== undefined) codeQuality[key] = plugin;
+    const plugin = readOutputProcessorRegistryEntry({ issues, key, path, value: pluginValue });
+    if (plugin !== undefined) outputProcessors[key] = plugin;
   }
 
-  return codeQuality;
+  return outputProcessors;
 };
 
-const readCodeQualityRegistryEntry = ({
+const readOutputProcessorRegistryEntry = ({
   issues,
   key,
   path: registryPath,
@@ -303,14 +303,14 @@ const readCodeQualityRegistryEntry = ({
   key: string;
   path: readonly X2ZodConfigPathSegment[];
   value: unknown;
-}>): X2ZodLoadedCodeQualityPlugin | undefined => {
+}>): X2ZodLoadedOutputProcessorPlugin | undefined => {
   const path = [...registryPath, key] as const;
   if (key.length === 0) {
-    issues.push(createIssue(path, "code quality keys must not be empty"));
+    issues.push(createIssue(path, "output processor keys must not be empty"));
     return undefined;
   }
   if (!isRecord(value)) {
-    issues.push(createIssue(path, "expected a code quality plugin object"));
+    issues.push(createIssue(path, "expected an output processor plugin object"));
     return undefined;
   }
 
@@ -319,30 +319,38 @@ const readCodeQualityRegistryEntry = ({
   const hasValidTransform = typeof transform === "function";
 
   if (typeof kind !== "string" || kind.length === 0) {
-    issues.push(createIssue([...path, "kind"], "expected a non-empty code quality kind"));
+    issues.push(createIssue([...path, "kind"], "expected a non-empty output processor kind"));
     return undefined;
   }
   if (kind !== key)
-    issues.push(createIssue([...path, "kind"], "code quality plugin kind must match its key"));
+    issues.push(createIssue([...path, "kind"], "output processor plugin kind must match its key"));
   if (!hasValidOptionsSchema)
     issues.push(createIssue([...path, "optionsSchema"], "expected a Zod options schema"));
   if (!hasValidTransform)
     issues.push(createIssue([...path, "transform"], "expected a transform function"));
 
   return kind === key && hasValidOptionsSchema && hasValidTransform
-    ? (value as unknown as X2ZodLoadedCodeQualityPlugin)
+    ? (value as unknown as X2ZodLoadedOutputProcessorPlugin)
     : undefined;
 };
 
 const readPluginConfig = (value: unknown, issues: X2ZodConfigIssue[]): LoadedPluginConfig => {
   if (!isRecord(value)) {
     issues.push(createIssue(["plugins"], "expected a plugin config object"));
-    return { codeQuality: {}, input: {} };
+    return { input: {}, output: {} };
   }
 
+  if (Object.hasOwn(value, "codeQuality"))
+    issues.push(
+      createIssue(
+        ["plugins", "codeQuality"],
+        "use plugins.output to register output processor plugins",
+      ),
+    );
+
   return {
-    codeQuality: readCodeQualityRegistry(value["codeQuality"], issues, ["plugins", "codeQuality"]),
     input: readPluginRegistry(value["input"], issues, ["plugins", "input"]),
+    output: readOutputProcessorRegistry(value["output"], issues, ["plugins", "output"]),
   };
 };
 
@@ -364,14 +372,14 @@ const readSupportedCLIOptionsSchema = (
 };
 
 const readResolvedOutput = ({
-  codeQuality,
   issues,
   output,
+  outputProcessors,
   path,
 }: ReadResolvedOutputContext):
-  | X2ZodResolvedOutputConfig<X2ZodLoadedCodeQualityRegistry>
+  | X2ZodResolvedOutputConfig<X2ZodLoadedOutputProcessorRegistry>
   | undefined => {
-  const { codeQuality: codeQualityConfig, path: outputPath, ...sourceOutputOptions } = output;
+  const { path: outputPath, processors: processorConfig, ...sourceOutputOptions } = output;
   const resolved = resolveZodSourceOutputOptions(sourceOutputOptions);
   if (!resolved.ok) {
     for (const diagnostic of resolved.diagnostics)
@@ -379,18 +387,18 @@ const readResolvedOutput = ({
     return undefined;
   }
 
-  const resolvedCodeQuality = readResolvedCodeQuality({
-    codeQuality,
+  const resolvedProcessors = readResolvedOutputProcessors({
     issues,
-    path: [...path, "codeQuality"],
-    value: codeQualityConfig,
+    outputProcessors,
+    path: [...path, "processors"],
+    value: processorConfig,
   });
-  if (codeQualityConfig !== undefined && resolvedCodeQuality === undefined) return undefined;
+  if (processorConfig !== undefined && resolvedProcessors === undefined) return undefined;
 
   return {
     ...resolved.value,
-    ...(resolvedCodeQuality === undefined ? {} : { codeQuality: resolvedCodeQuality }),
     path: outputPath,
+    ...(resolvedProcessors === undefined ? {} : { processors: resolvedProcessors }),
   };
 };
 
@@ -403,23 +411,23 @@ const readPluginOptions = (context: ReadPluginOptionsContext): unknown => {
   return undefined;
 };
 
-const readResolvedCodeQuality = ({
-  codeQuality,
+const readResolvedOutputProcessors = ({
   issues,
+  outputProcessors,
   path,
   value,
-}: ReadResolvedCodeQualityContext):
-  | X2ZodResolvedOutputConfig<X2ZodLoadedCodeQualityRegistry>["codeQuality"]
+}: ReadResolvedOutputProcessorsContext):
+  | X2ZodResolvedOutputConfig<X2ZodLoadedOutputProcessorRegistry>["processors"]
   | undefined => {
   if (value === undefined) return undefined;
   const isPipeline = Array.isArray(value);
-  const values: readonly X2ZodOutputCodeQualityConfigItem<X2ZodLoadedCodeQualityRegistry>[] =
+  const values: readonly X2ZodOutputProcessorConfigItem<X2ZodLoadedOutputProcessorRegistry>[] =
     isPipeline ? value : [value];
   const resolved = values
     .map((item, index) =>
-      readResolvedCodeQualityItem({
-        codeQuality,
+      readResolvedOutputProcessorItem({
         issues,
+        outputProcessors,
         path: isPipeline ? [...path, index] : path,
         value: item,
       }),
@@ -429,18 +437,18 @@ const readResolvedCodeQuality = ({
   return resolved.length === values.length ? resolved : undefined;
 };
 
-const readResolvedCodeQualityItem = ({
-  codeQuality,
+const readResolvedOutputProcessorItem = ({
   issues,
+  outputProcessors,
   path,
   value,
-}: ReadResolvedCodeQualityItemContext):
-  | X2ZodResolvedOutputCodeQualityConfigItem<X2ZodLoadedCodeQualityRegistry>
+}: ReadResolvedOutputProcessorItemContext):
+  | X2ZodResolvedOutputProcessorConfigItem<X2ZodLoadedOutputProcessorRegistry>
   | undefined => {
-  const plugin = codeQuality[value.kind];
+  const plugin = outputProcessors[value.kind];
   if (plugin === undefined) {
     issues.push(
-      createIssue([...path, "kind"], ["unknown code quality kind", value.kind].join(" ")),
+      createIssue([...path, "kind"], ["unknown output processor kind", value.kind].join(" ")),
     );
     return undefined;
   }
@@ -459,10 +467,23 @@ const readResolvedCodeQualityItem = ({
 const readResolvedTarget = (
   context: ReadResolvedTargetContext,
 ):
-  | X2ZodResolvedTarget<X2ZodLoadedInputPluginRegistry, X2ZodLoadedCodeQualityRegistry>
+  | X2ZodResolvedTarget<X2ZodLoadedInputPluginRegistry, X2ZodLoadedOutputProcessorRegistry>
   | undefined => {
-  const { codeQuality, issues, name, plugins, value } = context;
+  const { issues, name, outputProcessors, plugins, value } = context;
   const path = ["targets", name] as const;
+  if (
+    isRecord(value) &&
+    isRecord(value["output"]) &&
+    Object.hasOwn(value["output"], "codeQuality")
+  ) {
+    issues.push(
+      createIssue(
+        [...path, "output", "codeQuality"],
+        "use output.processors to select output processor plugins",
+      ),
+    );
+    return undefined;
+  }
   const parsed = targetConfigSchema.safeParse(value);
 
   if (!parsed.success) {
@@ -478,9 +499,9 @@ const readResolvedTarget = (
   }
 
   const resolvedOutput = readResolvedOutput({
-    codeQuality,
     issues,
     output,
+    outputProcessors,
     path: [...path, "output"],
   });
   const resolvedOptions = readPluginOptions({
@@ -503,13 +524,13 @@ const readResolvedTarget = (
 };
 
 const readResolvedTargets = ({
-  codeQuality,
   issues,
+  outputProcessors,
   plugins,
   value,
 }: ReadResolvedTargetsContext): X2ZodResolvedTargetMap<
   X2ZodLoadedInputPluginRegistry,
-  X2ZodLoadedCodeQualityRegistry
+  X2ZodLoadedOutputProcessorRegistry
 > => {
   if (!isRecord(value)) {
     issues.push(createIssue(["targets"], "expected a target map object"));
@@ -518,14 +539,20 @@ const readResolvedTargets = ({
 
   const targets: Record<
     string,
-    X2ZodResolvedTarget<X2ZodLoadedInputPluginRegistry, X2ZodLoadedCodeQualityRegistry>
+    X2ZodResolvedTarget<X2ZodLoadedInputPluginRegistry, X2ZodLoadedOutputProcessorRegistry>
   > = {};
 
   for (const [name, targetValue] of Object.entries(value))
     if (name.length === 0)
       issues.push(createIssue(["targets", name], "target names must not be empty"));
     else {
-      const target = readResolvedTarget({ codeQuality, issues, name, plugins, value: targetValue });
+      const target = readResolvedTarget({
+        issues,
+        name,
+        outputProcessors,
+        plugins,
+        value: targetValue,
+      });
       if (target !== undefined) targets[name] = target;
     }
 
@@ -534,17 +561,17 @@ const readResolvedTargets = ({
 
 const resolveUnknownX2ZodConfig = <
   const TPlugins extends X2ZodInputPluginRegistry,
-  const TCodeQuality extends X2ZodCodeQualityRegistry,
+  const TOutputProcessors extends X2ZodOutputProcessorRegistry,
 >(
   value: unknown,
   options: ResolveX2ZodConfigOptions = {},
-): X2ZodResolvedConfig<TPlugins, TCodeQuality> => {
+): X2ZodResolvedConfig<TPlugins, TOutputProcessors> => {
   const config = readConfigRecord(value);
   const issues: X2ZodConfigIssue[] = [];
   const plugins = readPluginConfig(config["plugins"], issues);
   const targets = readResolvedTargets({
-    codeQuality: plugins.codeQuality,
     issues,
+    outputProcessors: plugins.output,
     plugins: plugins.input,
     value: config["targets"],
   });
@@ -554,10 +581,10 @@ const resolveUnknownX2ZodConfig = <
   return {
     configFile: options.configFile,
     plugins: {
-      codeQuality: plugins.codeQuality as unknown as TCodeQuality,
       input: plugins.input as unknown as TPlugins,
+      output: plugins.output as unknown as TOutputProcessors,
     },
-    targets: targets as unknown as X2ZodResolvedTargetMap<TPlugins, TCodeQuality>,
+    targets: targets as unknown as X2ZodResolvedTargetMap<TPlugins, TOutputProcessors>,
   };
 };
 
@@ -576,12 +603,12 @@ const resolveUnknownX2ZodInputPluginRegistry = (
 
 export const resolveX2ZodConfig = <
   const TPlugins extends X2ZodInputPluginRegistry,
-  const TCodeQuality extends X2ZodCodeQualityRegistry,
+  const TOutputProcessors extends X2ZodOutputProcessorRegistry,
 >(
-  config: X2ZodConfig<TPlugins, TCodeQuality>,
+  config: X2ZodConfig<TPlugins, TOutputProcessors>,
   options: ResolveX2ZodConfigOptions = {},
-): X2ZodResolvedConfig<TPlugins, TCodeQuality> =>
-  resolveUnknownX2ZodConfig<TPlugins, TCodeQuality>(config, options);
+): X2ZodResolvedConfig<TPlugins, TOutputProcessors> =>
+  resolveUnknownX2ZodConfig<TPlugins, TOutputProcessors>(config, options);
 
 export const resolveX2ZodInputPluginRegistry = <const TPlugins extends X2ZodInputPluginRegistry>(
   config: Readonly<{
@@ -596,17 +623,19 @@ export const resolveX2ZodInputPluginRegistry = <const TPlugins extends X2ZodInpu
 
 export const loadX2ZodConfig = async (
   options: LoadX2ZodConfigOptions = {},
-): Promise<X2ZodResolvedConfig<X2ZodLoadedInputPluginRegistry, X2ZodLoadedCodeQualityRegistry>> => {
+): Promise<
+  X2ZodResolvedConfig<X2ZodLoadedInputPluginRegistry, X2ZodLoadedOutputProcessorRegistry>
+> => {
   const configFileRequired = options.configFileRequired ?? true;
   const loaded = await loadC12Config<Record<string, unknown>>(
     c12LoadOptions(options, configFileRequired),
   );
   if (configFileRequired) assertRequiredConfigLoaded(loaded.config, resolvedConfigFile(loaded));
 
-  return resolveUnknownX2ZodConfig<X2ZodLoadedInputPluginRegistry, X2ZodLoadedCodeQualityRegistry>(
-    loaded.config,
-    { configFile: loaded.configFile },
-  );
+  return resolveUnknownX2ZodConfig<
+    X2ZodLoadedInputPluginRegistry,
+    X2ZodLoadedOutputProcessorRegistry
+  >(loaded.config, { configFile: loaded.configFile });
 };
 
 export const loadX2ZodInputPluginRegistry = async (

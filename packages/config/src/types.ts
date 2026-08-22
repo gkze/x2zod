@@ -37,12 +37,12 @@ export type X2ZodInputPluginRegistryFor<TPlugins extends X2ZodInputPluginRegistr
     : never;
 }>;
 
-export type X2ZodCodeQualityContext = Readonly<{
+export type X2ZodOutputProcessorContext = Readonly<{
   baseDirectory: string;
   outputPath?: string | undefined;
 }>;
 
-export type X2ZodCodeQualityPlugin<
+export type X2ZodOutputProcessorPlugin<
   TOptions = unknown,
   TOptionsInput = TOptions,
   TKind extends string = string,
@@ -52,91 +52,96 @@ export type X2ZodCodeQualityPlugin<
   transform: (
     sourceText: string,
     options: TOptions,
-    context: X2ZodCodeQualityContext,
+    context: X2ZodOutputProcessorContext,
   ) => Promise<string> | string;
 }>;
 
-export type X2ZodAnyCodeQualityPlugin<TKind extends string = string> = Readonly<{
+export type X2ZodAnyOutputProcessorPlugin<TKind extends string = string> = Readonly<{
   kind: TKind;
   optionsSchema: z.ZodType;
   transform: (
     sourceText: string,
     options: never,
-    context: X2ZodCodeQualityContext,
+    context: X2ZodOutputProcessorContext,
   ) => Promise<string> | string;
 }>;
 
-export type X2ZodCodeQualityRegistry = Readonly<Record<string, X2ZodAnyCodeQualityPlugin>>;
-export type X2ZodEmptyCodeQualityRegistry = Readonly<Record<never, never>>;
-export type X2ZodCodeQualityKey<TCodeQuality extends X2ZodCodeQualityRegistry> = Extract<
-  keyof TCodeQuality,
-  string
->;
-export type X2ZodCodeQualityRegistryFor<TCodeQuality extends X2ZodCodeQualityRegistry> = Readonly<{
-  [TKind in X2ZodCodeQualityKey<TCodeQuality>]: TCodeQuality[TKind] extends X2ZodAnyCodeQualityPlugin<TKind>
-    ? TCodeQuality[TKind]
+export type X2ZodOutputProcessorRegistry = Readonly<Record<string, X2ZodAnyOutputProcessorPlugin>>;
+export type X2ZodEmptyOutputProcessorRegistry = Readonly<Record<never, never>>;
+export type X2ZodOutputProcessorKey<TOutputProcessors extends X2ZodOutputProcessorRegistry> =
+  Extract<keyof TOutputProcessors, string>;
+export type X2ZodOutputProcessorRegistryFor<
+  TOutputProcessors extends X2ZodOutputProcessorRegistry,
+> = Readonly<{
+  [TKind in X2ZodOutputProcessorKey<TOutputProcessors>]: TOutputProcessors[TKind] extends X2ZodAnyOutputProcessorPlugin<TKind>
+    ? TOutputProcessors[TKind]
     : never;
 }>;
 
 export type X2ZodPluginConfig<
   TInput extends X2ZodInputPluginRegistry,
-  TCodeQuality extends X2ZodCodeQualityRegistry = X2ZodEmptyCodeQualityRegistry,
+  TOutputProcessors extends X2ZodOutputProcessorRegistry = X2ZodEmptyOutputProcessorRegistry,
 > = Readonly<{
-  codeQuality?: (TCodeQuality & X2ZodCodeQualityRegistryFor<TCodeQuality>) | undefined;
   input: TInput & X2ZodInputPluginRegistryFor<TInput>;
+  output?: (TOutputProcessors & X2ZodOutputProcessorRegistryFor<TOutputProcessors>) | undefined;
 }>;
 
 export type X2ZodResolvedPluginConfig<
   TInput extends X2ZodInputPluginRegistry,
-  TCodeQuality extends X2ZodCodeQualityRegistry = X2ZodEmptyCodeQualityRegistry,
-> = Readonly<{ codeQuality: TCodeQuality; input: TInput }>;
+  TOutputProcessors extends X2ZodOutputProcessorRegistry = X2ZodEmptyOutputProcessorRegistry,
+> = Readonly<{ input: TInput; output: TOutputProcessors }>;
 
-export type X2ZodOutputCodeQualityConfigItemFor<
-  TCodeQuality extends X2ZodCodeQualityRegistry,
-  TKind extends X2ZodCodeQualityKey<TCodeQuality>,
-> = Readonly<{ kind: TKind; options?: z.input<TCodeQuality[TKind]["optionsSchema"]> | undefined }>;
-
-export type X2ZodOutputCodeQualityConfigFor<
-  TCodeQuality extends X2ZodCodeQualityRegistry,
-  TKind extends X2ZodCodeQualityKey<TCodeQuality>,
-> = X2ZodOutputCodeQualityConfigItemFor<TCodeQuality, TKind>;
-
-export type X2ZodOutputCodeQualityConfigItem<TCodeQuality extends X2ZodCodeQualityRegistry> = {
-  readonly [TKind in X2ZodCodeQualityKey<TCodeQuality>]: X2ZodOutputCodeQualityConfigItemFor<
-    TCodeQuality,
-    TKind
-  >;
-}[X2ZodCodeQualityKey<TCodeQuality>];
-
-export type X2ZodOutputCodeQualityConfig<TCodeQuality extends X2ZodCodeQualityRegistry> =
-  | X2ZodOutputCodeQualityConfigItem<TCodeQuality>
-  | readonly X2ZodOutputCodeQualityConfigItem<TCodeQuality>[];
-
-export type X2ZodResolvedOutputCodeQualityConfigItemFor<
-  TCodeQuality extends X2ZodCodeQualityRegistry,
-  TKind extends X2ZodCodeQualityKey<TCodeQuality>,
+export type X2ZodOutputProcessorConfigItemFor<
+  TOutputProcessors extends X2ZodOutputProcessorRegistry,
+  TKind extends X2ZodOutputProcessorKey<TOutputProcessors>,
 > = Readonly<{
   kind: TKind;
-  options: z.output<TCodeQuality[TKind]["optionsSchema"]>;
-  plugin: TCodeQuality[TKind];
+  options?: z.input<TOutputProcessors[TKind]["optionsSchema"]> | undefined;
 }>;
 
-export type X2ZodResolvedOutputCodeQualityConfigFor<
-  TCodeQuality extends X2ZodCodeQualityRegistry,
-  TKind extends X2ZodCodeQualityKey<TCodeQuality>,
-> = X2ZodResolvedOutputCodeQualityConfigItemFor<TCodeQuality, TKind>;
+export type X2ZodOutputProcessorConfigFor<
+  TOutputProcessors extends X2ZodOutputProcessorRegistry,
+  TKind extends X2ZodOutputProcessorKey<TOutputProcessors>,
+> = X2ZodOutputProcessorConfigItemFor<TOutputProcessors, TKind>;
 
-export type X2ZodResolvedOutputCodeQualityConfigItem<
-  TCodeQuality extends X2ZodCodeQualityRegistry,
+export type X2ZodOutputProcessorConfigItem<TOutputProcessors extends X2ZodOutputProcessorRegistry> =
+  {
+    readonly [TKind in X2ZodOutputProcessorKey<TOutputProcessors>]: X2ZodOutputProcessorConfigItemFor<
+      TOutputProcessors,
+      TKind
+    >;
+  }[X2ZodOutputProcessorKey<TOutputProcessors>];
+
+export type X2ZodOutputProcessorConfig<TOutputProcessors extends X2ZodOutputProcessorRegistry> =
+  | X2ZodOutputProcessorConfigItem<TOutputProcessors>
+  | readonly X2ZodOutputProcessorConfigItem<TOutputProcessors>[];
+
+export type X2ZodResolvedOutputProcessorConfigItemFor<
+  TOutputProcessors extends X2ZodOutputProcessorRegistry,
+  TKind extends X2ZodOutputProcessorKey<TOutputProcessors>,
+> = Readonly<{
+  kind: TKind;
+  options: z.output<TOutputProcessors[TKind]["optionsSchema"]>;
+  plugin: TOutputProcessors[TKind];
+}>;
+
+export type X2ZodResolvedOutputProcessorConfigFor<
+  TOutputProcessors extends X2ZodOutputProcessorRegistry,
+  TKind extends X2ZodOutputProcessorKey<TOutputProcessors>,
+> = X2ZodResolvedOutputProcessorConfigItemFor<TOutputProcessors, TKind>;
+
+export type X2ZodResolvedOutputProcessorConfigItem<
+  TOutputProcessors extends X2ZodOutputProcessorRegistry,
 > = {
-  readonly [TKind in X2ZodCodeQualityKey<TCodeQuality>]: X2ZodResolvedOutputCodeQualityConfigItemFor<
-    TCodeQuality,
+  readonly [TKind in X2ZodOutputProcessorKey<TOutputProcessors>]: X2ZodResolvedOutputProcessorConfigItemFor<
+    TOutputProcessors,
     TKind
   >;
-}[X2ZodCodeQualityKey<TCodeQuality>];
+}[X2ZodOutputProcessorKey<TOutputProcessors>];
 
-export type X2ZodResolvedOutputCodeQualityConfig<TCodeQuality extends X2ZodCodeQualityRegistry> =
-  readonly X2ZodResolvedOutputCodeQualityConfigItem<TCodeQuality>[];
+export type X2ZodResolvedOutputProcessorConfig<
+  TOutputProcessors extends X2ZodOutputProcessorRegistry,
+> = readonly X2ZodResolvedOutputProcessorConfigItem<TOutputProcessors>[];
 
 export type X2ZodFileInputConfig = Readonly<{ mediaType?: string | undefined; path: string }>;
 
@@ -156,92 +161,96 @@ export type X2ZodResolvedTargetTransformConfigItem = ZodEmissionTransform;
 export type X2ZodResolvedTargetTransformConfig = readonly X2ZodResolvedTargetTransformConfigItem[];
 
 export type X2ZodOutputConfig<
-  TCodeQuality extends X2ZodCodeQualityRegistry = X2ZodEmptyCodeQualityRegistry,
+  TOutputProcessors extends X2ZodOutputProcessorRegistry = X2ZodEmptyOutputProcessorRegistry,
 > = Readonly<
   ZodSourceOutputOptions & {
-    codeQuality?: X2ZodOutputCodeQualityConfig<TCodeQuality> | undefined;
     path: string;
+    processors?: X2ZodOutputProcessorConfig<TOutputProcessors> | undefined;
   }
 >;
 
 export type X2ZodResolvedOutputConfig<
-  TCodeQuality extends X2ZodCodeQualityRegistry = X2ZodEmptyCodeQualityRegistry,
+  TOutputProcessors extends X2ZodOutputProcessorRegistry = X2ZodEmptyOutputProcessorRegistry,
 > = Readonly<
   ResolvedZodSourceOutputOptions & {
-    codeQuality?: X2ZodResolvedOutputCodeQualityConfig<TCodeQuality> | undefined;
     path: string;
+    processors?: X2ZodResolvedOutputProcessorConfig<TOutputProcessors> | undefined;
   }
 >;
 
 export type X2ZodTargetFor<
   TPlugins extends X2ZodInputPluginRegistry,
   TKind extends X2ZodInputPluginKey<TPlugins>,
-  TCodeQuality extends X2ZodCodeQualityRegistry = X2ZodEmptyCodeQualityRegistry,
+  TOutputProcessors extends X2ZodOutputProcessorRegistry = X2ZodEmptyOutputProcessorRegistry,
 > = Readonly<{
   input: X2ZodInputConfig;
   kind: TKind;
   options?: z.input<TPlugins[TKind]["optionsSchema"]> | undefined;
-  output: X2ZodOutputConfig<TCodeQuality>;
+  output: X2ZodOutputConfig<TOutputProcessors>;
   transforms?: X2ZodTargetTransformConfig | undefined;
 }>;
 
 export type X2ZodTarget<
   TPlugins extends X2ZodInputPluginRegistry,
-  TCodeQuality extends X2ZodCodeQualityRegistry = X2ZodEmptyCodeQualityRegistry,
+  TOutputProcessors extends X2ZodOutputProcessorRegistry = X2ZodEmptyOutputProcessorRegistry,
 > = {
-  readonly [TKind in X2ZodInputPluginKey<TPlugins>]: X2ZodTargetFor<TPlugins, TKind, TCodeQuality>;
+  readonly [TKind in X2ZodInputPluginKey<TPlugins>]: X2ZodTargetFor<
+    TPlugins,
+    TKind,
+    TOutputProcessors
+  >;
 }[X2ZodInputPluginKey<TPlugins>];
 
 export type X2ZodTargetMap<
   TPlugins extends X2ZodInputPluginRegistry,
-  TCodeQuality extends X2ZodCodeQualityRegistry = X2ZodEmptyCodeQualityRegistry,
-> = Readonly<Record<string, X2ZodTarget<TPlugins, TCodeQuality>>>;
+  TOutputProcessors extends X2ZodOutputProcessorRegistry = X2ZodEmptyOutputProcessorRegistry,
+> = Readonly<Record<string, X2ZodTarget<TPlugins, TOutputProcessors>>>;
 
 export type X2ZodConfig<
   TPlugins extends X2ZodInputPluginRegistry,
-  TCodeQuality extends X2ZodCodeQualityRegistry = X2ZodEmptyCodeQualityRegistry,
+  TOutputProcessors extends X2ZodOutputProcessorRegistry = X2ZodEmptyOutputProcessorRegistry,
 > = Readonly<{
-  plugins: X2ZodPluginConfig<TPlugins, TCodeQuality>;
-  targets: X2ZodTargetMap<TPlugins, TCodeQuality>;
+  plugins: X2ZodPluginConfig<TPlugins, TOutputProcessors>;
+  targets: X2ZodTargetMap<TPlugins, TOutputProcessors>;
 }>;
 
 export type X2ZodResolvedTargetFor<
   TPlugins extends X2ZodInputPluginRegistry,
   TKind extends X2ZodInputPluginKey<TPlugins>,
-  TCodeQuality extends X2ZodCodeQualityRegistry = X2ZodEmptyCodeQualityRegistry,
+  TOutputProcessors extends X2ZodOutputProcessorRegistry = X2ZodEmptyOutputProcessorRegistry,
 > = Readonly<{
   input: X2ZodInputConfig;
   kind: TKind;
   name: string;
   options: z.output<TPlugins[TKind]["optionsSchema"]>;
-  output: X2ZodResolvedOutputConfig<TCodeQuality>;
+  output: X2ZodResolvedOutputConfig<TOutputProcessors>;
   plugin: TPlugins[TKind];
   transforms: X2ZodResolvedTargetTransformConfig;
 }>;
 
 export type X2ZodResolvedTarget<
   TPlugins extends X2ZodInputPluginRegistry,
-  TCodeQuality extends X2ZodCodeQualityRegistry = X2ZodEmptyCodeQualityRegistry,
+  TOutputProcessors extends X2ZodOutputProcessorRegistry = X2ZodEmptyOutputProcessorRegistry,
 > = {
   readonly [TKind in X2ZodInputPluginKey<TPlugins>]: X2ZodResolvedTargetFor<
     TPlugins,
     TKind,
-    TCodeQuality
+    TOutputProcessors
   >;
 }[X2ZodInputPluginKey<TPlugins>];
 
 export type X2ZodResolvedTargetMap<
   TPlugins extends X2ZodInputPluginRegistry,
-  TCodeQuality extends X2ZodCodeQualityRegistry = X2ZodEmptyCodeQualityRegistry,
-> = Readonly<Record<string, X2ZodResolvedTarget<TPlugins, TCodeQuality>>>;
+  TOutputProcessors extends X2ZodOutputProcessorRegistry = X2ZodEmptyOutputProcessorRegistry,
+> = Readonly<Record<string, X2ZodResolvedTarget<TPlugins, TOutputProcessors>>>;
 
 export type X2ZodResolvedConfig<
   TPlugins extends X2ZodInputPluginRegistry,
-  TCodeQuality extends X2ZodCodeQualityRegistry = X2ZodEmptyCodeQualityRegistry,
+  TOutputProcessors extends X2ZodOutputProcessorRegistry = X2ZodEmptyOutputProcessorRegistry,
 > = Readonly<{
   configFile?: string | undefined;
-  plugins: X2ZodResolvedPluginConfig<TPlugins, TCodeQuality>;
-  targets: X2ZodResolvedTargetMap<TPlugins, TCodeQuality>;
+  plugins: X2ZodResolvedPluginConfig<TPlugins, TOutputProcessors>;
+  targets: X2ZodResolvedTargetMap<TPlugins, TOutputProcessors>;
 }>;
 
 export type X2ZodResolvedInputPluginRegistry<TPlugins extends X2ZodInputPluginRegistry> = Readonly<{
@@ -253,16 +262,18 @@ export type X2ZodLoadedInputPlugin = X2ZodAnyInputPlugin;
 
 export type X2ZodLoadedInputPluginRegistry = Readonly<Record<string, X2ZodLoadedInputPlugin>>;
 
-export type X2ZodLoadedCodeQualityPlugin = X2ZodAnyCodeQualityPlugin;
+export type X2ZodLoadedOutputProcessorPlugin = X2ZodAnyOutputProcessorPlugin;
 
-export type X2ZodLoadedCodeQualityRegistry = Readonly<Record<string, X2ZodLoadedCodeQualityPlugin>>;
+export type X2ZodLoadedOutputProcessorRegistry = Readonly<
+  Record<string, X2ZodLoadedOutputProcessorPlugin>
+>;
 
 export type LoadX2ZodConfigOptions = Readonly<{
   configFile?: string | undefined;
   configFileRequired?: boolean | undefined;
   cwd?: string | undefined;
   overrides?:
-    | Partial<X2ZodConfig<X2ZodLoadedInputPluginRegistry, X2ZodLoadedCodeQualityRegistry>>
+    | Partial<X2ZodConfig<X2ZodLoadedInputPluginRegistry, X2ZodLoadedOutputProcessorRegistry>>
     | undefined;
 }>;
 
@@ -270,10 +281,10 @@ export type ResolveX2ZodConfigOptions = Readonly<{ configFile?: string | undefin
 
 export const defineConfig = <
   const TPlugins extends X2ZodInputPluginRegistry,
-  const TCodeQuality extends X2ZodCodeQualityRegistry = X2ZodEmptyCodeQualityRegistry,
+  const TOutputProcessors extends X2ZodOutputProcessorRegistry = X2ZodEmptyOutputProcessorRegistry,
 >(
   config: Readonly<{
-    plugins: X2ZodPluginConfig<TPlugins, TCodeQuality>;
-    targets: X2ZodTargetMap<TPlugins, TCodeQuality>;
+    plugins: X2ZodPluginConfig<TPlugins, TOutputProcessors>;
+    targets: X2ZodTargetMap<TPlugins, TOutputProcessors>;
   }>,
-): X2ZodConfig<TPlugins, TCodeQuality> => config;
+): X2ZodConfig<TPlugins, TOutputProcessors> => config;

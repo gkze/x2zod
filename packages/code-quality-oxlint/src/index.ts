@@ -14,8 +14,8 @@ import {
 } from "@x2zod/config";
 import type {
   CommandResult,
-  X2ZodCodeQualityContext,
-  X2ZodCodeQualityPlugin,
+  X2ZodOutputProcessorContext,
+  X2ZodOutputProcessorPlugin,
   X2ZodCodeQualityToolConfig,
 } from "@x2zod/config";
 
@@ -104,7 +104,7 @@ const oxlintFailureMessage = (result: CommandResult): string => {
 const runOxlint = async (
   sourceText: string,
   options: OxlintCodeQualityOptions,
-  context: X2ZodCodeQualityContext,
+  context: X2ZodOutputProcessorContext,
 ): Promise<string> => {
   const tempParent = outputDirectory(context);
   await mkdir(tempParent, { recursive: true });
@@ -134,7 +134,7 @@ export const oxlintCodeQualityOptionsSchema: z.ZodType<
   OxlintCodeQualityOptionsInput
 > = oxlintCodeQualityOptionsSchemaValue;
 
-export const oxlintCodeQualityPlugin: X2ZodCodeQualityPlugin<
+export const oxlintCodeQualityPlugin: X2ZodOutputProcessorPlugin<
   OxlintCodeQualityOptions,
   OxlintCodeQualityOptionsInput,
   "oxlint"

@@ -19,7 +19,7 @@ import {
   writeConfiguredUserTarget,
   writeDynamicUserTarget,
   writeJsonFile,
-  writeQualityUserTarget,
+  writeOutputProcessorUserTarget,
 } from "./fixtures";
 
 void test("runCLI compile writes generated source for anonymous JSON Schema input", async () => {
@@ -240,9 +240,9 @@ void test("runCLI with no args runs every configured target", async () => {
   }, cliWorkspaceTemp);
 });
 
-void test("runCLI applies configured code quality tools before writing generated source", async () => {
+void test("runCLI applies configured output processors before writing generated source", async () => {
   await withTempDirectory(async (directory) => {
-    await writeQualityUserTarget(directory);
+    await writeOutputProcessorUserTarget(directory);
 
     const result = await runCLITest(["compile", "-g", "user"], { cwd: directory });
 
