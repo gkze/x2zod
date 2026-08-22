@@ -1,5 +1,14 @@
 # @x2zod/output-oxfmt
 
+## 0.1.6
+
+### Patch Changes
+
+- 304ab00: Publish the Oxfmt and Oxlint integrations under their new output processor package names.
+
+  Use `@x2zod/output-oxfmt` and `@x2zod/output-oxlint` in new imports. Their exported APIs are
+  unchanged.
+
 ## 0.1.5
 
 ### Patch Changes
