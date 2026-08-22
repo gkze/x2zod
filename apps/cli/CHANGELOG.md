@@ -4,8 +4,8 @@
 
 ### Minor Changes
 
-- 3d9332e: Generalize code-quality-specific plugins behind a reusable output processor contract. This is a
-  breaking public API rename for the pre-1.0 config and CLI packages. Migrate these APIs:
+- 3d9332e: Generalize code-quality-specific plugins behind a reusable output processor contract.
+  This is a breaking public API rename for the pre-1.0 config and CLI packages. Migrate these APIs:
 
   | Previous API                              | Replacement                             |
   | ----------------------------------------- | --------------------------------------- |
