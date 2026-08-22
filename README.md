@@ -36,16 +36,16 @@ The V1 architecture is library-first:
   Schema-to-Zod lowering.
 - [`@x2zod/config`](packages/config) owns typed project config, plugin registry loading, target
   resolution, and the `defineConfig` helper for library and CLI callers.
-- [`@x2zod/code-quality-oxfmt`](packages/code-quality-oxfmt) and
-  [`@x2zod/code-quality-oxlint`](packages/code-quality-oxlint) provide optional code-quality output
-  processors for generated source.
+- [`@x2zod/output-oxfmt`](packages/output-oxfmt) and
+  [`@x2zod/output-oxlint`](packages/output-oxlint) provide optional output processors for generated
+  source.
 - [`@x2zod/cli`](apps/cli) exposes the `x2zod` binary and should stay thin over the library API.
 - Supporting packages such as [`@x2zod/build-inputs`](packages/build-inputs),
   [`@x2zod/eslint-plugins`](packages/eslint-plugins), and [`@x2zod/tsconfig`](packages/tsconfig)
   remain separate workspace packages.
 
-The Oxfmt and Oxlint package and export names remain code-quality-specific because they identify
-those concrete tool integrations; their plugin role is the general output processor role.
+The Oxfmt and Oxlint package names follow their general output processor role. Their existing
+code-quality-specific export names remain available for compatibility.
 
 Core should stay schema-language agnostic. Plugins validate and lower their own input languages;
 core coordinates compilation and emits a finalized TypeScript compiler `SourceFile`.
@@ -105,8 +105,8 @@ then select the ordered processors per output:
 
 ```ts
 import { defineConfig } from "@x2zod/config";
-import { oxfmtCodeQualityPlugin } from "@x2zod/code-quality-oxfmt";
-import { oxlintCodeQualityPlugin } from "@x2zod/code-quality-oxlint";
+import { oxfmtCodeQualityPlugin } from "@x2zod/output-oxfmt";
+import { oxlintCodeQualityPlugin } from "@x2zod/output-oxlint";
 import { jsonSchemaInputPlugin } from "@x2zod/input-json-schema";
 
 export default defineConfig({

@@ -4,8 +4,8 @@
   "files": [],
   "references": [
     { "path": "./apps/cli" },
-    { "path": "./packages/code-quality-oxfmt" },
-    { "path": "./packages/code-quality-oxlint" },
+    { "path": "./packages/output-oxfmt" },
+    { "path": "./packages/output-oxlint" },
     { "path": "./packages/config" },
     { "path": "./packages/core" },
     { "path": "./packages/build-inputs" },

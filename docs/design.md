@@ -27,18 +27,17 @@ start:
   registry validation, target option and transform resolution, output processor resolution, and
   target output resolution. This package lets library callers share the same config surface as the
   CLI without importing the CLI binary module.
-- `@x2zod/code-quality-oxfmt`: optional Oxfmt code-quality output processor plugin, including its
-  typed config re-exports and subprocess adapter.
-- `@x2zod/code-quality-oxlint`: optional Oxlint code-quality output processor plugin, including its
-  typed config re-exports and subprocess adapter.
+- `@x2zod/output-oxfmt`: optional Oxfmt output processor plugin, including its typed config
+  re-exports and subprocess adapter.
+- `@x2zod/output-oxlint`: optional Oxlint output processor plugin, including its typed config
+  re-exports and subprocess adapter.
 - `@x2zod/cli`: CLI package, located at `apps/cli` and exposing the `x2zod` binary.
 
 Supporting workspace packages such as `@x2zod/build-inputs`, `@x2zod/eslint-plugins`, and
 `@x2zod/tsconfig` remain separate packages; they are not input or output processor plugins.
 
-The Oxfmt and Oxlint package and export names remain code-quality-specific because they identify
-those concrete tool integrations. `plugins.output` is the general output processor registry role
-that they implement.
+The Oxfmt and Oxlint package names follow the general output processor role that they implement.
+Their existing code-quality-specific export names remain available for compatibility.
 
 There should not be standalone validator packages in v1. The core plugin interface does not expose a
 generic schema-language validation extension point, so validator selection is a JSON Schema plugin

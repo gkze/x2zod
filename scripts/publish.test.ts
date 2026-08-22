@@ -6,7 +6,7 @@ import type { Package } from "@manypkg/get-packages";
 import { publishRegistries, publishRegistryPackage } from "./publish";
 import type { PublishContext, RegistryPublisher } from "./publish";
 import { npmRegistryHasVersion } from "./publish-registries";
-import { notFoundStatus } from "./publish-runtime";
+import { notFoundStatus, unauthorizedStatus } from "./publish-runtime";
 
 interface PublisherState {
   publishCalls: number;
@@ -137,6 +137,29 @@ void describe("publishRegistryPackage", () => {
 });
 
 void describe("npmRegistryHasVersion", () => {
+  void test("treats protected dist-tags for a missing scoped package as unpublished", async () => {
+    const requestedUrls: string[] = [];
+    const registryFetch = async (url: Parameters<typeof fetch>[0]): Promise<Response> => {
+      await Promise.resolve();
+      const requestedUrl = requestUrl(url);
+      requestedUrls.push(requestedUrl);
+      if (requestedUrl === "https://registry.npmjs.org/%40x2zod%2Fexample")
+        return jsonResponse({ error: "Not found" }, notFoundStatus);
+      if (requestedUrl === "https://registry.npmjs.org/-/package/%40x2zod%2Fexample/dist-tags")
+        return jsonResponse({ error: "Unauthorized" }, unauthorizedStatus);
+
+      throw new Error(`Unexpected registry URL: ${requestedUrl}`);
+    };
+
+    const published = await npmRegistryHasVersion("@x2zod/example", "1.2.3", registryFetch);
+
+    assert.equal(published, false);
+    assert.deepEqual(requestedUrls, [
+      "https://registry.npmjs.org/%40x2zod%2Fexample",
+      "https://registry.npmjs.org/-/package/%40x2zod%2Fexample/dist-tags",
+    ]);
+  });
+
   void test("falls back to npm dist-tags when package metadata is temporarily missing", async () => {
     const requestedUrls: string[] = [];
     const registryFetch = async (url: Parameters<typeof fetch>[0]): Promise<Response> => {

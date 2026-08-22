@@ -18,6 +18,7 @@ import {
   runCommand,
   runningInGitHubActions,
   stringRecordSchema,
+  unauthorizedStatus,
   writeJsonObject,
   writeLine,
 } from "./publish-runtime";
@@ -66,7 +67,8 @@ export const npmRegistryHasVersion = async (
   const distTagsResponse = await registryFetch(distTagsUrl, {
     headers: { accept: "application/json" },
   });
-  if (distTagsResponse.status === notFoundStatus) return false;
+  if (distTagsResponse.status === notFoundStatus || distTagsResponse.status === unauthorizedStatus)
+    return false;
   if (!distTagsResponse.ok)
     fail(`Registry dist-tags request failed: ${distTagsUrl} returned ${distTagsResponse.status}.`);
 

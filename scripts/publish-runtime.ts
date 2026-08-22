@@ -8,6 +8,7 @@ import { z } from "zod/v4";
 
 export const jsrConfigFile = "jsr.json";
 export const notFoundStatus = 404;
+export const unauthorizedStatus = 401;
 export const rootDirectory = fileURLToPath(new URL("..", import.meta.url));
 export const bunExecutable = process.env["BUN_EXE"] ?? "bun";
 export const runningInGitHubActions = process.env["GITHUB_ACTIONS"] === "true";
