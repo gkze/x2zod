@@ -1,5 +1,12 @@
 # @x2zod/code-quality-oxfmt
 
+## 0.1.6
+
+### Patch Changes
+
+- Updated dependencies [3d9332e]
+  - @x2zod/config@0.3.0
+
 ## 0.1.5
 
 ### Patch Changes
