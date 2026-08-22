@@ -1,11 +1,4 @@
-# @x2zod/code-quality-oxlint
-
-## 0.1.6
-
-### Patch Changes
-
-- Updated dependencies [3d9332e]
-  - @x2zod/config@0.3.0
+# @x2zod/output-oxfmt
 
 ## 0.1.5
 
@@ -33,4 +26,4 @@
 
 ### Patch Changes
 
-- Initial Oxlint code quality plugin package.
+- Initial Oxfmt code quality plugin package.

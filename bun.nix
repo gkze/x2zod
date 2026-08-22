@@ -575,12 +575,12 @@
   };
   "@x2zod/build-inputs" = copyPathToStore ./packages/build-inputs;
   "@x2zod/cli" = copyPathToStore ./apps/cli;
-  "@x2zod/code-quality-oxfmt" = copyPathToStore ./packages/code-quality-oxfmt;
-  "@x2zod/code-quality-oxlint" = copyPathToStore ./packages/code-quality-oxlint;
   "@x2zod/config" = copyPathToStore ./packages/config;
   "@x2zod/core" = copyPathToStore ./packages/core;
   "@x2zod/eslint-plugins" = copyPathToStore ./packages/eslint-plugins;
   "@x2zod/input-json-schema" = copyPathToStore ./packages/input-json-schema;
+  "@x2zod/output-oxfmt" = copyPathToStore ./packages/output-oxfmt;
+  "@x2zod/output-oxlint" = copyPathToStore ./packages/output-oxlint;
   "@x2zod/tsconfig" = copyPathToStore ./packages/tsconfig;
   "ajv@8.20.0" = fetchurl {
     url = "https://registry.npmjs.org/ajv/-/ajv-8.20.0.tgz";

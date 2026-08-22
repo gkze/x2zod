@@ -6,12 +6,12 @@ Public npm packages:
 
 - `@x2zod/build-inputs`
 - `@x2zod/cli`
-- `@x2zod/code-quality-oxfmt`
-- `@x2zod/code-quality-oxlint`
 - `@x2zod/config`
 - `@x2zod/core`
 - `@x2zod/eslint-plugins`
 - `@x2zod/input-json-schema`
+- `@x2zod/output-oxfmt`
+- `@x2zod/output-oxlint`
 - `@x2zod/tsconfig`
 
 Public JSR packages are packages with a checked-in `jsr.json` file. `@x2zod/build-inputs` and
@@ -47,20 +47,23 @@ registry. This keeps retries idempotent when one registry succeeds and another f
 
 ## Registry Setup
 
-Before the first real publish:
+Before the first real publish of a package:
 
 1. Create or reserve the `@x2zod` scope on JSR.
 2. Create or reserve the `@x2zod` organization or scope on npm.
-3. Create each published package in both registries where that package has an adapter.
-4. Link each JSR package to the GitHub repository for trusted publishing.
-5. Configure npm Trusted Publisher for each npm package:
+3. Create each JSR package and link it to the GitHub repository for trusted publishing.
+4. For a new npm package name, create a short-lived granular token with write access to the `@x2zod`
+   scope and store it as the `publish` environment's `NPM_TOKEN` secret. The workflow maps this
+   secret to `NODE_AUTH_TOKEN` for the initial publish that creates the package.
+5. After the initial npm publish, configure npm Trusted Publisher for the package:
    - publisher: GitHub Actions
    - owner: `gkze`
    - repository: `x2zod`
    - workflow filename: `publish.yml`
    - environment: `publish`
    - allowed action: `npm publish`
-6. Add a GitHub `publish` environment if maintainer approval should gate registry writes.
+6. Remove the temporary `NPM_TOKEN` secret after trusted publishing is verified.
+7. Add a GitHub `publish` environment if maintainer approval should gate registry writes.
 
 ## Guardrails
 
