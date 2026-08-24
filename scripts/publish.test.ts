@@ -3,7 +3,7 @@ import { describe, test } from "node:test";
 
 import type { Package } from "@manypkg/get-packages";
 
-import { publishRegistries, publishRegistryPackage } from "./publish";
+import { publishAndTagPackages, publishRegistries, publishRegistryPackage } from "./publish";
 import type { PublishContext, RegistryPublisher } from "./publish";
 import { npmRegistryHasVersion } from "./publish-registries";
 import { notFoundStatus, unauthorizedStatus } from "./publish-runtime";
@@ -133,6 +133,24 @@ void describe("publishRegistryPackage", () => {
         registry: "failing-registry",
       },
     ]);
+  });
+});
+
+void describe("publishAndTagPackages", () => {
+  void test("reconciles tags after an all-skipped registry retry", async () => {
+    const { publisher } = createPublisher(true);
+    let tagCalls = 0;
+
+    await publishAndTagPackages({
+      context: publishContext(false),
+      publishers: [publisher],
+      tagPackages: () => {
+        tagCalls += 1;
+      },
+      workspacePackages: [workspacePackage],
+    });
+
+    assert.equal(tagCalls, 1);
   });
 });
 

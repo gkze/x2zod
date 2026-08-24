@@ -39,6 +39,12 @@ type PublishFailure = Readonly<{
   registry: RegistryPublisher["name"];
 }>;
 type PublishRegistriesResult = Readonly<{ failures: readonly PublishFailure[]; published: number }>;
+type PublishAndTagPackagesRequest = Readonly<{
+  context: PublishContext;
+  publishers: readonly RegistryPublisher[];
+  tagPackages?: () => void;
+  workspacePackages: readonly Package[];
+}>;
 
 const program = defineProgram({
   metadata: { brief: optiqueMessage`Publish x2zod workspace packages.`, name: "publish" },
@@ -172,6 +178,17 @@ const publishFailureSummary = (failures: readonly PublishFailure[]): string =>
     ),
   ].join("\n");
 
+export const publishAndTagPackages = async ({
+  context,
+  publishers: publishersToRun,
+  tagPackages,
+  workspacePackages,
+}: PublishAndTagPackagesRequest): Promise<void> => {
+  const { failures } = await publishRegistries(publishersToRun, workspacePackages, context);
+  if (failures.length > 0) fail(publishFailureSummary(failures));
+  if (!context.dryRun) tagPackages?.();
+};
+
 const publishPackages = async (options: PublishOptions): Promise<void> => {
   const packages = await getPackages(rootDirectory);
   const config = await readChangesetConfig(packages.rootDir);
@@ -199,18 +216,22 @@ const publishPackages = async (options: PublishOptions): Promise<void> => {
       ? {}
       : { npmTag: options.tag ?? preState?.tag }),
   };
-  const { failures, published } = await publishRegistries(
-    publishersToRun,
-    workspacePackages,
+  await publishAndTagPackages({
     context,
-  );
-  if (failures.length > 0) fail(publishFailureSummary(failures));
-  if (!options.dryRun && options.registry === undefined && published > 0)
-    runCommand(
-      [bunExecutable, "run", "changeset", "tag"],
-      packages.rootDir,
-      "changeset tag failed after registry publish.",
-    );
+    publishers: publishersToRun,
+    ...(options.registry === undefined
+      ? {
+          tagPackages: (): void => {
+            runCommand(
+              [bunExecutable, "run", "changeset", "tag"],
+              packages.rootDir,
+              "changeset tag failed after registry publish.",
+            );
+          },
+        }
+      : {}),
+    workspacePackages,
+  });
 };
 
 const main = async (): Promise<void> => {
