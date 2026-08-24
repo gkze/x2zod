@@ -326,17 +326,18 @@ The design discussion after this landscape pass resolved the initial open questi
   the selected plugin owns parsing into its input-language value and producing any location map.
 - The CLI uses explicit flags:
   `x2zod compile --kind json-schema --input <input> --output <output> --name <TypeName>`.
-- V1 targets Draft 2020-12 and Draft 7 in the JSON Schema plugin, starting with Ajv-backed
-  schema-document preflight.
-- This dialect split supports one modern semantic target and one common compatibility target. Draft
-  2019-09, Draft 6, Draft 4, JSON Hyper-Schema, JTD, and OpenAPI Schema Object stay out of V1 unless
-  a concrete source corpus justifies a future dialect, source profile, or separate plugin.
+- The JSON Schema plugin targets Draft 2020-12, Draft 2019-09, and Draft 7, starting with Ajv-backed
+  schema-document preflight and measured against a pinned official conformance suite.
+- This set supports one modern semantic target and two compatibility targets with materially
+  different recursive-reference, vocabulary, and applicator behavior. Draft 6, Draft 4, JSON
+  Hyper-Schema, JTD, and OpenAPI Schema Object stay outside this compatibility claim unless a future
+  dialect, source profile, or separate plugin explicitly adds them.
 - Draft 2020-12 dynamic references and vocabularies stay in scope, but implementation should be
   dependency-backed where possible. Spike `@hyperjump/json-schema` before building custom dialect,
   vocabulary, annotation, or dynamic-reference machinery.
 - Existing validators handle schema-document validity and dialect/vocabulary enforcement. `x2zod`
-  tests focus on validated-schema to Zod expression-plan mapping and deterministic TypeScript source
-  emission, with representative runtime smoke tests.
+  tests own validated-schema to Zod expression-plan mapping, deterministic TypeScript source
+  emission, and generated-runtime conformance against the pinned official suite.
 - JSON Schema implementation decisions should maximize existing tooling. Ajv or another selected
   JSON Schema tool owns validation and dialect evidence; source-map parsers own JSON Pointer spans;
   ref and dynamic-ref behavior should be dependency-backed where possible. `x2zod` owns the emission
@@ -421,8 +422,8 @@ The Mise config schema pinned to `v2026.7.5` is a second real-world acceptance c
 
 ## Product Boundary
 
-`x2zod` should not compete directly with Ajv. Ajv validates JSON Schema. `x2zod` generates Zod
-source.
+`x2zod` should not expose a competing standalone-validator product. Its artifact remains Zod source,
+even when an exact module-local validation helper is compiled from an existing validator backend.
 
 `x2zod` should also not simply wrap `z.fromJSONSchema()`. That path creates a runtime Zod schema, is
 experimental, and does not produce the deterministic source artifact this repo is built around.

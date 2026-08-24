@@ -1,0 +1,30 @@
+import { z } from "zod/v4";
+
+export const nodeSchema: z.ZodObject<{
+  value: z.ZodString;
+  children: z.ZodArray<z.ZodLazy<typeof nodeSchema>>;
+}> = z.object({
+  value: z.string(),
+  children: z.array(z.lazy(() => nodeSchema)),
+});
+
+export type Node = z.infer<typeof nodeSchema>;
+
+export const rightSchema: z.ZodObject<{
+  count: z.ZodNumber;
+  left: z.ZodOptional<z.ZodLazy<typeof leftSchema>>;
+}> = z.object({
+  count: z.number(),
+  left: z.lazy(() => leftSchema).optional(),
+});
+
+export const leftSchema: z.ZodObject<{
+  name: z.ZodString;
+  right: typeof rightSchema;
+}> = z.object({
+  name: z.string(),
+  right: rightSchema,
+});
+
+export type Left = z.infer<typeof leftSchema>;
+export type Right = z.infer<typeof rightSchema>;

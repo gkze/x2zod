@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "suite": {
+    "archiveSha256": "76915a25b6333f77cc37f2a9ff714f8feb9435b588ed2a7e48f6236257afa6d7",
+    "archiveUrl": "https://github.com/json-schema-org/JSON-Schema-Test-Suite/archive/b01af8c8d50244a2eb4dd3e01073e24823aa8691.tar.gz",
+    "commit": "b01af8c8d50244a2eb4dd3e01073e24823aa8691"
+  },
+  "required": {
+    "caseInventorySha256": "8236311cf8fce1c81fb200d0e7d077fe5a0cc4e35648ca529571443182c608e7",
+    "testCount": 3485,
+    "dialects": [
+      {
+        "caseInventorySha256": "fb56686515614166deab149208098ee4c58895d6f0acc2ca3737bd8af8a81f05",
+        "dialect": "draft-7",
+        "directory": "draft7",
+        "fileCount": 37,
+        "groupCount": 257,
+        "testCount": 927
+      },
+      {
+        "caseInventorySha256": "b54925c295f2db46aed6d90ece134efc692be5ddb34223ad45e2cd83167e28d1",
+        "dialect": "draft-2019-09",
+        "directory": "draft2019-09",
+        "fileCount": 46,
+        "groupCount": 372,
+        "testCount": 1259
+      },
+      {
+        "caseInventorySha256": "9d993a7b15b0f36c56d8908f663da78db887a7c367057b327d454c049e04d996",
+        "dialect": "draft-2020-12",
+        "directory": "draft2020-12",
+        "fileCount": 46,
+        "groupCount": 383,
+        "testCount": 1299
+      }
+    ]
+  }
+}

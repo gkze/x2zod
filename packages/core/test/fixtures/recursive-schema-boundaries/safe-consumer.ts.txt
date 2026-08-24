@@ -1,0 +1,27 @@
+import { z } from "zod/v4";
+
+import { leftSchema, nodeSchema, rightSchema } from "./safe-explicit";
+import type { Left, Node, Right } from "./safe-explicit";
+
+type Equal<TLeft, TRight> = (<T>() => T extends TLeft ? 1 : 2) extends <T>() =>
+  T extends TRight ? 1 : 2
+  ? true
+  : false;
+type Assert<TValue extends true> = TValue;
+
+type ExpectedNode = { value: string; children: ExpectedNode[] };
+type ExpectedLeft = { name: string; right: ExpectedRight };
+type ExpectedRight = { count: number; left?: ExpectedLeft | undefined };
+
+export type NodeSchemaOutputIsRecursive = Assert<
+  Equal<z.output<typeof nodeSchema>, ExpectedNode>
+>;
+export type NodeAliasIsRecursive = Assert<Equal<Node, ExpectedNode>>;
+export type LeftSchemaOutputIsRecursive = Assert<
+  Equal<z.output<typeof leftSchema>, ExpectedLeft>
+>;
+export type RightSchemaOutputIsRecursive = Assert<
+  Equal<z.output<typeof rightSchema>, ExpectedRight>
+>;
+export type LeftAliasIsRecursive = Assert<Equal<Left, ExpectedLeft>>;
+export type RightAliasIsRecursive = Assert<Equal<Right, ExpectedRight>>;

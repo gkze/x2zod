@@ -116,8 +116,10 @@ requires information that existing libraries cannot provide. The intended split 
   oracles, not architecture dependencies.
 
 Advanced JSON Schema support remains in scope, but should enter through direct Zod lowering,
-dependency-backed preparation, or generated helpers with tests. The project should avoid building a
-general JSON Schema validator under the name of Zod source generation.
+dependency-backed preparation, or generated helpers with tests. Validation equivalence across the
+advertised dialects means some generated helpers may implement validator behavior internally. That
+behavior must remain behind the generated Zod parse surface rather than becoming a separate runtime
+validator product.
 
 The tooling-first rule applies to every JSON Schema implementation decision:
 
@@ -174,7 +176,7 @@ the option type, defaults, validation, and CLI help metadata:
 ```ts
 export const jsonSchemaOptionsSchema = z.object({
   dialect: z
-    .enum(["draft-2020-12", "draft-7"])
+    .enum(["draft-2020-12", "draft-2019-09", "draft-7"])
     .default("draft-2020-12")
     .describe("JSON Schema dialect."),
   validator: z.enum(["ajv", "none"]).default("ajv").describe("Schema document validator."),
@@ -592,18 +594,19 @@ diagnostic.
 
 ## Dialects And References
 
-V1 supports JSON Schema Draft 2020-12 and Draft 7.
+The JSON Schema plugin targets Draft 2020-12, Draft 2019-09, and Draft 7. The exact compatibility
+claim, observable boundaries, and required evidence are defined in
+[`json-schema-conformance.md`](json-schema-conformance.md).
 
-This split is intentional. Draft 2020-12 is the modern semantic target: it exercises vocabularies,
-dynamic references, annotation-dependent evaluation, `unevaluated*`, and format assertion policy.
-Draft 7 is the practical compatibility target: it remains common in real schemas and gives broad
-coverage without carrying every historical dialect.
+Draft 2020-12 is the modern semantic target: it exercises vocabularies, dynamic references,
+annotation-dependent evaluation, `unevaluated*`, and format assertion policy. Draft 2019-09 is a
+supported compatibility target because its recursive-reference and vocabulary behavior cannot be
+honestly represented as Draft 2020-12. Draft 7 remains common in real schemas and has distinct
+reference and applicator behavior.
 
 Other JSON Schema-family specifications are out of scope for V1 unless a future design change adds a
 new dialect option, source profile, or input plugin:
 
-- Draft 2019-09 is transitional; its complexity should be handled through Draft 2020-12 unless a
-  concrete corpus requires direct support.
 - Draft 6, Draft 4, and older drafts are legacy dialects with older keyword and reference behavior.
 - JSON Hyper-Schema adds link and HTTP relation semantics outside Zod validation generation.
 - JSON Type Definition (JTD) is a separate schema language rather than a JSON Schema dialect.
@@ -661,9 +664,11 @@ through the typed helper ABI.
 
 ## JSON Schema Semantics
 
-The compiler should preserve JSON Schema semantics for supported constructs. When exact semantics
-require runtime checks that TypeScript cannot represent, generated `z.infer` types should remain the
-best honest structural type and helper/refinement code should enforce runtime-only behavior.
+The compiler should preserve JSON Schema semantics for supported constructs. The conformance target
+is validation equivalence on the ordinary JavaScript JSON domain, with successful parse output
+deeply equal to the input. When exact semantics require runtime checks that TypeScript cannot
+represent, generated `z.infer` types should remain the best honest structural type and
+helper/refinement code should enforce runtime-only behavior.
 
 V1 semantic target:
 
@@ -786,15 +791,15 @@ A follow-up documentation pass can add:
 ## Test Plan
 
 `x2zod` should lean on existing JSON Schema validators for schema-document validity, dialect
-handling, and vocabulary enforcement. The project's own conformance target is mapping a validated
-JSON Schema document into the correct Zod expression plan and emitting deterministic,
-declaration-safe TypeScript source. Generated Zod runtime tests should be representative regression
-tests, not an attempt to supersede Ajv or pass the full JSON Schema Test Suite as a validator.
+handling, and vocabulary enforcement. The plugin's required conformance gate is the pinned official
+JSON Schema Test Suite for Draft 2020-12, Draft 2019-09, and Draft 7, as specified in
+[`json-schema-conformance.md`](json-schema-conformance.md). The suite's expected result is
+authoritative; a dialect-matched validator is a differential oracle and harness sanity check.
 
 Validator adapter tests:
 
 - valid and invalid schema documents;
-- Draft 2020-12 and Draft 7;
+- Draft 2020-12, Draft 2019-09, and Draft 7;
 - `$vocabulary`, required unknown vocabularies, and optional unknown vocabularies;
 - `$schema` and explicit dialect conflict;
 - normalized JSON Pointer diagnostics;
@@ -838,16 +843,16 @@ Emission transform tests:
 - bidirectional decode/encode round trips with dynamic keys left unchanged;
 - declaration emission proving encoded `z.input` and decoded `z.output` / `z.infer` types.
 
-Runtime smoke tests:
+Generated runtime and conformance tests:
 
 - write generated source to temp modules;
 - import through the configured test/runtime command;
 - validate behavior through Zod `safeParse`;
 - verify representative runtime-only helper semantics where TypeScript inference cannot encode
   constraints;
-- compare generated Zod behavior with dialect-matched Ajv validators on every generated-Zod target
-  sample and on small targeted fixtures for tricky semantics, without treating full JSON Schema Test
-  Suite pass/fail as the product gate;
+- compare generated Zod behavior with the official expected result and a dialect-matched reference
+  validator for every required-suite case;
+- assert successful parse output is deeply equal to the input;
 - run declaration-only TypeScript emit for every generated-Zod target module.
 
 Acceptance corpus:
@@ -867,14 +872,18 @@ Acceptance corpus:
    and source construction types.
 2. Implement the JSON Schema input plugin skeleton with option parsing, document parsing, JSON
    Pointer source-span mapping, Ajv preflight, and a lowering entrypoint.
-3. Spike the ref/dialect/vocabulary strategy with `@hyperjump/json-schema` and a smaller ref-parser
+3. Pin the official conformance suite, add the monotonic gap harness, and prove Ajv standalone
+   generation plus declaration-safe recursive Zod emission before selecting either backend.
+4. Spike the ref/dialect/vocabulary strategy with `@hyperjump/json-schema` and a smaller ref-parser
    fallback before committing to custom graph handling.
-4. Implement the selected reference, dialect, vocabulary, and naming strategy.
-5. Implement direct Zod expression planning for primitives, objects, enums, arrays, tuples,
+5. Implement the selected reference, dialect, vocabulary, and naming strategy.
+6. Implement direct Zod expression planning for primitives, objects, enums, arrays, tuples,
    metadata, and refs.
-6. Add generated helper registry and advanced semantic support.
-7. Add the ordered emission-transform pipeline and its first generic property-mapping transform.
-8. Build the CLI compile command and formatter/write path.
-9. Add golden, runtime, adapter, and acceptance tests.
-10. Add `CONTEXT.md` and an ADR once the core contract is concrete enough to avoid documenting
+7. Add the generated helper registry, exact wire-validation path, and advanced semantic support.
+8. Remove suite gaps by keyword family, then require zero required-suite gaps for every advertised
+   dialect.
+9. Add the ordered emission-transform pipeline and its first generic property-mapping transform.
+10. Build the CLI compile command and formatter/write path.
+11. Add golden, runtime, adapter, and acceptance tests.
+12. Add `CONTEXT.md` and an ADR once the core contract is concrete enough to avoid documenting
     churn.
