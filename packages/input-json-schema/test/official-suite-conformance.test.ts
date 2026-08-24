@@ -50,6 +50,8 @@ const printerHelperEntryPoint = nodePath.join(
 const generatedSchemaExport = "officialSuiteCaseSchema";
 const typeScriptBinary = nodePath.resolve(packageRootDirectory, "../../node_modules/.bin/tsgo");
 const officialSuiteNativePreviewExternals = [...nativePreviewExternals, "jsonc-parser"] as const;
+const officialSuiteTestName = "runs the focused official-suite shard through generated Zod";
+const officialSuiteTestTimeoutMs = 30_000;
 
 const officialSuiteDialects = [
   { dialect: "draft-7", directory: "draft7" },
@@ -335,7 +337,7 @@ const emitGeneratedDeclarations = (
   assert.equal(result.status, 0, [result.stdout, result.stderr].join("\n"));
 };
 
-void test("runs the focused official-suite shard through generated Zod", async () => {
+void test(officialSuiteTestName, { timeout: officialSuiteTestTimeoutMs }, async () => {
   const inventoryManifest = await parseJsonFile(inventoryManifestFile, inventoryManifestSchema);
   const shardManifest = await parseJsonFile(shardManifestFile, shardManifestSchema);
   assert.equal(shardManifest.suiteCommit, inventoryManifest.suite.commit);
