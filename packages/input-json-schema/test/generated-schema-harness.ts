@@ -19,7 +19,7 @@ const printerHelperEntryPoint = nodePath.join(import.meta.dirname, "runtime-prin
 const generatedSchemaExport = "runtimeCaseSchema";
 const jsonSchemaNativePreviewExternals = [...nativePreviewExternals, "jsonc-parser"] as const;
 
-type RuntimeParseResult = Readonly<{ success: boolean }>;
+type RuntimeParseResult = Readonly<{ success: false }> | Readonly<{ data: unknown; success: true }>;
 type RuntimeZodSchema = Readonly<{ safeParse: (value: unknown) => RuntimeParseResult }>;
 
 type GeneratedSchemaFixture = Readonly<{ generatedSchema: RuntimeZodSchema; source: string }>;

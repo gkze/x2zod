@@ -1,0 +1,23 @@
+{
+  "inputs": {
+    "json-schema-test-suite": {
+      "materialization": {
+        "sha256": "f49b58fafffce1493b1eb8ecd43b359c1d78f737566acfa104a8e8dd89f585cf"
+      },
+      "materialized": {
+        "directoryCount": 35,
+        "fileCount": 302,
+        "sha256": "bfa9d5a00db9a9492df617ff1f73a20a4d7fa1ec60a675d0785ef61ae584f031",
+        "totalSizeBytes": 1577019
+      },
+      "source": {
+        "sha256": "76915a25b6333f77cc37f2a9ff714f8feb9435b588ed2a7e48f6236257afa6d7",
+        "sizeBytes": 278454,
+        "url": "https://github.com/json-schema-org/JSON-Schema-Test-Suite/archive/b01af8c8d50244a2eb4dd3e01073e24823aa8691.tar.gz"
+      },
+      "type": "archive"
+    }
+  },
+  "urls": {},
+  "version": 1
+}

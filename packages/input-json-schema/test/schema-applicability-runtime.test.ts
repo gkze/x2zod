@@ -11,19 +11,65 @@ type ApplicabilityParityRequest = Readonly<{
   values: readonly JsonValue[];
 }>;
 
+type GeneratedSchema = Awaited<ReturnType<typeof compileGeneratedSchema>>["generatedSchema"];
+type RuntimeParityRequest = Readonly<{
+  generatedSchema: GeneratedSchema;
+  validate: (value: unknown) => boolean;
+  value: JsonValue;
+}>;
+
+const assertRuntimeParity = ({ generatedSchema, validate, value }: RuntimeParityRequest): void => {
+  const expectedValue = structuredClone(value);
+  const ajvInput = structuredClone(expectedValue);
+  const zodInput = structuredClone(expectedValue);
+  const ajvAccepted = validate(ajvInput);
+  const zodResult = generatedSchema.safeParse(zodInput);
+  assert.deepEqual(
+    ajvInput,
+    expectedValue,
+    `Ajv mutated input for ${JSON.stringify(expectedValue)}`,
+  );
+  assert.deepEqual(
+    zodInput,
+    expectedValue,
+    `generated schema mutated input for ${JSON.stringify(expectedValue)}`,
+  );
+  assert.equal(
+    zodResult.success,
+    ajvAccepted,
+    `generated schema should match Ajv for ${JSON.stringify(expectedValue)}`,
+  );
+  if (ajvAccepted && zodResult.success) assert.deepEqual(zodResult.data, expectedValue);
+};
+
 const assertAjvParity = async ({ schema, values }: ApplicabilityParityRequest): Promise<void> => {
   const validate = new AjvDraft2020({ logger: false, strict: false }).compile(schema);
   const { generatedSchema } = await compileGeneratedSchema(schema);
 
-  for (const value of values)
-    assert.equal(
-      generatedSchema.safeParse(value).success,
-      validate(value),
-      `generated schema should match Ajv for ${JSON.stringify(value)}`,
-    );
+  for (const value of values) assertRuntimeParity({ generatedSchema, validate, value });
 };
 
 void describe("JSON Schema type-specific keyword applicability", () => {
+  void test("detects generated schemas that mutate their input in place", () => {
+    const value = { metadata: true };
+    const mutatingGeneratedSchema: GeneratedSchema = {
+      safeParse: (input) => {
+        if (typeof input !== "object" || input === null)
+          throw new TypeError("expected object input");
+        Reflect.set(input, "mutated", true);
+        return { data: input, success: true };
+      },
+    };
+
+    assert.throws(() => {
+      assertRuntimeParity({
+        generatedSchema: mutatingGeneratedSchema,
+        validate: () => true,
+        value,
+      });
+    }, /mutated input/u);
+  });
+
   void test("preserves non-object applicability for required-only schemas", async () => {
     await assertAjvParity({
       schema: { required: ["metadata"] },

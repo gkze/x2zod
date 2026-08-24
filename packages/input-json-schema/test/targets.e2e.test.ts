@@ -51,7 +51,9 @@ const lastArrayItemOffset = 1;
 const ajvOptions = { allErrors: true, logger: false, strict: false } satisfies Options;
 const typeScriptBinary = nodePath.resolve(packageRootDirectory, "../../node_modules/.bin/tsgo");
 
-type TargetZodParseResult = Readonly<{ success: boolean }>;
+type TargetZodParseResult =
+  | Readonly<{ success: false }>
+  | Readonly<{ data: unknown; success: true }>;
 type TargetZodSchema = Readonly<{ safeParse: (value: unknown) => TargetZodParseResult }>;
 type TargetRuntimeSample = Readonly<{ label: string; value: unknown }>;
 type RuntimeSampleParityRequest = Readonly<{
@@ -228,17 +230,33 @@ const assertRuntimeSampleParity = ({
   target,
   zodSchema,
 }: RuntimeSampleParityRequest): void => {
-  const ajvAccepted = ajvValidate(sample.value);
+  const expectedValue = structuredClone(sample.value);
+  const ajvInput = structuredClone(expectedValue);
+  const zodInput = structuredClone(expectedValue);
+  const ajvAccepted = ajvValidate(ajvInput);
+  assert.deepEqual(ajvInput, expectedValue, `${target.name} Ajv mutated input for ${sample.label}`);
   assert.equal(
     ajvAccepted,
     expected,
     `${target.name} Ajv result disagreed for ${sample.label}: ${JSON.stringify(ajvValidate.errors)}`,
   );
+  const zodResult = zodSchema.safeParse(zodInput);
+  assert.deepEqual(
+    zodInput,
+    expectedValue,
+    `${target.name} generated Zod mutated input for ${sample.label}`,
+  );
   assert.equal(
-    zodSchema.safeParse(sample.value).success,
+    zodResult.success,
     ajvAccepted,
     `${target.name} generated Zod disagreed with Ajv for ${sample.label}`,
   );
+  if (ajvAccepted && zodResult.success)
+    assert.deepEqual(
+      zodResult.data,
+      expectedValue,
+      `${target.name} generated Zod changed accepted data for ${sample.label}`,
+    );
 };
 
 const assertGeneratedTarget = async (target: GeneratedZodTarget): Promise<void> => {

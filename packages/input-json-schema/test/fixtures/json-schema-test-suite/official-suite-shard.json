@@ -1,0 +1,210 @@
+{
+  "version": 1,
+  "suiteCommit": "b01af8c8d50244a2eb4dd3e01073e24823aa8691",
+  "caseCount": 54,
+  "caseInventorySha256": "054283bddc3bd48794c22c4afc32180536cb22f776820efd2c4b130c680484e6",
+  "expectedCompileWaivers": {
+    "cyclic-root": {
+      "diagnostics": [
+        {
+          "code": "cyclic_reference",
+          "message": "Zod emission module contains a cyclic reference: root -> root",
+          "pointer": null,
+          "severity": "error"
+        }
+      ],
+      "reason": "recursive declarations are not emitted yet"
+    },
+    "multiple-of": {
+      "diagnostics": [
+        {
+          "code": "unsupported_keyword",
+          "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: multipleOf.",
+          "pointer": "/multipleOf",
+          "severity": "error"
+        }
+      ],
+      "reason": "multipleOf is not lowered"
+    },
+    "recursive-ref": {
+      "diagnostics": [
+        {
+          "code": "unknown_keyword",
+          "message": "JSON Schema keyword is not recognized by the selected source profile: $recursiveRef.",
+          "pointer": "/properties/foo/$recursiveRef",
+          "severity": "error"
+        }
+      ],
+      "reason": "$recursiveRef and recursive declarations are not lowered yet"
+    }
+  },
+  "groups": [
+    {
+      "dialect": "draft-7",
+      "file": "type.json",
+      "groupIndexes": [0]
+    },
+    {
+      "dialect": "draft-7",
+      "file": "multipleOf.json",
+      "groupIndexes": [0]
+    },
+    {
+      "dialect": "draft-7",
+      "file": "ref.json",
+      "groupIndexes": [0]
+    },
+    {
+      "dialect": "draft-7",
+      "file": "refRemote.json",
+      "groupIndexes": [0]
+    },
+    {
+      "dialect": "draft-2019-09",
+      "file": "type.json",
+      "groupIndexes": [0]
+    },
+    {
+      "dialect": "draft-2019-09",
+      "file": "multipleOf.json",
+      "groupIndexes": [0]
+    },
+    {
+      "dialect": "draft-2019-09",
+      "file": "recursiveRef.json",
+      "groupIndexes": [0]
+    },
+    {
+      "dialect": "draft-2019-09",
+      "file": "refRemote.json",
+      "groupIndexes": [0]
+    },
+    {
+      "dialect": "draft-2020-12",
+      "file": "type.json",
+      "groupIndexes": [0]
+    },
+    {
+      "dialect": "draft-2020-12",
+      "file": "multipleOf.json",
+      "groupIndexes": [0]
+    },
+    {
+      "dialect": "draft-2020-12",
+      "file": "ref.json",
+      "groupIndexes": [0]
+    },
+    {
+      "dialect": "draft-2020-12",
+      "file": "refRemote.json",
+      "groupIndexes": [0]
+    }
+  ],
+  "expectedGaps": [
+    {
+      "id": "draft-7:multipleOf.json:0:0",
+      "phase": "compile",
+      "waiver": "multiple-of"
+    },
+    {
+      "id": "draft-7:multipleOf.json:0:1",
+      "phase": "compile",
+      "waiver": "multiple-of"
+    },
+    {
+      "id": "draft-7:multipleOf.json:0:2",
+      "phase": "compile",
+      "waiver": "multiple-of"
+    },
+    {
+      "id": "draft-7:ref.json:0:0",
+      "phase": "compile",
+      "waiver": "cyclic-root"
+    },
+    {
+      "id": "draft-7:ref.json:0:1",
+      "phase": "compile",
+      "waiver": "cyclic-root"
+    },
+    {
+      "id": "draft-7:ref.json:0:2",
+      "phase": "compile",
+      "waiver": "cyclic-root"
+    },
+    {
+      "id": "draft-7:ref.json:0:3",
+      "phase": "compile",
+      "waiver": "cyclic-root"
+    },
+    {
+      "id": "draft-2019-09:multipleOf.json:0:0",
+      "phase": "compile",
+      "waiver": "multiple-of"
+    },
+    {
+      "id": "draft-2019-09:multipleOf.json:0:1",
+      "phase": "compile",
+      "waiver": "multiple-of"
+    },
+    {
+      "id": "draft-2019-09:multipleOf.json:0:2",
+      "phase": "compile",
+      "waiver": "multiple-of"
+    },
+    {
+      "id": "draft-2019-09:recursiveRef.json:0:0",
+      "phase": "compile",
+      "waiver": "recursive-ref"
+    },
+    {
+      "id": "draft-2019-09:recursiveRef.json:0:1",
+      "phase": "compile",
+      "waiver": "recursive-ref"
+    },
+    {
+      "id": "draft-2019-09:recursiveRef.json:0:2",
+      "phase": "compile",
+      "waiver": "recursive-ref"
+    },
+    {
+      "id": "draft-2019-09:recursiveRef.json:0:3",
+      "phase": "compile",
+      "waiver": "recursive-ref"
+    },
+    {
+      "id": "draft-2020-12:multipleOf.json:0:0",
+      "phase": "compile",
+      "waiver": "multiple-of"
+    },
+    {
+      "id": "draft-2020-12:multipleOf.json:0:1",
+      "phase": "compile",
+      "waiver": "multiple-of"
+    },
+    {
+      "id": "draft-2020-12:multipleOf.json:0:2",
+      "phase": "compile",
+      "waiver": "multiple-of"
+    },
+    {
+      "id": "draft-2020-12:ref.json:0:0",
+      "phase": "compile",
+      "waiver": "cyclic-root"
+    },
+    {
+      "id": "draft-2020-12:ref.json:0:1",
+      "phase": "compile",
+      "waiver": "cyclic-root"
+    },
+    {
+      "id": "draft-2020-12:ref.json:0:2",
+      "phase": "compile",
+      "waiver": "cyclic-root"
+    },
+    {
+      "id": "draft-2020-12:ref.json:0:3",
+      "phase": "compile",
+      "waiver": "cyclic-root"
+    }
+  ]
+}
