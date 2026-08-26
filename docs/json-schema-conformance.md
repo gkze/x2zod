@@ -2,8 +2,21 @@
 
 This document defines the JSON Schema compatibility target for `@x2zod/input-json-schema`. It is a
 target contract, not a statement that the current implementation already conforms. Current support
-in covered slices is measured by the pinned suite inventory and checked-in shard gap manifest. Cases
-outside the active shards are inventory, not evidence of support.
+is measured across the complete pinned required-suite inventory by a checked-in conformance
+baseline.
+
+<!-- BEGIN OFFICIAL SUITE SUPPORT SUMMARY -->
+
+At suite commit `b01af8c8d50244a2eb4dd3e01073e24823aa8691`, 1,488 of 3,485 required cases currently
+conform. The baseline records 1,974 cases in 602 schema groups that do not compile and 23 case-level
+runtime gaps. These case counts measure this corpus, not a percentage of JSON Schema semantics: test
+cases and language features are not equally weighted.
+
+The baseline also records 63 discrepancies between the suite's authoritative expected results and
+the reference-validator sanity check. Those discrepancies are tracked separately from `x2zod`
+support gaps and do not replace the suite's expected results.
+
+<!-- END OFFICIAL SUITE SUPPORT SUMMARY -->
 
 ## Compatibility Claim
 
@@ -97,25 +110,43 @@ claimed as supported.
 The official JSON Schema Test Suite is pinned to an immutable source archive through
 `@x2zod/build-inputs`. Tests do not fetch the suite or its remote resources from the network.
 
-For each required Draft 7, Draft 2019-09, and Draft 2020-12 case, the harness must eventually:
+For every required Draft 7, Draft 2019-09, and Draft 2020-12 schema group, the harness:
 
-1. compile the schema under the exact dialect;
-2. provide the suite's remote resources at their prescribed retrieval URIs;
-3. emit and import the generated Zod module;
-4. compare Zod acceptance with the suite's authoritative expected result;
-5. compare a dialect-matched reference validator with that same expected result as a harness sanity
-   check;
-6. assert deep output equality for every accepted instance;
-7. complete declaration-only TypeScript emit; and
-8. identify any failure by dialect, suite file, test description, case description, phase, and
-   diagnostic.
+1. selects the exact dialect and provides the suite's remote resources at their prescribed retrieval
+   URIs;
+2. attempts compilation and records any unsupported or unlowerable schema as a canonical group-level
+   compiler gap; and
+3. compares a dialect-matched reference validator with the suite's authoritative expected results as
+   an independent harness sanity check.
 
-The checked-in gap manifest is monotonic:
+For each schema group that compiles successfully, the harness also:
+
+1. emits and imports the generated Zod module;
+2. compares Zod acceptance with the suite's authoritative expected result for every case;
+3. asserts deep output equality for every accepted instance; and
+4. completes declaration-only TypeScript emit.
+
+Every failure is attributed to its applicable schema-group or case identity: dialect, suite file,
+group description, and, for case-level failures, case description, together with its phase and
+diagnostic.
+
+The checked-in conformance baseline is monotonic:
 
 - an unlisted failure is a regression and fails CI;
 - a listed failure whose observed identity or diagnostic changes fails CI;
-- a listed failure that starts passing must be removed from the manifest; and
-- a crash, timeout, nondeterministic result, or harness failure may not be hidden as a semantic gap.
+- a listed failure that starts passing must be removed from the baseline; and
+- a compiler or generated-runtime crash, timeout, nondeterministic result, or harness failure may
+  not be hidden as a semantic gap.
+
+Compiler gaps are stored once per schema group and reference deduplicated, canonical diagnostic
+sets. Runtime gaps are stored per case; reference-validator compile exceptions are stored per group,
+and its runtime discrepancies are stored per case. Counts and hashes of the full, passing, and gap
+case inventories make selection drift visible. A failing comparison reports the suite group and case
+descriptions and bounds its output. Baseline regeneration is an explicit review action:
+
+```sh
+bun --no-env-file run test:conformance:update
+```
 
 The completed release gate has zero gaps for the required suite in all three advertised dialects.
 Optional suites are reported separately by capability, including format assertion, cross-draft

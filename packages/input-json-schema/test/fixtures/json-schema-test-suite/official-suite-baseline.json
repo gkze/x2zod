@@ -1,0 +1,2614 @@
+{
+  "byDialect": [
+    {
+      "compileGapCaseCount": 464,
+      "compileGapGroupCount": 132,
+      "conformingCaseCount": 456,
+      "gapCaseInventorySha256": "ecd2274a82106af97b7165dfe10a20258fec51c22b9a6060e70d937e0e82dac9",
+      "oracleDiscrepancyCount": 4,
+      "passingCaseInventorySha256": "3d0c97f343a19774f921dab1eec18c4083ab91550e5a806c378dbad060682328",
+      "runtimeGapCaseCount": 7,
+      "dialect": "draft-7",
+      "testCount": 927
+    },
+    {
+      "compileGapCaseCount": 746,
+      "compileGapGroupCount": 230,
+      "conformingCaseCount": 506,
+      "gapCaseInventorySha256": "7d7517a5fe2102573d187ba44fe33ab0037720b600812101a14528afd1bdb987",
+      "oracleDiscrepancyCount": 14,
+      "passingCaseInventorySha256": "a20cd5e5ab12a78199ba898753ac749ab82bebfbe1d853261c60eb994ceab33f",
+      "runtimeGapCaseCount": 7,
+      "dialect": "draft-2019-09",
+      "testCount": 1259
+    },
+    {
+      "compileGapCaseCount": 764,
+      "compileGapGroupCount": 240,
+      "conformingCaseCount": 526,
+      "gapCaseInventorySha256": "4c0d75ee5116a9819ab809632dd0bceaeb89f9258118ae481d9a0610d223f6c2",
+      "oracleDiscrepancyCount": 45,
+      "passingCaseInventorySha256": "b76db37a7b586075f41f1b1e924c186079344cf61b29b3c6445bc3805175b713",
+      "runtimeGapCaseCount": 9,
+      "dialect": "draft-2020-12",
+      "testCount": 1299
+    }
+  ],
+  "caseCount": 3485,
+  "caseInventorySha256": "8236311cf8fce1c81fb200d0e7d077fe5a0cc4e35648ca529571443182c608e7",
+  "compileDiagnosticSets": {
+    "016f6f02314738f7072a4db3103e9bee7c0531b5c398abb52a68182ef80cc2ab": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: $dynamicAnchor.",
+        "pointer": "/$defs/foo/$dynamicAnchor",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: $dynamicRef.",
+        "pointer": "/items/$dynamicRef",
+        "severity": "error"
+      }
+    ],
+    "02127f7b4a489935865c05d2b04d86c46b78ff9bc98c1b2a36953b08fd8c4761": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: $dynamicAnchor.",
+        "pointer": "/$defs/foo/$dynamicAnchor",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: $dynamicRef.",
+        "pointer": "/$defs/list/items/$dynamicRef",
+        "severity": "error"
+      }
+    ],
+    "041845aeaec76af08fd3c015ac981848f3785581ab85b1a6441a8c9baa0bdce9": [
+      {
+        "code": "unrepresentable_schema_combination",
+        "message": "Only primitive const and enum values are supported in the first JSON Schema lowering slice.",
+        "pointer": "/enum/0",
+        "severity": "error"
+      }
+    ],
+    "051dab5e058037ddfc1413e82966c320da305746c03687c92d42547b8ced496c": [
+      {
+        "code": "unsupported_keyword",
+        "message": "Tuple schemas are not supported in the first JSON Schema lowering slice.",
+        "pointer": "/items",
+        "severity": "error"
+      }
+    ],
+    "06df32916f2ccb40fdcf5e65257f20ded2c7d2a0426711e2d133043083ef9566": [
+      {
+        "code": "unrepresentable_schema_combination",
+        "message": "JSON Schema oneOf with unevaluatedProperties requires evaluated-property annotation bookkeeping that is not supported by this lowering slice.",
+        "pointer": "/unevaluatedProperties",
+        "severity": "error"
+      }
+    ],
+    "074774ddbe7fb3cfa210f5fd14b722a09cf9032a048363f220847ae2ed9108f9": [
+      {
+        "code": "unknown_keyword",
+        "message": "JSON Schema keyword is not recognized by the selected source profile: contentMediaType.",
+        "pointer": "/contentMediaType",
+        "severity": "error"
+      }
+    ],
+    "0c0525d6fe5172d4a935dc2a833e32a8e2162ce6e0482fbad2ee958240e92104": [
+      {
+        "code": "unknown_keyword",
+        "message": "JSON Schema keyword is not recognized by the selected source profile: $recursiveAnchor.",
+        "pointer": "/$defs/myobject/$recursiveAnchor",
+        "severity": "error"
+      },
+      {
+        "code": "unknown_keyword",
+        "message": "JSON Schema keyword is not recognized by the selected source profile: $recursiveRef.",
+        "pointer": "/$defs/myobject/anyOf/1/additionalProperties/$recursiveRef",
+        "severity": "error"
+      }
+    ],
+    "0dcfcc137e1429303ce33ff7855ed00184cc93007f064a6c7d0abc0c0ff397af": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: then.",
+        "pointer": "/then",
+        "severity": "error"
+      }
+    ],
+    "10b90a194aa4f58dd21342c838d2fbbb1a511a60ac02f35ff745886618e99daf": [
+      {
+        "code": "unknown_keyword",
+        "message": "JSON Schema keyword is not recognized by the selected source profile: $recursiveAnchor.",
+        "pointer": "/$defs/~1schemas~1unevaluated-items-are-allowed/$recursiveAnchor",
+        "severity": "error"
+      },
+      {
+        "code": "unknown_keyword",
+        "message": "JSON Schema keyword is not recognized by the selected source profile: $recursiveAnchor.",
+        "pointer": "/$recursiveAnchor",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: unevaluatedItems.",
+        "pointer": "/unevaluatedItems",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "Tuple schemas are not supported in the first JSON Schema lowering slice.",
+        "pointer": "/$defs/~1schemas~1unevaluated-items-are-allowed/items",
+        "severity": "error"
+      }
+    ],
+    "11759e97fabff14fa36af1feeabeb856ccb4adfc674399c20e46f8bb12ad5635": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: minContains.",
+        "pointer": "/minContains",
+        "severity": "error"
+      }
+    ],
+    "13e264b99f40acabd3926545742ca7d4ff0b05f058499bfdf34ca919dee61e57": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: unevaluatedItems.",
+        "pointer": "/unevaluatedItems",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "Tuple schemas are not supported in the first JSON Schema lowering slice.",
+        "pointer": "/anyOf/0/items",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "Tuple schemas are not supported in the first JSON Schema lowering slice.",
+        "pointer": "/anyOf/1/items",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "Tuple schemas are not supported in the first JSON Schema lowering slice.",
+        "pointer": "/items",
+        "severity": "error"
+      }
+    ],
+    "14d31a9b9356f44343ee67dd2bc3829ba014ec083f428fe3990563528abe2052": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: $dynamicAnchor.",
+        "pointer": "/$defs/foo/$dynamicAnchor",
+        "severity": "error"
+      }
+    ],
+    "17133f5c263a9fa679532a30e57f50a183997a84fea12fd53c1e70e701fb8e6c": [
+      {
+        "code": "unrepresentable_schema_combination",
+        "message": "JSON Schema string constraints without a string type are not supported by this lowering slice.",
+        "pointer": "/anyOf/0/maxLength",
+        "severity": "error"
+      },
+      {
+        "code": "unrepresentable_schema_combination",
+        "message": "JSON Schema string constraints without a string type are not supported by this lowering slice.",
+        "pointer": "/anyOf/1/minLength",
+        "severity": "error"
+      }
+    ],
+    "171e78736a37aa3e83d8e57fcdcfee48d3063fd645aec1ecede470cd6e8c383d": [
+      {
+        "code": "unknown_keyword",
+        "message": "JSON Schema keyword is not recognized by the selected source profile: additionalItems.",
+        "pointer": "/additionalItems",
+        "severity": "error"
+      },
+      {
+        "code": "unknown_keyword",
+        "message": "JSON Schema keyword is not recognized by the selected source profile: additionalItems.",
+        "pointer": "/definitions/item/additionalItems",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "Tuple schemas are not supported in the first JSON Schema lowering slice.",
+        "pointer": "/definitions/item/items",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "Tuple schemas are not supported in the first JSON Schema lowering slice.",
+        "pointer": "/items",
+        "severity": "error"
+      }
+    ],
+    "17da1a2b13b01b72ddd2d927613e13734d7df582a26594b4272114825bc2cde8": [
+      {
+        "code": "invalid_zod_emission_module",
+        "message": "Zod method required references keys that are not in the object shape: __proto__, toString, constructor",
+        "pointer": null,
+        "severity": "error"
+      }
+    ],
+    "1a3ba4ccae6827c978cd28cf4fa16d98c6398026aa121c46ab142122bf679929": [
+      {
+        "code": "unknown_keyword",
+        "message": "JSON Schema keyword is not recognized by the selected source profile: additionalItems.",
+        "pointer": "/additionalItems",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: unevaluatedItems.",
+        "pointer": "/unevaluatedItems",
+        "severity": "error"
+      }
+    ],
+    "1dd84139e76f974427feda1aa3c518a181ed9e29bee4f8108e01fd6ca29b00eb": [
+      {
+        "code": "unknown_keyword",
+        "message": "JSON Schema keyword is not recognized by the selected source profile: dependencies.",
+        "pointer": "/dependencies",
+        "severity": "error"
+      }
+    ],
+    "1e94faa2871d45652b3a71faccfcbe0c3f410c91534e44463c167302c74dd10a": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: else.",
+        "pointer": "/else",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: if.",
+        "pointer": "/if",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: then.",
+        "pointer": "/then",
+        "severity": "error"
+      }
+    ],
+    "1ea766e8c65dd0f4038371e08105cde2489ed88b433049f0089635645392d171": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: $dynamicAnchor.",
+        "pointer": "/allOf/0/$defs/elements/$dynamicAnchor",
+        "severity": "error"
+      }
+    ],
+    "22269dab9adc1844e414510ee167dacf072c40bac235bc0a84a387f3bc2432bc": [
+      {
+        "code": "unrepresentable_schema_combination",
+        "message": "JSON Schema numeric bounds without a number or integer type are not supported by this lowering slice.",
+        "pointer": "/oneOf/1",
+        "severity": "error"
+      }
+    ],
+    "225a65e522d379cf29e4108f2d5111d14ecf8fdedbd63667ad53aad853707bda": [
+      {
+        "code": "unsupported_dialect",
+        "message": "JSON Schema dialect is not supported: http://localhost:1234/draft2020-12/metaschema-no-validation.json.",
+        "pointer": "/$schema",
+        "severity": "error"
+      }
+    ],
+    "22a8a3d9053996b327771353546579c030b1878951f13c5dfa88311108ff1143": [
+      {
+        "code": "unrepresentable_schema_combination",
+        "message": "JSON Schema $ref has untyped object sibling assertions whose non-object applicability cannot be preserved by object-only Zod lowering.",
+        "pointer": "/$ref",
+        "severity": "error"
+      },
+      {
+        "code": "unresolved_reference",
+        "message": "JSON Schema $ref target was not found. External references must be provided through plugin options.",
+        "pointer": "/$ref",
+        "severity": "error"
+      }
+    ],
+    "28996618661f22ad3594cbdf7b9677ac09933ebc454a05cf82abed35c2a354f9": [
+      {
+        "code": "unrepresentable_schema_combination",
+        "message": "JSON Schema allOf has untyped object sibling assertions whose non-object applicability cannot be preserved by object-only Zod lowering.",
+        "pointer": "/allOf",
+        "severity": "error"
+      },
+      {
+        "code": "unresolved_reference",
+        "message": "JSON Schema $ref target was not found. External references must be provided through plugin options.",
+        "pointer": "/allOf/0/$ref",
+        "severity": "error"
+      }
+    ],
+    "2bcc349bcf94df351761d3b965e05decc7afddc014c88c9e2efcad7adf8d3455": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: patternProperties.",
+        "pointer": "/$defs/one/oneOf/2/patternProperties",
+        "severity": "error"
+      }
+    ],
+    "2bd665c6b8322684b40d359d1fc828768f065474a9bfa58e0408e5187c206371": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: $dynamicAnchor.",
+        "pointer": "/$defs/extended/$dynamicAnchor",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: $dynamicAnchor.",
+        "pointer": "/$dynamicAnchor",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: $dynamicRef.",
+        "pointer": "/$defs/bar/properties/baz/$dynamicRef",
+        "severity": "error"
+      }
+    ],
+    "2e6292da3a2bd1180b46cb0aea8183066887ea87b0efe79f837e94c7e67d4ca3": [
+      {
+        "code": "unsupported_dialect",
+        "message": "JSON Schema dialect is not supported: http://localhost:1234/draft2019-09/metaschema-no-validation.json.",
+        "pointer": "/$schema",
+        "severity": "error"
+      }
+    ],
+    "2f36f99af32115e9b61c57402b274072d3bed59a55ed9308a479ffbcd7f235c6": [
+      {
+        "code": "unrepresentable_schema_combination",
+        "message": "JSON Schema numeric bounds without a number or integer type are not supported by this lowering slice.",
+        "pointer": "/anyOf/1",
+        "severity": "error"
+      }
+    ],
+    "318c5862d291cd6e122b716eb450b1e47307278d251ddf88a262b38b23f6ee84": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: maxProperties.",
+        "pointer": "/maxProperties",
+        "severity": "error"
+      }
+    ],
+    "324ea112084e4e48a9bbd5ef7721996e94d2d2f7eab7814739dced243b156d20": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: $dynamicAnchor.",
+        "pointer": "/$defs/bar/$defs/content/$dynamicAnchor",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: $dynamicAnchor.",
+        "pointer": "/$defs/bar/$defs/item/$defs/defaultContent/$dynamicAnchor",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: $dynamicRef.",
+        "pointer": "/$defs/bar/$defs/item/properties/content/$dynamicRef",
+        "severity": "error"
+      }
+    ],
+    "33fcbcafce66113dcb93f018efc508c6304b7296c46b3464ce7d528cdddb80ef": [
+      {
+        "code": "unrepresentable_schema_combination",
+        "message": "JSON Schema $ref with unevaluatedProperties requires evaluated-property annotation bookkeeping that is not supported by this lowering slice.",
+        "pointer": "/unevaluatedProperties",
+        "severity": "error"
+      }
+    ],
+    "3628df12d76526141c696ba2af17a623a03051e72e1c58ccb13bbce4f7dc0a91": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: else.",
+        "pointer": "/allOf/1/else",
+        "severity": "error"
+      }
+    ],
+    "384582ed62648e768188cd91edcf7d21e15cc84265b74237e1b0b7672dacc448": [
+      {
+        "code": "unknown_keyword",
+        "message": "JSON Schema keyword is not recognized by the selected source profile: additionalItems.",
+        "pointer": "/additionalItems",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: uniqueItems.",
+        "pointer": "/uniqueItems",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "Tuple schemas are not supported in the first JSON Schema lowering slice.",
+        "pointer": "/items",
+        "severity": "error"
+      }
+    ],
+    "38eee3540182ba474f77b34ce4fb235a268c8bb576ef591510f28f0a99ecf0e4": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: dependentSchemas.",
+        "pointer": "/dependentSchemas",
+        "severity": "error"
+      }
+    ],
+    "396fb2aa57602cf078e04c1a4a82060f47b95d4b94f713b7a18045966ecb2cb8": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: minProperties.",
+        "pointer": "/minProperties",
+        "severity": "error"
+      }
+    ],
+    "3a7e23dffea0d179b7e6c74e2e95290b2b1cbd01f852cb770cdcf31ac76c5148": [
+      {
+        "code": "unknown_keyword",
+        "message": "JSON Schema keyword is not recognized by the selected source profile: $recursiveAnchor.",
+        "pointer": "/$recursiveAnchor",
+        "severity": "error"
+      },
+      {
+        "code": "unknown_keyword",
+        "message": "JSON Schema keyword is not recognized by the selected source profile: $recursiveRef.",
+        "pointer": "/anyOf/1/additionalProperties/anyOf/1/additionalProperties/$recursiveRef",
+        "severity": "error"
+      }
+    ],
+    "3acb836426b3fe8efb9fee067b9f566dd01cb07ea97668520627bcca609be479": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: unevaluatedItems.",
+        "pointer": "/properties/foo/unevaluatedItems",
+        "severity": "error"
+      }
+    ],
+    "3ae23edf60660cb751314c741f8a3cf5cf1b6847d2887bab33f9b33cdc689728": [
+      {
+        "code": "unrepresentable_schema_combination",
+        "message": "JSON Schema string constraints without a string type are not supported by this lowering slice.",
+        "pointer": "/pattern",
+        "severity": "error"
+      }
+    ],
+    "3b1cb78656cae8f0d984834e2da015aefe33e47197a646c92ec73b3b61369bf5": [
+      {
+        "code": "unknown_keyword",
+        "message": "JSON Schema keyword is not recognized by the selected source profile: additionalItems.",
+        "pointer": "/additionalItems",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "Tuple schemas are not supported in the first JSON Schema lowering slice.",
+        "pointer": "/allOf/0/items",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "Tuple schemas are not supported in the first JSON Schema lowering slice.",
+        "pointer": "/items",
+        "severity": "error"
+      }
+    ],
+    "3e052301c20defd81559310a036ad8544c04c442a49c8ebcf5959981ad03efe0": [
+      {
+        "code": "unrepresentable_schema_combination",
+        "message": "JSON Schema not is only supported for schemas that match every value.",
+        "pointer": "/not",
+        "severity": "error"
+      }
+    ],
+    "3f1f2b6ee2f3a64fd289934d19ad52c7b30f07c3e3d400df854f82383ee8e2a7": [
+      {
+        "code": "unrepresentable_schema_combination",
+        "message": "JSON Schema anyOf sibling assertions include closed or schema-valued object boundaries that cannot be preserved by a plain Zod intersection.",
+        "pointer": "/anyOf",
+        "severity": "error"
+      }
+    ],
+    "419252634efdbc769c3c64350602c55edb04eec69a509d582cb7335db4b94b4e": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: contains.",
+        "pointer": "/contains",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: maxContains.",
+        "pointer": "/maxContains",
+        "severity": "error"
+      }
+    ],
+    "43fad8460bf15af7290788702abe2c94d67d120b54d5a26592328201794ce716": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: contains.",
+        "pointer": "/contains",
+        "severity": "error"
+      }
+    ],
+    "4715e81e583334e3d681e1260a7f7f859cc3eb2c5a0bc4f479b8745deb89a676": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: else.",
+        "pointer": "/else",
+        "severity": "error"
+      }
+    ],
+    "47bf1335a44511c8783ce496ac4b4ee6841a44c8e6fc86dfc9487811bad15f7e": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: if.",
+        "pointer": "/if",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: then.",
+        "pointer": "/then",
+        "severity": "error"
+      }
+    ],
+    "4b9db1d96225904d2e24423d70e9a2582e1bd3e69082d345ff00109017edff34": [
+      {
+        "code": "unsupported_dialect",
+        "message": "JSON Schema dialect is not supported: http://localhost:1234/draft2020-12/metaschema-optional-vocabulary.json.",
+        "pointer": "/$schema",
+        "severity": "error"
+      }
+    ],
+    "4c29e2899995e84019828f640edcaa358aaa4796b3553aeae8bdfb6039e1b4a7": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: unevaluatedItems.",
+        "pointer": "/unevaluatedItems",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "Tuple schemas are not supported in the first JSON Schema lowering slice.",
+        "pointer": "/allOf/0/items",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "Tuple schemas are not supported in the first JSON Schema lowering slice.",
+        "pointer": "/items",
+        "severity": "error"
+      }
+    ],
+    "4c7bdeb0987ac6de394ccdb25ecb9bc7521e74db51828de2f904cbebb024ab57": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: contains.",
+        "pointer": "/contains",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: minContains.",
+        "pointer": "/minContains",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: unevaluatedItems.",
+        "pointer": "/unevaluatedItems",
+        "severity": "error"
+      }
+    ],
+    "4f10b572ee4c0eebdfb87aa7dd0883ba90fb68b6a513027e40323e0dd500ecce": [
+      {
+        "code": "unrepresentable_schema_combination",
+        "message": "JSON Schema numeric bounds without a number or integer type are not supported by this lowering slice.",
+        "pointer": "",
+        "severity": "error"
+      }
+    ],
+    "505f2797ef61b493ac73c6f2aa1985bfa279e68cdab2fa1db837ef9a6aded5ff": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: contains.",
+        "pointer": "/allOf/0/contains",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: contains.",
+        "pointer": "/allOf/1/contains",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: unevaluatedItems.",
+        "pointer": "/unevaluatedItems",
+        "severity": "error"
+      }
+    ],
+    "54cd4973e07fa1ea3a7d1b86d21c285489496a520cb9f046a0fd942c06e87877": [
+      {
+        "code": "unknown_keyword",
+        "message": "JSON Schema keyword is not recognized by the selected source profile: contentEncoding.",
+        "pointer": "/contentEncoding",
+        "severity": "error"
+      },
+      {
+        "code": "unknown_keyword",
+        "message": "JSON Schema keyword is not recognized by the selected source profile: contentMediaType.",
+        "pointer": "/contentMediaType",
+        "severity": "error"
+      }
+    ],
+    "583ef5dc382f2891a84de3236aad63e1a4021979bcff8b594359e7aa247c0177": [
+      {
+        "code": "unsupported_keyword",
+        "message": "Only fixed-length prefixItems tuples are supported in this JSON Schema lowering slice.",
+        "pointer": "/prefixItems",
+        "severity": "error"
+      }
+    ],
+    "5d325f062639b1c5bd21d8bf71ce597ed62311e0c2284982308109b0bc72b3db": [
+      {
+        "code": "unrepresentable_schema_combination",
+        "message": "JSON Schema numeric bounds without a number or integer type are not supported by this lowering slice.",
+        "pointer": "/allOf/0",
+        "severity": "error"
+      },
+      {
+        "code": "unrepresentable_schema_combination",
+        "message": "JSON Schema numeric bounds without a number or integer type are not supported by this lowering slice.",
+        "pointer": "/allOf/1",
+        "severity": "error"
+      }
+    ],
+    "5f7da038038e7ab7480b69a32f134ed2e9e40d47f3934b204a5313a5aca86b66": [
+      {
+        "code": "unrepresentable_schema_combination",
+        "message": "JSON Schema allOf includes closed or schema-valued object boundaries that cannot be preserved by a plain Zod intersection.",
+        "pointer": "/allOf",
+        "severity": "error"
+      }
+    ],
+    "5fa03d4005da82db45f3e97324fa48f75d57c57c4179fdecf1e1e7a4d35266ed": [
+      {
+        "code": "unknown_keyword",
+        "message": "JSON Schema keyword is not recognized by the selected source profile: $recursiveAnchor.",
+        "pointer": "/$defs/tree/$recursiveAnchor",
+        "severity": "error"
+      },
+      {
+        "code": "unknown_keyword",
+        "message": "JSON Schema keyword is not recognized by the selected source profile: $recursiveAnchor.",
+        "pointer": "/$recursiveAnchor",
+        "severity": "error"
+      },
+      {
+        "code": "unknown_keyword",
+        "message": "JSON Schema keyword is not recognized by the selected source profile: $recursiveRef.",
+        "pointer": "/$defs/tree/properties/branches/$recursiveRef",
+        "severity": "error"
+      }
+    ],
+    "615762908b43f6aed55670606b11a364a3ec11b80311639ff8846a6cfb1b1c38": [
+      {
+        "code": "unknown_keyword",
+        "message": "JSON Schema keyword is not recognized by the selected source profile: additionalItems.",
+        "pointer": "/additionalItems",
+        "severity": "error"
+      }
+    ],
+    "6235774b2c58082ee92ebde1676593fc314fc01cbbc5b3eeb6493689359b82c5": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: $dynamicRef.",
+        "pointer": "/$defs/foo/$dynamicRef",
+        "severity": "error"
+      }
+    ],
+    "634ab1e4d99b39e4fbc62081ebde272dd729f2145311b7884cc945b7d5dae332": [
+      {
+        "code": "unknown_keyword",
+        "message": "JSON Schema keyword is not recognized by the selected source profile: additionalItems.",
+        "pointer": "/allOf/0/additionalItems",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: unevaluatedItems.",
+        "pointer": "/unevaluatedItems",
+        "severity": "error"
+      }
+    ],
+    "686a1cf67ff243e545392b265de588768739eda226743e06c717aa7c61bb6345": [
+      {
+        "code": "unresolved_reference",
+        "message": "JSON Schema $ref target was not found. External references must be provided through plugin options.",
+        "pointer": "/definitions/baz/definitions/bar/items/$ref",
+        "severity": "error"
+      }
+    ],
+    "688e3b6c6637894c1849dfe756ff1c1ed8ee1a5780cb65777d902bc52ab6de13": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: unevaluatedItems.",
+        "pointer": "/properties/foo/unevaluatedItems",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "Tuple schemas are not supported in the first JSON Schema lowering slice.",
+        "pointer": "/anyOf/0/properties/foo/items",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "Tuple schemas are not supported in the first JSON Schema lowering slice.",
+        "pointer": "/properties/foo/items",
+        "severity": "error"
+      }
+    ],
+    "6de154e4edbb0b1fcd57119e98df4d86d460910cd2271505bab13cc951a8808b": [
+      {
+        "code": "unknown_keyword",
+        "message": "JSON Schema keyword is not recognized by the selected source profile: contentEncoding.",
+        "pointer": "/contentEncoding",
+        "severity": "error"
+      }
+    ],
+    "6e39a5a5e87d0abdc627a3c62888afabfbfd906343a6a9e11fc1902e73059833": [
+      {
+        "code": "unrepresentable_schema_combination",
+        "message": "JSON Schema $ref with sibling assertion keywords is not supported by this lowering slice.",
+        "pointer": "/properties/foo/$ref",
+        "severity": "error"
+      }
+    ],
+    "6ebb1339a5e4cb952b3154e7fa10323723287501373648ae2690040b41475a4e": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: unevaluatedItems.",
+        "pointer": "/unevaluatedItems",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "Tuple schemas are not supported in the first JSON Schema lowering slice.",
+        "pointer": "/items",
+        "severity": "error"
+      }
+    ],
+    "6ec524011ac7781cf269f19d6821441a9cdd18fa46e7a4b5b0c09612e8589566": [
+      {
+        "code": "unresolved_reference",
+        "message": "JSON Schema $ref target was not found. External references must be provided through plugin options.",
+        "pointer": "/definitions/refToInteger/$ref",
+        "severity": "error"
+      }
+    ],
+    "7032310f6e79596f78290867981e79840d8c39757ef572cae9f0bcf66b6aec3c": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: $dynamicRef.",
+        "pointer": "/properties/false/$dynamicRef",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: $dynamicRef.",
+        "pointer": "/properties/true/$dynamicRef",
+        "severity": "error"
+      }
+    ],
+    "704557d163f31aeb97445162a026de94ce63fbc1d5dc64ac8b9c995e5cfae30f": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: uniqueItems.",
+        "pointer": "/uniqueItems",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "Tuple schemas are not supported in the first JSON Schema lowering slice.",
+        "pointer": "/items",
+        "severity": "error"
+      }
+    ],
+    "73652c0e5bbd76d18206dbeb2ca2d6669965a62f5ba1cbdc5996485f104e83dc": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: unevaluatedItems.",
+        "pointer": "/allOf/1/unevaluatedItems",
+        "severity": "error"
+      }
+    ],
+    "73b4710f40367aa4eae2718bfa1814e6ab3758233e089f2f39f30e7f83961bc7": [
+      {
+        "code": "unknown_keyword",
+        "message": "JSON Schema keyword is not recognized by the selected source profile: additionalItems.",
+        "pointer": "/additionalItems",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "Tuple schemas are not supported in the first JSON Schema lowering slice.",
+        "pointer": "/items",
+        "severity": "error"
+      }
+    ],
+    "7535fc7a05cd123a8b90409188c4d469575a0b19e6e2d0756bd8add366d64aa6": [
+      {
+        "code": "unrepresentable_schema_combination",
+        "message": "JSON Schema string constraints without a string type are not supported by this lowering slice.",
+        "pointer": "/minLength",
+        "severity": "error"
+      }
+    ],
+    "79b897a98a00f89a23a16703082e238a8c62ba29637c3f1d2f517547ee9cc9b2": [
+      {
+        "code": "unknown_keyword",
+        "message": "JSON Schema keyword is not recognized by the selected source profile: contentEncoding.",
+        "pointer": "/contentEncoding",
+        "severity": "error"
+      },
+      {
+        "code": "unknown_keyword",
+        "message": "JSON Schema keyword is not recognized by the selected source profile: contentMediaType.",
+        "pointer": "/contentMediaType",
+        "severity": "error"
+      },
+      {
+        "code": "unknown_keyword",
+        "message": "JSON Schema keyword is not recognized by the selected source profile: contentSchema.",
+        "pointer": "/contentSchema",
+        "severity": "error"
+      }
+    ],
+    "7a4bf2899531b11ff238c5121b29124a9459b1ed8e5a3dbf3656ee8c13c5a9bf": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: multipleOf.",
+        "pointer": "/multipleOf",
+        "severity": "error"
+      }
+    ],
+    "83120dadb0620037b556eedada26c912533c8f9ebc176fa653e97a4ceb61c489": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: else.",
+        "pointer": "/else",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: if.",
+        "pointer": "/if",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: then.",
+        "pointer": "/then",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: unevaluatedItems.",
+        "pointer": "/unevaluatedItems",
+        "severity": "error"
+      }
+    ],
+    "8315f6084a65f1f108fc1e05a5e2dc34d4085a62bca76eae851400bebdbcdb46": [
+      {
+        "code": "unknown_keyword",
+        "message": "JSON Schema keyword is not recognized by the selected source profile: $recursiveRef.",
+        "pointer": "/properties/foo/$recursiveRef",
+        "severity": "error"
+      }
+    ],
+    "8379938b9b726ff0eed184009528a26031c6426724a0cd32a66d9cf32a0e943b": [
+      {
+        "code": "unrepresentable_schema_combination",
+        "message": "JSON Schema string constraints without a string type are not supported by this lowering slice.",
+        "pointer": "/oneOf/0/minLength",
+        "severity": "error"
+      },
+      {
+        "code": "unrepresentable_schema_combination",
+        "message": "JSON Schema string constraints without a string type are not supported by this lowering slice.",
+        "pointer": "/oneOf/1/maxLength",
+        "severity": "error"
+      }
+    ],
+    "87dcbc9556367fe8d45d457d45ee257f6776ef9280d1aed4c45d67b82a5f4b0c": [
+      {
+        "code": "unresolved_reference",
+        "message": "JSON Schema $ref target was not found. External references must be provided through plugin options.",
+        "pointer": "/definitions/foo/$ref",
+        "severity": "error"
+      }
+    ],
+    "8a683e0b076e148b86db6ad22dd68c2251cdc03c0e7807a0ad9d827881b16843": [
+      {
+        "code": "unknown_keyword",
+        "message": "JSON Schema keyword is not recognized by the selected source profile: $recursiveAnchor.",
+        "pointer": "/$defs/myobject/$recursiveAnchor",
+        "severity": "error"
+      },
+      {
+        "code": "unknown_keyword",
+        "message": "JSON Schema keyword is not recognized by the selected source profile: $recursiveAnchor.",
+        "pointer": "/$recursiveAnchor",
+        "severity": "error"
+      },
+      {
+        "code": "unknown_keyword",
+        "message": "JSON Schema keyword is not recognized by the selected source profile: $recursiveRef.",
+        "pointer": "/$defs/myobject/anyOf/1/additionalProperties/$recursiveRef",
+        "severity": "error"
+      }
+    ],
+    "8c205684c9f2e501768e86cd7ff5e7671335ebecb3bdb9b7ebd3b2869560c599": [
+      {
+        "code": "unknown_keyword",
+        "message": "JSON Schema keyword is not recognized by the selected source profile: additionalItems.",
+        "pointer": "/allOf/0/additionalItems",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: unevaluatedItems.",
+        "pointer": "/unevaluatedItems",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "Tuple schemas are not supported in the first JSON Schema lowering slice.",
+        "pointer": "/allOf/0/items",
+        "severity": "error"
+      }
+    ],
+    "8c676fd28b9420da2d03c4afd8cbdee8438bdfc34dca5278c11e577a3d77767a": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: $dynamicAnchor.",
+        "pointer": "/$defs/elements/$dynamicAnchor",
+        "severity": "error"
+      }
+    ],
+    "8d9b61f8b03b224ec2b5de61fb55171a697b87e12b1fcbd1a6a3e4bf547991a5": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: unevaluatedItems.",
+        "pointer": "/unevaluatedItems",
+        "severity": "error"
+      }
+    ],
+    "8f55ec16091700f6b3c582213df0cb9eb5f5a1ce3279a208f5d41331520c186f": [
+      {
+        "code": "unrepresentable_schema_combination",
+        "message": "JSON Schema $ref has untyped object sibling assertions whose non-object applicability cannot be preserved by object-only Zod lowering.",
+        "pointer": "/$ref",
+        "severity": "error"
+      }
+    ],
+    "90705bfd24c27ed6d969e9229bbbfe51cd229609847f66da870fced6eaea4350": [
+      {
+        "code": "unresolved_reference",
+        "message": "JSON Schema $ref target was not found. External references must be provided through plugin options.",
+        "pointer": "/items/items/$ref",
+        "severity": "error"
+      }
+    ],
+    "9089b797c36de6f4f2e7fa79dc937a94b6971a166589beb2f60250812698858c": [
+      {
+        "code": "unrepresentable_schema_combination",
+        "message": "JSON Schema string constraints without a string type are not supported by this lowering slice.",
+        "pointer": "/maxLength",
+        "severity": "error"
+      }
+    ],
+    "91e9944d0465887635176d0f2fe6cfd0c7ac89ce4e9f8737c55fe48b700456b1": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: contains.",
+        "pointer": "/contains",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: unevaluatedItems.",
+        "pointer": "/unevaluatedItems",
+        "severity": "error"
+      }
+    ],
+    "9539952ea869eee1479c0ad8524c3abd78ef661f151c712d15d1c2046345aeed": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: unevaluatedItems.",
+        "pointer": "/unevaluatedItems",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "Tuple schemas are not supported in the first JSON Schema lowering slice.",
+        "pointer": "/items",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "Tuple schemas are not supported in the first JSON Schema lowering slice.",
+        "pointer": "/oneOf/0/items",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "Tuple schemas are not supported in the first JSON Schema lowering slice.",
+        "pointer": "/oneOf/1/items",
+        "severity": "error"
+      }
+    ],
+    "965d756687206c6f3e98c4ad532f9e6472d355b0d11f29a3b0ef35d2ee7739d7": [
+      {
+        "code": "unresolved_reference",
+        "message": "JSON Schema $ref target was not found. External references must be provided through plugin options.",
+        "pointer": "/properties/nodes/items/$ref",
+        "severity": "error"
+      }
+    ],
+    "99b1755aaedac738f4b1ae3c8d01cec355a5ad98143094b4bd8584da03f443fa": [
+      {
+        "code": "unsupported_dialect",
+        "message": "JSON Schema dialect is not supported: http://localhost:1234/draft2019-09/metaschema-optional-vocabulary.json.",
+        "pointer": "/$schema",
+        "severity": "error"
+      }
+    ],
+    "9d3ccd649e58d3d1f51aac9a6a8d774782c2d8bad02ddb344b9adcc7f3cfa995": [
+      {
+        "code": "unresolved_reference",
+        "message": "JSON Schema $ref target was not found. External references must be provided through plugin options.",
+        "pointer": "/$defs/refToInteger/$ref",
+        "severity": "error"
+      }
+    ],
+    "9e9cf85ae8fa64a75032a443f8285eed541737e77b0f2158099b304c3badff95": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: if.",
+        "pointer": "/if",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: unevaluatedItems.",
+        "pointer": "/unevaluatedItems",
+        "severity": "error"
+      }
+    ],
+    "9eb81e49baa716577d49cb65dceee49879749ad14fb6ce959004e3d7c9f948b7": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: unevaluatedItems.",
+        "pointer": "/allOf/1/unevaluatedItems",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "Tuple schemas are not supported in the first JSON Schema lowering slice.",
+        "pointer": "/allOf/0/items",
+        "severity": "error"
+      }
+    ],
+    "9ed13b9ca19d8d5a3694732f4439399c62874042db56c256cc5567c9b6c7f5de": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: if.",
+        "pointer": "/if",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: then.",
+        "pointer": "/then",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: unevaluatedItems.",
+        "pointer": "/unevaluatedItems",
+        "severity": "error"
+      }
+    ],
+    "9f4a2341c4c64e8c9e7c53d5b97f26e9906239a83f663005fc291c42b11d5788": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: if.",
+        "pointer": "/allOf/1/if",
+        "severity": "error"
+      }
+    ],
+    "a19930c1befd353063de6f0964677e571a0eaf9bfae5ead0535d9602cf0a4dbb": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: unevaluatedItems.",
+        "pointer": "/unevaluatedItems",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "Tuple schemas are not supported in the first JSON Schema lowering slice.",
+        "pointer": "/items",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "Tuple schemas are not supported in the first JSON Schema lowering slice.",
+        "pointer": "/not/not/items",
+        "severity": "error"
+      }
+    ],
+    "a33207be89947c888f2d6868285adc17af022e936b220b6bf2325a409cf825ff": [
+      {
+        "code": "unrepresentable_schema_combination",
+        "message": "JSON Schema allOf has untyped object sibling assertions whose non-object applicability cannot be preserved by object-only Zod lowering.",
+        "pointer": "/allOf",
+        "severity": "error"
+      }
+    ],
+    "a49349de0c4a8b7a7f64e591dbe2b00043d85b8841a8e2df690d6acae732038b": [
+      {
+        "code": "unresolved_reference",
+        "message": "JSON Schema $ref target was not found. External references must be provided through plugin options.",
+        "pointer": "/properties/list/$ref",
+        "severity": "error"
+      }
+    ],
+    "a50f8bf19161fd47f0cc11908dff1f84ebdc2b185c2621961d8f2d882a02994b": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: if.",
+        "pointer": "/if",
+        "severity": "error"
+      }
+    ],
+    "a6a0770649b2effd650f15b2f0446529c4ce11bd7a899ab8b8303a47434a8c26": [
+      {
+        "code": "unknown_keyword",
+        "message": "JSON Schema keyword is not recognized by the selected source profile: $recursiveAnchor.",
+        "pointer": "/$defs/inner/$recursiveAnchor",
+        "severity": "error"
+      },
+      {
+        "code": "unknown_keyword",
+        "message": "JSON Schema keyword is not recognized by the selected source profile: $recursiveRef.",
+        "pointer": "/$defs/inner/additionalProperties/$recursiveRef",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: else.",
+        "pointer": "/else",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: if.",
+        "pointer": "/if",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: then.",
+        "pointer": "/then",
+        "severity": "error"
+      }
+    ],
+    "a724fdecc8c6eb92044f4c32f9a8db7117fcf70948882057b104a01715ad5a96": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: contains.",
+        "pointer": "/contains",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: minContains.",
+        "pointer": "/minContains",
+        "severity": "error"
+      }
+    ],
+    "a81df94852643163c55b845a76a9c78b191120bc9929343d092d48e8652458a8": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: patternProperties.",
+        "pointer": "/allOf/0/patternProperties",
+        "severity": "error"
+      }
+    ],
+    "a9be553871f07ca70c11f953727ae9382ef9b5e211c85644e63c1ed56bffae22": [
+      {
+        "code": "unrepresentable_schema_combination",
+        "message": "Only primitive const and enum values are supported in the first JSON Schema lowering slice.",
+        "pointer": "/const",
+        "severity": "error"
+      }
+    ],
+    "aa24b65fcbb41933ad636cd597dfebd79debe0bd9e5f16d577a91987797388e4": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: unevaluatedItems.",
+        "pointer": "/allOf/1/unevaluatedItems",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: unevaluatedItems.",
+        "pointer": "/unevaluatedItems",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "Tuple schemas are not supported in the first JSON Schema lowering slice.",
+        "pointer": "/allOf/0/items",
+        "severity": "error"
+      }
+    ],
+    "aa7dfcd6d71af49b016e83ff1cb79598b1d6bd439a8ebe61bbb064b07f16d262": [
+      {
+        "code": "cyclic_reference",
+        "message": "Zod emission module contains a cyclic reference: root -> root",
+        "pointer": null,
+        "severity": "error"
+      }
+    ],
+    "ac85c5e7f39a9806c442d1436acff3855d6fb66b6c92708bc7b96db89df20562": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: uniqueItems.",
+        "pointer": "/uniqueItems",
+        "severity": "error"
+      }
+    ],
+    "b3d40056e1a484f7a40299187583e3ae27a85e74cf209d55fadffd4d9a4e5c4b": [
+      {
+        "code": "unresolved_reference",
+        "message": "JSON Schema $ref target was not found. External references must be provided through plugin options.",
+        "pointer": "/properties/foo/$ref",
+        "severity": "error"
+      }
+    ],
+    "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012": [
+      {
+        "code": "unresolved_reference",
+        "message": "JSON Schema $ref target was not found. External references must be provided through plugin options.",
+        "pointer": "/$ref",
+        "severity": "error"
+      }
+    ],
+    "b4a1cee48a8f894c6b144be189cdf9c3c533edb2435185090fab666f2f47fd98": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: contains.",
+        "pointer": "/contains",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: multipleOf.",
+        "pointer": "/items/multipleOf",
+        "severity": "error"
+      }
+    ],
+    "b51f820fd9db6757bbdb263bcb57012fe88786cdac604a3b254be28dcc7881d6": [
+      {
+        "code": "unresolved_reference",
+        "message": "JSON Schema $ref target was not found. External references must be provided through plugin options.",
+        "pointer": "/properties/name/$ref",
+        "severity": "error"
+      }
+    ],
+    "b5b45b9147eed83bb38185a76269af3ccdbcd3f3f04651be5a70013f8e21c4df": [
+      {
+        "code": "unresolved_reference",
+        "message": "JSON Schema $ref target was not found. External references must be provided through plugin options.",
+        "pointer": "/definitions/baz/items/$ref",
+        "severity": "error"
+      }
+    ],
+    "b7c8d91aef3509b03ae36df63e016a789c607984fe8ea98fb536cdd7396745fc": [
+      {
+        "code": "unknown_keyword",
+        "message": "JSON Schema keyword is not recognized by the selected source profile: additionalItems.",
+        "pointer": "/$defs/item/additionalItems",
+        "severity": "error"
+      },
+      {
+        "code": "unknown_keyword",
+        "message": "JSON Schema keyword is not recognized by the selected source profile: additionalItems.",
+        "pointer": "/additionalItems",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "Tuple schemas are not supported in the first JSON Schema lowering slice.",
+        "pointer": "/$defs/item/items",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "Tuple schemas are not supported in the first JSON Schema lowering slice.",
+        "pointer": "/items",
+        "severity": "error"
+      }
+    ],
+    "b90a4534f02bd0c0a103e51a6cda37235fcba060a08b35609b44053f33ff0e1f": [
+      {
+        "code": "unrepresentable_schema_combination",
+        "message": "JSON Schema allOf with unevaluatedProperties requires an object-only root and mergeable object schema branches.",
+        "pointer": "/unevaluatedProperties",
+        "severity": "error"
+      }
+    ],
+    "ba91c18411537029e6930bb62c1bb715bb1cb371df974a0587beea6a416e331a": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: $dynamicRef.",
+        "pointer": "/items/$dynamicRef",
+        "severity": "error"
+      }
+    ],
+    "bb6076d0f701d7c085b870dd95a108badef1885ec3a5e6bcd5e0085c9787792b": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: $dynamicAnchor.",
+        "pointer": "/$defs/baseSchema/$defs/defaultAddons/$dynamicAnchor",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: $dynamicAnchor.",
+        "pointer": "/$defs/derived/$dynamicAnchor",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: $dynamicRef.",
+        "pointer": "/$defs/baseSchema/$dynamicRef",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: unevaluatedItems.",
+        "pointer": "/$defs/baseSchema/unevaluatedItems",
+        "severity": "error"
+      }
+    ],
+    "c146d59dbfa9f8ba12c381cff9f0b499254526462742f6fb6bc019bee1bbaf89": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: contains.",
+        "pointer": "/contains",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: maxContains.",
+        "pointer": "/maxContains",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: minContains.",
+        "pointer": "/minContains",
+        "severity": "error"
+      }
+    ],
+    "c3ad2309ddcabfa3da9dc3cfa31c25425ee69d6bfbad7911d268f2ce9218b1ac": [
+      {
+        "code": "unrepresentable_schema_combination",
+        "message": "JSON Schema not has untyped object sibling assertions whose non-object applicability cannot be preserved by object-only Zod lowering.",
+        "pointer": "/not",
+        "severity": "error"
+      },
+      {
+        "code": "unrepresentable_schema_combination",
+        "message": "JSON Schema not is only supported for schemas that match every value.",
+        "pointer": "/not",
+        "severity": "error"
+      }
+    ],
+    "c5f3467f113b16205c2cecfd887807416654deddef1e9bd202c9dd6f96ec1df4": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: $dynamicAnchor.",
+        "pointer": "/allOf/1/$defs/elements/$dynamicAnchor",
+        "severity": "error"
+      }
+    ],
+    "c67a2f0911ac9f54fb2f8c67dd3862868f924d3d6430e559ebe307d5d29165e0": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: $dynamicAnchor.",
+        "pointer": "/$defs/thingy/$dynamicAnchor",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: $dynamicRef.",
+        "pointer": "/$defs/start/$dynamicRef",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: if.",
+        "pointer": "/if",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: then.",
+        "pointer": "/then",
+        "severity": "error"
+      }
+    ],
+    "c944df738999c388a5d5dd84ef74b60da83037f14dcfd649204c7288edde6a88": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: $dynamicAnchor.",
+        "pointer": "/$dynamicAnchor",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: $dynamicRef.",
+        "pointer": "/$defs/bar/properties/baz/$dynamicRef",
+        "severity": "error"
+      }
+    ],
+    "c9c90617cc424ad741f49ba943680c79cf7328cafcbe187f7c04b5695a1eb65a": [
+      {
+        "code": "unrepresentable_schema_combination",
+        "message": "JSON Schema allOf sibling assertions include closed or schema-valued object boundaries that cannot be preserved by a plain Zod intersection.",
+        "pointer": "/allOf",
+        "severity": "error"
+      }
+    ],
+    "ced781fe97d6ece101f4067ddcdc6a2deec25abc63f6b42dde218c0f8ac73049": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: unevaluatedItems.",
+        "pointer": "/unevaluatedItems",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "Tuple schemas are not supported in the first JSON Schema lowering slice.",
+        "pointer": "/$defs/bar/items",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "Tuple schemas are not supported in the first JSON Schema lowering slice.",
+        "pointer": "/items",
+        "severity": "error"
+      }
+    ],
+    "cfe5668bd62ff8f41016e246313d20cb2d6ee6f00a7e1c263328f4835f3c5b96": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: multipleOf.",
+        "pointer": "/allOf/0/multipleOf",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: multipleOf.",
+        "pointer": "/anyOf/0/multipleOf",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: multipleOf.",
+        "pointer": "/oneOf/0/multipleOf",
+        "severity": "error"
+      }
+    ],
+    "d18e0129ba5b87d99a166afa67e9bffe6b8d2255b5385e298e698313267e0eb5": [
+      {
+        "code": "unresolved_reference",
+        "message": "JSON Schema $ref target was not found. External references must be provided through plugin options.",
+        "pointer": "/$defs/foo/$ref",
+        "severity": "error"
+      }
+    ],
+    "d45ac1b5fa873f5b7ab1aa396251d566b500446f3ca6643ebefa92912bd53851": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: $dynamicAnchor.",
+        "pointer": "/$defs/second/$defs/length/$dynamicAnchor",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: $dynamicAnchor.",
+        "pointer": "/$defs/third/$defs/length/$dynamicAnchor",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: $dynamicRef.",
+        "pointer": "/$defs/third/$defs/stuff/$dynamicRef",
+        "severity": "error"
+      }
+    ],
+    "d503ca1b8a33f02e6b6d302436d3957de8f22318710bb2d59968f4c9f2be434b": [
+      {
+        "code": "unknown_keyword",
+        "message": "JSON Schema keyword is not recognized by the selected source profile: additionalItems.",
+        "pointer": "/additionalItems",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: unevaluatedItems.",
+        "pointer": "/unevaluatedItems",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "Tuple schemas are not supported in the first JSON Schema lowering slice.",
+        "pointer": "/items",
+        "severity": "error"
+      }
+    ],
+    "d715592bf2e90d9ac9bf8b9b200cd6572ca253237dbba7c455a2fceada14b9f4": [
+      {
+        "code": "unrepresentable_schema_combination",
+        "message": "Only primitive const and enum values are supported in the first JSON Schema lowering slice.",
+        "pointer": "/enum/2",
+        "severity": "error"
+      },
+      {
+        "code": "unrepresentable_schema_combination",
+        "message": "Only primitive const and enum values are supported in the first JSON Schema lowering slice.",
+        "pointer": "/enum/4",
+        "severity": "error"
+      }
+    ],
+    "db5b8c50a6698b8cb03ef3c97e240f7b2d04717e11333a81796484cdcb531c42": [
+      {
+        "code": "unrepresentable_schema_combination",
+        "message": "JSON Schema anyOf with unevaluatedProperties requires evaluated-property annotation bookkeeping that is not supported by this lowering slice.",
+        "pointer": "/unevaluatedProperties",
+        "severity": "error"
+      }
+    ],
+    "de617bb08e2de3dbc74c546b83c9eaf021a7366bd2e49c20d8b3df84b79fb93c": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: $dynamicAnchor.",
+        "pointer": "/$defs/genericList/$defs/defaultItemType/$dynamicAnchor",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: $dynamicAnchor.",
+        "pointer": "/$defs/numberList/$defs/itemType/$dynamicAnchor",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: $dynamicAnchor.",
+        "pointer": "/$defs/stringList/$defs/itemType/$dynamicAnchor",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: $dynamicRef.",
+        "pointer": "/$defs/genericList/properties/list/items/$dynamicRef",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: else.",
+        "pointer": "/else",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: if.",
+        "pointer": "/if",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: then.",
+        "pointer": "/then",
+        "severity": "error"
+      }
+    ],
+    "e2d411e3eda324b54ce142de91577ec9be204827e695b168f028395df23c2ecb": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: else.",
+        "pointer": "/else",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: if.",
+        "pointer": "/if",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: then.",
+        "pointer": "/then",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: unevaluatedItems.",
+        "pointer": "/unevaluatedItems",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "Tuple schemas are not supported in the first JSON Schema lowering slice.",
+        "pointer": "/items",
+        "severity": "error"
+      }
+    ],
+    "e319b08ceaa0361e77f501364f8ac3c2fa2dfcebc9e4560135565c302b9d608e": [
+      {
+        "code": "unknown_keyword",
+        "message": "JSON Schema keyword is not recognized by the selected source profile: $recursiveAnchor.",
+        "pointer": "/$defs/tree/$recursiveAnchor",
+        "severity": "error"
+      },
+      {
+        "code": "unknown_keyword",
+        "message": "JSON Schema keyword is not recognized by the selected source profile: $recursiveAnchor.",
+        "pointer": "/$recursiveAnchor",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "Tuple schemas are not supported in the first JSON Schema lowering slice.",
+        "pointer": "/$defs/tree/items",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "Tuple schemas are not supported in the first JSON Schema lowering slice.",
+        "pointer": "/items",
+        "severity": "error"
+      }
+    ],
+    "e396c654931bb692742a6f4e0c04d8bdee7b4696c2890e8179a4d2772e2b991c": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: dependentRequired.",
+        "pointer": "/dependentRequired",
+        "severity": "error"
+      }
+    ],
+    "e52adcae835018b6362b074d2a591596f6e32d414ceeb8eff32baad1e7d3eb7b": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: unevaluatedItems.",
+        "pointer": "/allOf/1/unevaluatedItems",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: unevaluatedItems.",
+        "pointer": "/unevaluatedItems",
+        "severity": "error"
+      }
+    ],
+    "e95ecb905779ea1066283b348543bbd1574524296d0cad1bfc8f2f29b3f839d0": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: maxContains.",
+        "pointer": "/maxContains",
+        "severity": "error"
+      }
+    ],
+    "ea6be7686976c3489fb34d0336cb03f5ec6ee8f9b9c106909bac8735148e0024": [
+      {
+        "code": "unrepresentable_schema_combination",
+        "message": "JSON Schema allOf has untyped array sibling assertions whose non-array applicability cannot be preserved by array-only Zod lowering.",
+        "pointer": "/allOf",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "Only fixed-length prefixItems tuples are supported in this JSON Schema lowering slice.",
+        "pointer": "/allOf/0/prefixItems",
+        "severity": "error"
+      }
+    ],
+    "eb326214ab76d6c214cd4ba9624d29fef7e3d5ad375a5c447c3f67cedf4bd3af": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: patternProperties.",
+        "pointer": "/properties/foo/patternProperties",
+        "severity": "error"
+      }
+    ],
+    "eb5514448c08d085b12c1b80aaf4312256da41f2d28fb8c26fab7bacf971ac67": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: else.",
+        "pointer": "/allOf/2/else",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: if.",
+        "pointer": "/allOf/0/if",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: then.",
+        "pointer": "/allOf/1/then",
+        "severity": "error"
+      }
+    ],
+    "ef62aaebf5d7dab5b8b5be74b5f54a23cd40236205d58e3d7b7d49e405dd52eb": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: $dynamicAnchor.",
+        "pointer": "/$dynamicAnchor",
+        "severity": "error"
+      }
+    ],
+    "efdf244b28d51a495c55a7f413178354c6087825b235ecd9fec0106957964dd1": [
+      {
+        "code": "unrepresentable_schema_combination",
+        "message": "JSON Schema anyOf has untyped object sibling assertions whose non-object applicability cannot be preserved by object-only Zod lowering.",
+        "pointer": "/anyOf",
+        "severity": "error"
+      }
+    ],
+    "f12779cbe757cd5235f6dba4fb1a6f7ca710d4f55f76d02d53f39f48aa13364f": [
+      {
+        "code": "unknown_keyword",
+        "message": "JSON Schema keyword is not recognized by the selected source profile: $recursiveAnchor.",
+        "pointer": "/anyOf/1/additionalProperties/$recursiveAnchor",
+        "severity": "error"
+      },
+      {
+        "code": "unknown_keyword",
+        "message": "JSON Schema keyword is not recognized by the selected source profile: $recursiveRef.",
+        "pointer": "/anyOf/1/additionalProperties/anyOf/1/additionalProperties/$recursiveRef",
+        "severity": "error"
+      }
+    ],
+    "f197fe3248db53161ceb2723e1d16b80c41a50e98da03b4fffbc5ee012439b48": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: else.",
+        "pointer": "/else",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: if.",
+        "pointer": "/if",
+        "severity": "error"
+      }
+    ],
+    "f534de13d84cf19d429bce1a95a443e570f9e82b33ae770cb1fef14103725d70": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: $dynamicAnchor.",
+        "pointer": "/$defs/foo/$dynamicAnchor",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: $dynamicAnchor.",
+        "pointer": "/$defs/list/$defs/items/$dynamicAnchor",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: $dynamicRef.",
+        "pointer": "/$defs/list/items/$dynamicRef",
+        "severity": "error"
+      }
+    ],
+    "f7835a7de7fe4f8f2350640df6abea1a832d228db7ea5389651e5c1ed9548bef": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: patternProperties.",
+        "pointer": "/patternProperties",
+        "severity": "error"
+      }
+    ],
+    "f91e61ee7bdd007294ed922720b95380da54c15fcee24577acc95f33c359f1bb": [
+      {
+        "code": "invalid_zod_emission_module",
+        "message": "Zod emission module is invalid: declarations.0.nameHints.0.value: Too small: expected string to have >=1 characters",
+        "pointer": null,
+        "severity": "error"
+      }
+    ],
+    "fe9855e3a3b6394c7c76c6930d98a6de8d987e441c2a3ca89f767719f6e43db6": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: then.",
+        "pointer": "/allOf/1/then",
+        "severity": "error"
+      }
+    ],
+    "fe9b4cf6495c1dbbbdace639899a68d89aeb372dd171cc76fa3ecb33d2a7f592": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: $dynamicAnchor.",
+        "pointer": "/$defs/list/$defs/items/$dynamicAnchor",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: $dynamicRef.",
+        "pointer": "/$defs/list/items/$dynamicRef",
+        "severity": "error"
+      }
+    ],
+    "fee39c184cfcb3ba67d52abc50232f27b829147874c96422d69ad6075119ee4c": [
+      {
+        "code": "unresolved_reference",
+        "message": "JSON Schema $ref target was not found. External references must be provided through plugin options.",
+        "pointer": "/allOf/0/$ref",
+        "severity": "error"
+      }
+    ],
+    "ffddf4e78f8ad8de68442a59ef348e3a9d2392162f3ff4705aa6a346dcb7ecbc": [
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: $dynamicAnchor.",
+        "pointer": "/$defs/baseSchema/$defs/defaultAddons/$dynamicAnchor",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: $dynamicAnchor.",
+        "pointer": "/$defs/derived/$dynamicAnchor",
+        "severity": "error"
+      },
+      {
+        "code": "unsupported_keyword",
+        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: $dynamicRef.",
+        "pointer": "/$defs/baseSchema/$dynamicRef",
+        "severity": "error"
+      }
+    ]
+  },
+  "compileGaps": {
+    "draft-7:additionalItems.json:0": "73b4710f40367aa4eae2718bfa1814e6ab3758233e089f2f39f30e7f83961bc7",
+    "draft-7:additionalItems.json:1": "615762908b43f6aed55670606b11a364a3ec11b80311639ff8846a6cfb1b1c38",
+    "draft-7:additionalItems.json:2": "615762908b43f6aed55670606b11a364a3ec11b80311639ff8846a6cfb1b1c38",
+    "draft-7:additionalItems.json:3": "73b4710f40367aa4eae2718bfa1814e6ab3758233e089f2f39f30e7f83961bc7",
+    "draft-7:additionalItems.json:4": "615762908b43f6aed55670606b11a364a3ec11b80311639ff8846a6cfb1b1c38",
+    "draft-7:additionalItems.json:5": "051dab5e058037ddfc1413e82966c320da305746c03687c92d42547b8ced496c",
+    "draft-7:additionalItems.json:6": "3b1cb78656cae8f0d984834e2da015aefe33e47197a646c92ec73b3b61369bf5",
+    "draft-7:additionalItems.json:7": "73b4710f40367aa4eae2718bfa1814e6ab3758233e089f2f39f30e7f83961bc7",
+    "draft-7:additionalItems.json:8": "73b4710f40367aa4eae2718bfa1814e6ab3758233e089f2f39f30e7f83961bc7",
+    "draft-7:additionalItems.json:9": "615762908b43f6aed55670606b11a364a3ec11b80311639ff8846a6cfb1b1c38",
+    "draft-7:additionalProperties.json:0": "f7835a7de7fe4f8f2350640df6abea1a832d228db7ea5389651e5c1ed9548bef",
+    "draft-7:additionalProperties.json:1": "f7835a7de7fe4f8f2350640df6abea1a832d228db7ea5389651e5c1ed9548bef",
+    "draft-7:additionalProperties.json:5": "a33207be89947c888f2d6868285adc17af022e936b220b6bf2325a409cf825ff",
+    "draft-7:allOf.json:1": "a33207be89947c888f2d6868285adc17af022e936b220b6bf2325a409cf825ff",
+    "draft-7:allOf.json:2": "5d325f062639b1c5bd21d8bf71ce597ed62311e0c2284982308109b0bc72b3db",
+    "draft-7:allOf.json:11": "cfe5668bd62ff8f41016e246313d20cb2d6ee6f00a7e1c263328f4835f3c5b96",
+    "draft-7:anyOf.json:0": "2f36f99af32115e9b61c57402b274072d3bed59a55ed9308a479ffbcd7f235c6",
+    "draft-7:anyOf.json:1": "17133f5c263a9fa679532a30e57f50a183997a84fea12fd53c1e70e701fb8e6c",
+    "draft-7:const.json:1": "a9be553871f07ca70c11f953727ae9382ef9b5e211c85644e63c1ed56bffae22",
+    "draft-7:const.json:2": "a9be553871f07ca70c11f953727ae9382ef9b5e211c85644e63c1ed56bffae22",
+    "draft-7:const.json:6": "a9be553871f07ca70c11f953727ae9382ef9b5e211c85644e63c1ed56bffae22",
+    "draft-7:const.json:7": "a9be553871f07ca70c11f953727ae9382ef9b5e211c85644e63c1ed56bffae22",
+    "draft-7:const.json:8": "a9be553871f07ca70c11f953727ae9382ef9b5e211c85644e63c1ed56bffae22",
+    "draft-7:const.json:9": "a9be553871f07ca70c11f953727ae9382ef9b5e211c85644e63c1ed56bffae22",
+    "draft-7:contains.json:0": "43fad8460bf15af7290788702abe2c94d67d120b54d5a26592328201794ce716",
+    "draft-7:contains.json:1": "43fad8460bf15af7290788702abe2c94d67d120b54d5a26592328201794ce716",
+    "draft-7:contains.json:2": "43fad8460bf15af7290788702abe2c94d67d120b54d5a26592328201794ce716",
+    "draft-7:contains.json:3": "43fad8460bf15af7290788702abe2c94d67d120b54d5a26592328201794ce716",
+    "draft-7:contains.json:4": "b4a1cee48a8f894c6b144be189cdf9c3c533edb2435185090fab666f2f47fd98",
+    "draft-7:contains.json:5": "43fad8460bf15af7290788702abe2c94d67d120b54d5a26592328201794ce716",
+    "draft-7:contains.json:6": "43fad8460bf15af7290788702abe2c94d67d120b54d5a26592328201794ce716",
+    "draft-7:definitions.json:0": "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012",
+    "draft-7:dependencies.json:0": "1dd84139e76f974427feda1aa3c518a181ed9e29bee4f8108e01fd6ca29b00eb",
+    "draft-7:dependencies.json:1": "1dd84139e76f974427feda1aa3c518a181ed9e29bee4f8108e01fd6ca29b00eb",
+    "draft-7:dependencies.json:2": "1dd84139e76f974427feda1aa3c518a181ed9e29bee4f8108e01fd6ca29b00eb",
+    "draft-7:dependencies.json:3": "1dd84139e76f974427feda1aa3c518a181ed9e29bee4f8108e01fd6ca29b00eb",
+    "draft-7:dependencies.json:4": "1dd84139e76f974427feda1aa3c518a181ed9e29bee4f8108e01fd6ca29b00eb",
+    "draft-7:dependencies.json:5": "1dd84139e76f974427feda1aa3c518a181ed9e29bee4f8108e01fd6ca29b00eb",
+    "draft-7:dependencies.json:6": "1dd84139e76f974427feda1aa3c518a181ed9e29bee4f8108e01fd6ca29b00eb",
+    "draft-7:enum.json:1": "d715592bf2e90d9ac9bf8b9b200cd6572ca253237dbba7c455a2fceada14b9f4",
+    "draft-7:enum.json:6": "041845aeaec76af08fd3c015ac981848f3785581ab85b1a6441a8c9baa0bdce9",
+    "draft-7:enum.json:8": "041845aeaec76af08fd3c015ac981848f3785581ab85b1a6441a8c9baa0bdce9",
+    "draft-7:enum.json:10": "041845aeaec76af08fd3c015ac981848f3785581ab85b1a6441a8c9baa0bdce9",
+    "draft-7:enum.json:12": "041845aeaec76af08fd3c015ac981848f3785581ab85b1a6441a8c9baa0bdce9",
+    "draft-7:exclusiveMaximum.json:0": "4f10b572ee4c0eebdfb87aa7dd0883ba90fb68b6a513027e40323e0dd500ecce",
+    "draft-7:exclusiveMinimum.json:0": "4f10b572ee4c0eebdfb87aa7dd0883ba90fb68b6a513027e40323e0dd500ecce",
+    "draft-7:if-then-else.json:0": "a50f8bf19161fd47f0cc11908dff1f84ebdc2b185c2621961d8f2d882a02994b",
+    "draft-7:if-then-else.json:1": "0dcfcc137e1429303ce33ff7855ed00184cc93007f064a6c7d0abc0c0ff397af",
+    "draft-7:if-then-else.json:2": "4715e81e583334e3d681e1260a7f7f859cc3eb2c5a0bc4f479b8745deb89a676",
+    "draft-7:if-then-else.json:3": "47bf1335a44511c8783ce496ac4b4ee6841a44c8e6fc86dfc9487811bad15f7e",
+    "draft-7:if-then-else.json:4": "f197fe3248db53161ceb2723e1d16b80c41a50e98da03b4fffbc5ee012439b48",
+    "draft-7:if-then-else.json:5": "1e94faa2871d45652b3a71faccfcbe0c3f410c91534e44463c167302c74dd10a",
+    "draft-7:if-then-else.json:6": "eb5514448c08d085b12c1b80aaf4312256da41f2d28fb8c26fab7bacf971ac67",
+    "draft-7:if-then-else.json:7": "1e94faa2871d45652b3a71faccfcbe0c3f410c91534e44463c167302c74dd10a",
+    "draft-7:if-then-else.json:8": "1e94faa2871d45652b3a71faccfcbe0c3f410c91534e44463c167302c74dd10a",
+    "draft-7:if-then-else.json:9": "1e94faa2871d45652b3a71faccfcbe0c3f410c91534e44463c167302c74dd10a",
+    "draft-7:if-then-else.json:10": "47bf1335a44511c8783ce496ac4b4ee6841a44c8e6fc86dfc9487811bad15f7e",
+    "draft-7:if-then-else.json:11": "f197fe3248db53161ceb2723e1d16b80c41a50e98da03b4fffbc5ee012439b48",
+    "draft-7:infinite-loop-detection.json:0": "5f7da038038e7ab7480b69a32f134ed2e9e40d47f3934b204a5313a5aca86b66",
+    "draft-7:items.json:1": "051dab5e058037ddfc1413e82966c320da305746c03687c92d42547b8ced496c",
+    "draft-7:items.json:4": "051dab5e058037ddfc1413e82966c320da305746c03687c92d42547b8ced496c",
+    "draft-7:items.json:5": "171e78736a37aa3e83d8e57fcdcfee48d3063fd645aec1ecede470cd6e8c383d",
+    "draft-7:items.json:8": "051dab5e058037ddfc1413e82966c320da305746c03687c92d42547b8ced496c",
+    "draft-7:maxLength.json:0": "9089b797c36de6f4f2e7fa79dc937a94b6971a166589beb2f60250812698858c",
+    "draft-7:maxLength.json:1": "9089b797c36de6f4f2e7fa79dc937a94b6971a166589beb2f60250812698858c",
+    "draft-7:maxProperties.json:0": "318c5862d291cd6e122b716eb450b1e47307278d251ddf88a262b38b23f6ee84",
+    "draft-7:maxProperties.json:1": "318c5862d291cd6e122b716eb450b1e47307278d251ddf88a262b38b23f6ee84",
+    "draft-7:maxProperties.json:2": "318c5862d291cd6e122b716eb450b1e47307278d251ddf88a262b38b23f6ee84",
+    "draft-7:maximum.json:0": "4f10b572ee4c0eebdfb87aa7dd0883ba90fb68b6a513027e40323e0dd500ecce",
+    "draft-7:maximum.json:1": "4f10b572ee4c0eebdfb87aa7dd0883ba90fb68b6a513027e40323e0dd500ecce",
+    "draft-7:minLength.json:0": "7535fc7a05cd123a8b90409188c4d469575a0b19e6e2d0756bd8add366d64aa6",
+    "draft-7:minLength.json:1": "7535fc7a05cd123a8b90409188c4d469575a0b19e6e2d0756bd8add366d64aa6",
+    "draft-7:minProperties.json:0": "396fb2aa57602cf078e04c1a4a82060f47b95d4b94f713b7a18045966ecb2cb8",
+    "draft-7:minProperties.json:1": "396fb2aa57602cf078e04c1a4a82060f47b95d4b94f713b7a18045966ecb2cb8",
+    "draft-7:minimum.json:0": "4f10b572ee4c0eebdfb87aa7dd0883ba90fb68b6a513027e40323e0dd500ecce",
+    "draft-7:minimum.json:1": "4f10b572ee4c0eebdfb87aa7dd0883ba90fb68b6a513027e40323e0dd500ecce",
+    "draft-7:multipleOf.json:0": "7a4bf2899531b11ff238c5121b29124a9459b1ed8e5a3dbf3656ee8c13c5a9bf",
+    "draft-7:multipleOf.json:1": "7a4bf2899531b11ff238c5121b29124a9459b1ed8e5a3dbf3656ee8c13c5a9bf",
+    "draft-7:multipleOf.json:2": "7a4bf2899531b11ff238c5121b29124a9459b1ed8e5a3dbf3656ee8c13c5a9bf",
+    "draft-7:multipleOf.json:3": "7a4bf2899531b11ff238c5121b29124a9459b1ed8e5a3dbf3656ee8c13c5a9bf",
+    "draft-7:multipleOf.json:4": "7a4bf2899531b11ff238c5121b29124a9459b1ed8e5a3dbf3656ee8c13c5a9bf",
+    "draft-7:not.json:0": "3e052301c20defd81559310a036ad8544c04c442a49c8ebcf5959981ad03efe0",
+    "draft-7:not.json:1": "3e052301c20defd81559310a036ad8544c04c442a49c8ebcf5959981ad03efe0",
+    "draft-7:not.json:2": "3e052301c20defd81559310a036ad8544c04c442a49c8ebcf5959981ad03efe0",
+    "draft-7:not.json:7": "3e052301c20defd81559310a036ad8544c04c442a49c8ebcf5959981ad03efe0",
+    "draft-7:oneOf.json:0": "22269dab9adc1844e414510ee167dacf072c40bac235bc0a84a387f3bc2432bc",
+    "draft-7:oneOf.json:1": "8379938b9b726ff0eed184009528a26031c6426724a0cd32a66d9cf32a0e943b",
+    "draft-7:pattern.json:0": "3ae23edf60660cb751314c741f8a3cf5cf1b6847d2887bab33f9b33cdc689728",
+    "draft-7:pattern.json:1": "3ae23edf60660cb751314c741f8a3cf5cf1b6847d2887bab33f9b33cdc689728",
+    "draft-7:patternProperties.json:0": "f7835a7de7fe4f8f2350640df6abea1a832d228db7ea5389651e5c1ed9548bef",
+    "draft-7:patternProperties.json:1": "f7835a7de7fe4f8f2350640df6abea1a832d228db7ea5389651e5c1ed9548bef",
+    "draft-7:patternProperties.json:2": "f7835a7de7fe4f8f2350640df6abea1a832d228db7ea5389651e5c1ed9548bef",
+    "draft-7:patternProperties.json:3": "f7835a7de7fe4f8f2350640df6abea1a832d228db7ea5389651e5c1ed9548bef",
+    "draft-7:patternProperties.json:4": "f7835a7de7fe4f8f2350640df6abea1a832d228db7ea5389651e5c1ed9548bef",
+    "draft-7:properties.json:1": "f7835a7de7fe4f8f2350640df6abea1a832d228db7ea5389651e5c1ed9548bef",
+    "draft-7:ref.json:0": "aa7dfcd6d71af49b016e83ff1cb79598b1d6bd439a8ebe61bbb064b07f16d262",
+    "draft-7:ref.json:2": "051dab5e058037ddfc1413e82966c320da305746c03687c92d42547b8ced496c",
+    "draft-7:ref.json:5": "6e39a5a5e87d0abdc627a3c62888afabfbfd906343a6a9e11fc1902e73059833",
+    "draft-7:ref.json:6": "fee39c184cfcb3ba67d52abc50232f27b829147874c96422d69ad6075119ee4c",
+    "draft-7:ref.json:7": "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012",
+    "draft-7:ref.json:12": "965d756687206c6f3e98c4ad532f9e6472d355b0d11f29a3b0ef35d2ee7739d7",
+    "draft-7:ref.json:14": "fee39c184cfcb3ba67d52abc50232f27b829147874c96422d69ad6075119ee4c",
+    "draft-7:ref.json:15": "fee39c184cfcb3ba67d52abc50232f27b829147874c96422d69ad6075119ee4c",
+    "draft-7:ref.json:16": "fee39c184cfcb3ba67d52abc50232f27b829147874c96422d69ad6075119ee4c",
+    "draft-7:ref.json:17": "041845aeaec76af08fd3c015ac981848f3785581ab85b1a6441a8c9baa0bdce9",
+    "draft-7:ref.json:18": "28996618661f22ad3594cbdf7b9677ac09933ebc454a05cf82abed35c2a354f9",
+    "draft-7:ref.json:19": "28996618661f22ad3594cbdf7b9677ac09933ebc454a05cf82abed35c2a354f9",
+    "draft-7:ref.json:20": "fee39c184cfcb3ba67d52abc50232f27b829147874c96422d69ad6075119ee4c",
+    "draft-7:ref.json:21": "4f10b572ee4c0eebdfb87aa7dd0883ba90fb68b6a513027e40323e0dd500ecce",
+    "draft-7:ref.json:26": "b3d40056e1a484f7a40299187583e3ae27a85e74cf209d55fadffd4d9a4e5c4b",
+    "draft-7:ref.json:27": "b3d40056e1a484f7a40299187583e3ae27a85e74cf209d55fadffd4d9a4e5c4b",
+    "draft-7:ref.json:28": "9f4a2341c4c64e8c9e7c53d5b97f26e9906239a83f663005fc291c42b11d5788",
+    "draft-7:ref.json:29": "fe9855e3a3b6394c7c76c6930d98a6de8d987e441c2a3ca89f767719f6e43db6",
+    "draft-7:ref.json:30": "3628df12d76526141c696ba2af17a623a03051e72e1c58ccb13bbce4f7dc0a91",
+    "draft-7:ref.json:31": "fee39c184cfcb3ba67d52abc50232f27b829147874c96422d69ad6075119ee4c",
+    "draft-7:ref.json:34": "f91e61ee7bdd007294ed922720b95380da54c15fcee24577acc95f33c359f1bb",
+    "draft-7:refRemote.json:2": "6ec524011ac7781cf269f19d6821441a9cdd18fa46e7a4b5b0c09612e8589566",
+    "draft-7:refRemote.json:3": "90705bfd24c27ed6d969e9229bbbfe51cd229609847f66da870fced6eaea4350",
+    "draft-7:refRemote.json:4": "b5b45b9147eed83bb38185a76269af3ccdbcd3f3f04651be5a70013f8e21c4df",
+    "draft-7:refRemote.json:5": "686a1cf67ff243e545392b265de588768739eda226743e06c717aa7c61bb6345",
+    "draft-7:refRemote.json:6": "b51f820fd9db6757bbdb263bcb57012fe88786cdac604a3b254be28dcc7881d6",
+    "draft-7:refRemote.json:7": "fee39c184cfcb3ba67d52abc50232f27b829147874c96422d69ad6075119ee4c",
+    "draft-7:refRemote.json:8": "6ec524011ac7781cf269f19d6821441a9cdd18fa46e7a4b5b0c09612e8589566",
+    "draft-7:refRemote.json:9": "b51f820fd9db6757bbdb263bcb57012fe88786cdac604a3b254be28dcc7881d6",
+    "draft-7:refRemote.json:10": "87dcbc9556367fe8d45d457d45ee257f6776ef9280d1aed4c45d67b82a5f4b0c",
+    "draft-7:required.json:4": "17da1a2b13b01b72ddd2d927613e13734d7df582a26594b4272114825bc2cde8",
+    "draft-7:uniqueItems.json:0": "ac85c5e7f39a9806c442d1436acff3855d6fb66b6c92708bc7b96db89df20562",
+    "draft-7:uniqueItems.json:1": "704557d163f31aeb97445162a026de94ce63fbc1d5dc64ac8b9c995e5cfae30f",
+    "draft-7:uniqueItems.json:2": "384582ed62648e768188cd91edcf7d21e15cc84265b74237e1b0b7672dacc448",
+    "draft-7:uniqueItems.json:3": "ac85c5e7f39a9806c442d1436acff3855d6fb66b6c92708bc7b96db89df20562",
+    "draft-7:uniqueItems.json:4": "704557d163f31aeb97445162a026de94ce63fbc1d5dc64ac8b9c995e5cfae30f",
+    "draft-7:uniqueItems.json:5": "384582ed62648e768188cd91edcf7d21e15cc84265b74237e1b0b7672dacc448",
+    "draft-2019-09:additionalItems.json:0": "73b4710f40367aa4eae2718bfa1814e6ab3758233e089f2f39f30e7f83961bc7",
+    "draft-2019-09:additionalItems.json:1": "615762908b43f6aed55670606b11a364a3ec11b80311639ff8846a6cfb1b1c38",
+    "draft-2019-09:additionalItems.json:2": "615762908b43f6aed55670606b11a364a3ec11b80311639ff8846a6cfb1b1c38",
+    "draft-2019-09:additionalItems.json:3": "73b4710f40367aa4eae2718bfa1814e6ab3758233e089f2f39f30e7f83961bc7",
+    "draft-2019-09:additionalItems.json:4": "615762908b43f6aed55670606b11a364a3ec11b80311639ff8846a6cfb1b1c38",
+    "draft-2019-09:additionalItems.json:5": "051dab5e058037ddfc1413e82966c320da305746c03687c92d42547b8ced496c",
+    "draft-2019-09:additionalItems.json:6": "3b1cb78656cae8f0d984834e2da015aefe33e47197a646c92ec73b3b61369bf5",
+    "draft-2019-09:additionalItems.json:7": "73b4710f40367aa4eae2718bfa1814e6ab3758233e089f2f39f30e7f83961bc7",
+    "draft-2019-09:additionalItems.json:8": "73b4710f40367aa4eae2718bfa1814e6ab3758233e089f2f39f30e7f83961bc7",
+    "draft-2019-09:additionalItems.json:9": "615762908b43f6aed55670606b11a364a3ec11b80311639ff8846a6cfb1b1c38",
+    "draft-2019-09:additionalProperties.json:0": "f7835a7de7fe4f8f2350640df6abea1a832d228db7ea5389651e5c1ed9548bef",
+    "draft-2019-09:additionalProperties.json:1": "f7835a7de7fe4f8f2350640df6abea1a832d228db7ea5389651e5c1ed9548bef",
+    "draft-2019-09:additionalProperties.json:5": "a33207be89947c888f2d6868285adc17af022e936b220b6bf2325a409cf825ff",
+    "draft-2019-09:additionalProperties.json:8": "38eee3540182ba474f77b34ce4fb235a268c8bb576ef591510f28f0a99ecf0e4",
+    "draft-2019-09:allOf.json:1": "a33207be89947c888f2d6868285adc17af022e936b220b6bf2325a409cf825ff",
+    "draft-2019-09:allOf.json:2": "5d325f062639b1c5bd21d8bf71ce597ed62311e0c2284982308109b0bc72b3db",
+    "draft-2019-09:allOf.json:11": "cfe5668bd62ff8f41016e246313d20cb2d6ee6f00a7e1c263328f4835f3c5b96",
+    "draft-2019-09:anchor.json:0": "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012",
+    "draft-2019-09:anchor.json:1": "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012",
+    "draft-2019-09:anchor.json:2": "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012",
+    "draft-2019-09:anchor.json:3": "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012",
+    "draft-2019-09:anyOf.json:0": "2f36f99af32115e9b61c57402b274072d3bed59a55ed9308a479ffbcd7f235c6",
+    "draft-2019-09:anyOf.json:1": "17133f5c263a9fa679532a30e57f50a183997a84fea12fd53c1e70e701fb8e6c",
+    "draft-2019-09:const.json:1": "a9be553871f07ca70c11f953727ae9382ef9b5e211c85644e63c1ed56bffae22",
+    "draft-2019-09:const.json:2": "a9be553871f07ca70c11f953727ae9382ef9b5e211c85644e63c1ed56bffae22",
+    "draft-2019-09:const.json:6": "a9be553871f07ca70c11f953727ae9382ef9b5e211c85644e63c1ed56bffae22",
+    "draft-2019-09:const.json:7": "a9be553871f07ca70c11f953727ae9382ef9b5e211c85644e63c1ed56bffae22",
+    "draft-2019-09:const.json:8": "a9be553871f07ca70c11f953727ae9382ef9b5e211c85644e63c1ed56bffae22",
+    "draft-2019-09:const.json:9": "a9be553871f07ca70c11f953727ae9382ef9b5e211c85644e63c1ed56bffae22",
+    "draft-2019-09:contains.json:0": "43fad8460bf15af7290788702abe2c94d67d120b54d5a26592328201794ce716",
+    "draft-2019-09:contains.json:1": "43fad8460bf15af7290788702abe2c94d67d120b54d5a26592328201794ce716",
+    "draft-2019-09:contains.json:2": "43fad8460bf15af7290788702abe2c94d67d120b54d5a26592328201794ce716",
+    "draft-2019-09:contains.json:3": "43fad8460bf15af7290788702abe2c94d67d120b54d5a26592328201794ce716",
+    "draft-2019-09:contains.json:4": "b4a1cee48a8f894c6b144be189cdf9c3c533edb2435185090fab666f2f47fd98",
+    "draft-2019-09:contains.json:5": "43fad8460bf15af7290788702abe2c94d67d120b54d5a26592328201794ce716",
+    "draft-2019-09:contains.json:6": "43fad8460bf15af7290788702abe2c94d67d120b54d5a26592328201794ce716",
+    "draft-2019-09:content.json:0": "074774ddbe7fb3cfa210f5fd14b722a09cf9032a048363f220847ae2ed9108f9",
+    "draft-2019-09:content.json:1": "6de154e4edbb0b1fcd57119e98df4d86d460910cd2271505bab13cc951a8808b",
+    "draft-2019-09:content.json:2": "54cd4973e07fa1ea3a7d1b86d21c285489496a520cb9f046a0fd942c06e87877",
+    "draft-2019-09:content.json:3": "79b897a98a00f89a23a16703082e238a8c62ba29637c3f1d2f517547ee9cc9b2",
+    "draft-2019-09:defs.json:0": "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012",
+    "draft-2019-09:dependentRequired.json:0": "e396c654931bb692742a6f4e0c04d8bdee7b4696c2890e8179a4d2772e2b991c",
+    "draft-2019-09:dependentRequired.json:1": "e396c654931bb692742a6f4e0c04d8bdee7b4696c2890e8179a4d2772e2b991c",
+    "draft-2019-09:dependentRequired.json:2": "e396c654931bb692742a6f4e0c04d8bdee7b4696c2890e8179a4d2772e2b991c",
+    "draft-2019-09:dependentRequired.json:3": "e396c654931bb692742a6f4e0c04d8bdee7b4696c2890e8179a4d2772e2b991c",
+    "draft-2019-09:dependentSchemas.json:0": "38eee3540182ba474f77b34ce4fb235a268c8bb576ef591510f28f0a99ecf0e4",
+    "draft-2019-09:dependentSchemas.json:1": "38eee3540182ba474f77b34ce4fb235a268c8bb576ef591510f28f0a99ecf0e4",
+    "draft-2019-09:dependentSchemas.json:2": "38eee3540182ba474f77b34ce4fb235a268c8bb576ef591510f28f0a99ecf0e4",
+    "draft-2019-09:dependentSchemas.json:3": "38eee3540182ba474f77b34ce4fb235a268c8bb576ef591510f28f0a99ecf0e4",
+    "draft-2019-09:enum.json:1": "d715592bf2e90d9ac9bf8b9b200cd6572ca253237dbba7c455a2fceada14b9f4",
+    "draft-2019-09:enum.json:6": "041845aeaec76af08fd3c015ac981848f3785581ab85b1a6441a8c9baa0bdce9",
+    "draft-2019-09:enum.json:8": "041845aeaec76af08fd3c015ac981848f3785581ab85b1a6441a8c9baa0bdce9",
+    "draft-2019-09:enum.json:10": "041845aeaec76af08fd3c015ac981848f3785581ab85b1a6441a8c9baa0bdce9",
+    "draft-2019-09:enum.json:12": "041845aeaec76af08fd3c015ac981848f3785581ab85b1a6441a8c9baa0bdce9",
+    "draft-2019-09:exclusiveMaximum.json:0": "4f10b572ee4c0eebdfb87aa7dd0883ba90fb68b6a513027e40323e0dd500ecce",
+    "draft-2019-09:exclusiveMinimum.json:0": "4f10b572ee4c0eebdfb87aa7dd0883ba90fb68b6a513027e40323e0dd500ecce",
+    "draft-2019-09:if-then-else.json:0": "a50f8bf19161fd47f0cc11908dff1f84ebdc2b185c2621961d8f2d882a02994b",
+    "draft-2019-09:if-then-else.json:1": "0dcfcc137e1429303ce33ff7855ed00184cc93007f064a6c7d0abc0c0ff397af",
+    "draft-2019-09:if-then-else.json:2": "4715e81e583334e3d681e1260a7f7f859cc3eb2c5a0bc4f479b8745deb89a676",
+    "draft-2019-09:if-then-else.json:3": "47bf1335a44511c8783ce496ac4b4ee6841a44c8e6fc86dfc9487811bad15f7e",
+    "draft-2019-09:if-then-else.json:4": "f197fe3248db53161ceb2723e1d16b80c41a50e98da03b4fffbc5ee012439b48",
+    "draft-2019-09:if-then-else.json:5": "1e94faa2871d45652b3a71faccfcbe0c3f410c91534e44463c167302c74dd10a",
+    "draft-2019-09:if-then-else.json:6": "eb5514448c08d085b12c1b80aaf4312256da41f2d28fb8c26fab7bacf971ac67",
+    "draft-2019-09:if-then-else.json:7": "1e94faa2871d45652b3a71faccfcbe0c3f410c91534e44463c167302c74dd10a",
+    "draft-2019-09:if-then-else.json:8": "1e94faa2871d45652b3a71faccfcbe0c3f410c91534e44463c167302c74dd10a",
+    "draft-2019-09:if-then-else.json:9": "1e94faa2871d45652b3a71faccfcbe0c3f410c91534e44463c167302c74dd10a",
+    "draft-2019-09:if-then-else.json:10": "47bf1335a44511c8783ce496ac4b4ee6841a44c8e6fc86dfc9487811bad15f7e",
+    "draft-2019-09:if-then-else.json:11": "f197fe3248db53161ceb2723e1d16b80c41a50e98da03b4fffbc5ee012439b48",
+    "draft-2019-09:infinite-loop-detection.json:0": "5f7da038038e7ab7480b69a32f134ed2e9e40d47f3934b204a5313a5aca86b66",
+    "draft-2019-09:items.json:1": "051dab5e058037ddfc1413e82966c320da305746c03687c92d42547b8ced496c",
+    "draft-2019-09:items.json:4": "051dab5e058037ddfc1413e82966c320da305746c03687c92d42547b8ced496c",
+    "draft-2019-09:items.json:5": "b7c8d91aef3509b03ae36df63e016a789c607984fe8ea98fb536cdd7396745fc",
+    "draft-2019-09:items.json:8": "051dab5e058037ddfc1413e82966c320da305746c03687c92d42547b8ced496c",
+    "draft-2019-09:maxContains.json:0": "e95ecb905779ea1066283b348543bbd1574524296d0cad1bfc8f2f29b3f839d0",
+    "draft-2019-09:maxContains.json:1": "419252634efdbc769c3c64350602c55edb04eec69a509d582cb7335db4b94b4e",
+    "draft-2019-09:maxContains.json:2": "419252634efdbc769c3c64350602c55edb04eec69a509d582cb7335db4b94b4e",
+    "draft-2019-09:maxContains.json:3": "c146d59dbfa9f8ba12c381cff9f0b499254526462742f6fb6bc019bee1bbaf89",
+    "draft-2019-09:maxContains.json:4": "c146d59dbfa9f8ba12c381cff9f0b499254526462742f6fb6bc019bee1bbaf89",
+    "draft-2019-09:maxLength.json:0": "9089b797c36de6f4f2e7fa79dc937a94b6971a166589beb2f60250812698858c",
+    "draft-2019-09:maxLength.json:1": "9089b797c36de6f4f2e7fa79dc937a94b6971a166589beb2f60250812698858c",
+    "draft-2019-09:maxProperties.json:0": "318c5862d291cd6e122b716eb450b1e47307278d251ddf88a262b38b23f6ee84",
+    "draft-2019-09:maxProperties.json:1": "318c5862d291cd6e122b716eb450b1e47307278d251ddf88a262b38b23f6ee84",
+    "draft-2019-09:maxProperties.json:2": "318c5862d291cd6e122b716eb450b1e47307278d251ddf88a262b38b23f6ee84",
+    "draft-2019-09:maximum.json:0": "4f10b572ee4c0eebdfb87aa7dd0883ba90fb68b6a513027e40323e0dd500ecce",
+    "draft-2019-09:maximum.json:1": "4f10b572ee4c0eebdfb87aa7dd0883ba90fb68b6a513027e40323e0dd500ecce",
+    "draft-2019-09:minContains.json:0": "11759e97fabff14fa36af1feeabeb856ccb4adfc674399c20e46f8bb12ad5635",
+    "draft-2019-09:minContains.json:1": "a724fdecc8c6eb92044f4c32f9a8db7117fcf70948882057b104a01715ad5a96",
+    "draft-2019-09:minContains.json:2": "a724fdecc8c6eb92044f4c32f9a8db7117fcf70948882057b104a01715ad5a96",
+    "draft-2019-09:minContains.json:3": "a724fdecc8c6eb92044f4c32f9a8db7117fcf70948882057b104a01715ad5a96",
+    "draft-2019-09:minContains.json:4": "c146d59dbfa9f8ba12c381cff9f0b499254526462742f6fb6bc019bee1bbaf89",
+    "draft-2019-09:minContains.json:5": "c146d59dbfa9f8ba12c381cff9f0b499254526462742f6fb6bc019bee1bbaf89",
+    "draft-2019-09:minContains.json:6": "a724fdecc8c6eb92044f4c32f9a8db7117fcf70948882057b104a01715ad5a96",
+    "draft-2019-09:minContains.json:7": "c146d59dbfa9f8ba12c381cff9f0b499254526462742f6fb6bc019bee1bbaf89",
+    "draft-2019-09:minLength.json:0": "7535fc7a05cd123a8b90409188c4d469575a0b19e6e2d0756bd8add366d64aa6",
+    "draft-2019-09:minLength.json:1": "7535fc7a05cd123a8b90409188c4d469575a0b19e6e2d0756bd8add366d64aa6",
+    "draft-2019-09:minProperties.json:0": "396fb2aa57602cf078e04c1a4a82060f47b95d4b94f713b7a18045966ecb2cb8",
+    "draft-2019-09:minProperties.json:1": "396fb2aa57602cf078e04c1a4a82060f47b95d4b94f713b7a18045966ecb2cb8",
+    "draft-2019-09:minimum.json:0": "4f10b572ee4c0eebdfb87aa7dd0883ba90fb68b6a513027e40323e0dd500ecce",
+    "draft-2019-09:minimum.json:1": "4f10b572ee4c0eebdfb87aa7dd0883ba90fb68b6a513027e40323e0dd500ecce",
+    "draft-2019-09:multipleOf.json:0": "7a4bf2899531b11ff238c5121b29124a9459b1ed8e5a3dbf3656ee8c13c5a9bf",
+    "draft-2019-09:multipleOf.json:1": "7a4bf2899531b11ff238c5121b29124a9459b1ed8e5a3dbf3656ee8c13c5a9bf",
+    "draft-2019-09:multipleOf.json:2": "7a4bf2899531b11ff238c5121b29124a9459b1ed8e5a3dbf3656ee8c13c5a9bf",
+    "draft-2019-09:multipleOf.json:3": "7a4bf2899531b11ff238c5121b29124a9459b1ed8e5a3dbf3656ee8c13c5a9bf",
+    "draft-2019-09:multipleOf.json:4": "7a4bf2899531b11ff238c5121b29124a9459b1ed8e5a3dbf3656ee8c13c5a9bf",
+    "draft-2019-09:not.json:0": "3e052301c20defd81559310a036ad8544c04c442a49c8ebcf5959981ad03efe0",
+    "draft-2019-09:not.json:1": "3e052301c20defd81559310a036ad8544c04c442a49c8ebcf5959981ad03efe0",
+    "draft-2019-09:not.json:2": "3e052301c20defd81559310a036ad8544c04c442a49c8ebcf5959981ad03efe0",
+    "draft-2019-09:not.json:7": "3e052301c20defd81559310a036ad8544c04c442a49c8ebcf5959981ad03efe0",
+    "draft-2019-09:not.json:8": "3e052301c20defd81559310a036ad8544c04c442a49c8ebcf5959981ad03efe0",
+    "draft-2019-09:oneOf.json:0": "22269dab9adc1844e414510ee167dacf072c40bac235bc0a84a387f3bc2432bc",
+    "draft-2019-09:oneOf.json:1": "8379938b9b726ff0eed184009528a26031c6426724a0cd32a66d9cf32a0e943b",
+    "draft-2019-09:pattern.json:0": "3ae23edf60660cb751314c741f8a3cf5cf1b6847d2887bab33f9b33cdc689728",
+    "draft-2019-09:pattern.json:1": "3ae23edf60660cb751314c741f8a3cf5cf1b6847d2887bab33f9b33cdc689728",
+    "draft-2019-09:patternProperties.json:0": "f7835a7de7fe4f8f2350640df6abea1a832d228db7ea5389651e5c1ed9548bef",
+    "draft-2019-09:patternProperties.json:1": "f7835a7de7fe4f8f2350640df6abea1a832d228db7ea5389651e5c1ed9548bef",
+    "draft-2019-09:patternProperties.json:2": "f7835a7de7fe4f8f2350640df6abea1a832d228db7ea5389651e5c1ed9548bef",
+    "draft-2019-09:patternProperties.json:3": "f7835a7de7fe4f8f2350640df6abea1a832d228db7ea5389651e5c1ed9548bef",
+    "draft-2019-09:patternProperties.json:4": "f7835a7de7fe4f8f2350640df6abea1a832d228db7ea5389651e5c1ed9548bef",
+    "draft-2019-09:properties.json:1": "f7835a7de7fe4f8f2350640df6abea1a832d228db7ea5389651e5c1ed9548bef",
+    "draft-2019-09:recursiveRef.json:0": "8315f6084a65f1f108fc1e05a5e2dc34d4085a62bca76eae851400bebdbcdb46",
+    "draft-2019-09:recursiveRef.json:1": "0c0525d6fe5172d4a935dc2a833e32a8e2162ce6e0482fbad2ee958240e92104",
+    "draft-2019-09:recursiveRef.json:2": "8a683e0b076e148b86db6ad22dd68c2251cdc03c0e7807a0ad9d827881b16843",
+    "draft-2019-09:recursiveRef.json:3": "8a683e0b076e148b86db6ad22dd68c2251cdc03c0e7807a0ad9d827881b16843",
+    "draft-2019-09:recursiveRef.json:4": "0c0525d6fe5172d4a935dc2a833e32a8e2162ce6e0482fbad2ee958240e92104",
+    "draft-2019-09:recursiveRef.json:5": "3a7e23dffea0d179b7e6c74e2e95290b2b1cbd01f852cb770cdcf31ac76c5148",
+    "draft-2019-09:recursiveRef.json:6": "f12779cbe757cd5235f6dba4fb1a6f7ca710d4f55f76d02d53f39f48aa13364f",
+    "draft-2019-09:recursiveRef.json:7": "a6a0770649b2effd650f15b2f0446529c4ce11bd7a899ab8b8303a47434a8c26",
+    "draft-2019-09:recursiveRef.json:8": "a6a0770649b2effd650f15b2f0446529c4ce11bd7a899ab8b8303a47434a8c26",
+    "draft-2019-09:ref.json:0": "aa7dfcd6d71af49b016e83ff1cb79598b1d6bd439a8ebe61bbb064b07f16d262",
+    "draft-2019-09:ref.json:2": "051dab5e058037ddfc1413e82966c320da305746c03687c92d42547b8ced496c",
+    "draft-2019-09:ref.json:6": "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012",
+    "draft-2019-09:ref.json:11": "965d756687206c6f3e98c4ad532f9e6472d355b0d11f29a3b0ef35d2ee7739d7",
+    "draft-2019-09:ref.json:13": "8f55ec16091700f6b3c582213df0cb9eb5f5a1ce3279a208f5d41331520c186f",
+    "draft-2019-09:ref.json:14": "041845aeaec76af08fd3c015ac981848f3785581ab85b1a6441a8c9baa0bdce9",
+    "draft-2019-09:ref.json:15": "22a8a3d9053996b327771353546579c030b1878951f13c5dfa88311108ff1143",
+    "draft-2019-09:ref.json:16": "22a8a3d9053996b327771353546579c030b1878951f13c5dfa88311108ff1143",
+    "draft-2019-09:ref.json:17": "fee39c184cfcb3ba67d52abc50232f27b829147874c96422d69ad6075119ee4c",
+    "draft-2019-09:ref.json:18": "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012",
+    "draft-2019-09:ref.json:19": "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012",
+    "draft-2019-09:ref.json:20": "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012",
+    "draft-2019-09:ref.json:21": "4f10b572ee4c0eebdfb87aa7dd0883ba90fb68b6a513027e40323e0dd500ecce",
+    "draft-2019-09:ref.json:26": "b3d40056e1a484f7a40299187583e3ae27a85e74cf209d55fadffd4d9a4e5c4b",
+    "draft-2019-09:ref.json:27": "b3d40056e1a484f7a40299187583e3ae27a85e74cf209d55fadffd4d9a4e5c4b",
+    "draft-2019-09:ref.json:28": "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012",
+    "draft-2019-09:ref.json:29": "a50f8bf19161fd47f0cc11908dff1f84ebdc2b185c2621961d8f2d882a02994b",
+    "draft-2019-09:ref.json:30": "0dcfcc137e1429303ce33ff7855ed00184cc93007f064a6c7d0abc0c0ff397af",
+    "draft-2019-09:ref.json:31": "4715e81e583334e3d681e1260a7f7f859cc3eb2c5a0bc4f479b8745deb89a676",
+    "draft-2019-09:ref.json:32": "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012",
+    "draft-2019-09:ref.json:35": "f91e61ee7bdd007294ed922720b95380da54c15fcee24577acc95f33c359f1bb",
+    "draft-2019-09:ref.json:36": "10b90a194aa4f58dd21342c838d2fbbb1a511a60ac02f35ff745886618e99daf",
+    "draft-2019-09:refRemote.json:2": "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012",
+    "draft-2019-09:refRemote.json:3": "9d3ccd649e58d3d1f51aac9a6a8d774782c2d8bad02ddb344b9adcc7f3cfa995",
+    "draft-2019-09:refRemote.json:4": "90705bfd24c27ed6d969e9229bbbfe51cd229609847f66da870fced6eaea4350",
+    "draft-2019-09:refRemote.json:5": "a49349de0c4a8b7a7f64e591dbe2b00043d85b8841a8e2df690d6acae732038b",
+    "draft-2019-09:refRemote.json:6": "a49349de0c4a8b7a7f64e591dbe2b00043d85b8841a8e2df690d6acae732038b",
+    "draft-2019-09:refRemote.json:7": "b51f820fd9db6757bbdb263bcb57012fe88786cdac604a3b254be28dcc7881d6",
+    "draft-2019-09:refRemote.json:8": "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012",
+    "draft-2019-09:refRemote.json:9": "9d3ccd649e58d3d1f51aac9a6a8d774782c2d8bad02ddb344b9adcc7f3cfa995",
+    "draft-2019-09:refRemote.json:10": "b51f820fd9db6757bbdb263bcb57012fe88786cdac604a3b254be28dcc7881d6",
+    "draft-2019-09:refRemote.json:11": "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012",
+    "draft-2019-09:refRemote.json:12": "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012",
+    "draft-2019-09:refRemote.json:13": "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012",
+    "draft-2019-09:refRemote.json:14": "d18e0129ba5b87d99a166afa67e9bffe6b8d2255b5385e298e698313267e0eb5",
+    "draft-2019-09:required.json:4": "17da1a2b13b01b72ddd2d927613e13734d7df582a26594b4272114825bc2cde8",
+    "draft-2019-09:unevaluatedItems.json:0": "8d9b61f8b03b224ec2b5de61fb55171a697b87e12b1fcbd1a6a3e4bf547991a5",
+    "draft-2019-09:unevaluatedItems.json:1": "8d9b61f8b03b224ec2b5de61fb55171a697b87e12b1fcbd1a6a3e4bf547991a5",
+    "draft-2019-09:unevaluatedItems.json:2": "8d9b61f8b03b224ec2b5de61fb55171a697b87e12b1fcbd1a6a3e4bf547991a5",
+    "draft-2019-09:unevaluatedItems.json:3": "8d9b61f8b03b224ec2b5de61fb55171a697b87e12b1fcbd1a6a3e4bf547991a5",
+    "draft-2019-09:unevaluatedItems.json:4": "6ebb1339a5e4cb952b3154e7fa10323723287501373648ae2690040b41475a4e",
+    "draft-2019-09:unevaluatedItems.json:5": "d503ca1b8a33f02e6b6d302436d3957de8f22318710bb2d59968f4c9f2be434b",
+    "draft-2019-09:unevaluatedItems.json:6": "1a3ba4ccae6827c978cd28cf4fa16d98c6398026aa121c46ab142122bf679929",
+    "draft-2019-09:unevaluatedItems.json:7": "634ab1e4d99b39e4fbc62081ebde272dd729f2145311b7884cc945b7d5dae332",
+    "draft-2019-09:unevaluatedItems.json:8": "4c29e2899995e84019828f640edcaa358aaa4796b3553aeae8bdfb6039e1b4a7",
+    "draft-2019-09:unevaluatedItems.json:9": "8d9b61f8b03b224ec2b5de61fb55171a697b87e12b1fcbd1a6a3e4bf547991a5",
+    "draft-2019-09:unevaluatedItems.json:10": "8c205684c9f2e501768e86cd7ff5e7671335ebecb3bdb9b7ebd3b2869560c599",
+    "draft-2019-09:unevaluatedItems.json:11": "aa24b65fcbb41933ad636cd597dfebd79debe0bd9e5f16d577a91987797388e4",
+    "draft-2019-09:unevaluatedItems.json:12": "13e264b99f40acabd3926545742ca7d4ff0b05f058499bfdf34ca919dee61e57",
+    "draft-2019-09:unevaluatedItems.json:13": "9539952ea869eee1479c0ad8524c3abd78ef661f151c712d15d1c2046345aeed",
+    "draft-2019-09:unevaluatedItems.json:14": "a19930c1befd353063de6f0964677e571a0eaf9bfae5ead0535d9602cf0a4dbb",
+    "draft-2019-09:unevaluatedItems.json:15": "e2d411e3eda324b54ce142de91577ec9be204827e695b168f028395df23c2ecb",
+    "draft-2019-09:unevaluatedItems.json:16": "8d9b61f8b03b224ec2b5de61fb55171a697b87e12b1fcbd1a6a3e4bf547991a5",
+    "draft-2019-09:unevaluatedItems.json:17": "ced781fe97d6ece101f4067ddcdc6a2deec25abc63f6b42dde218c0f8ac73049",
+    "draft-2019-09:unevaluatedItems.json:18": "ced781fe97d6ece101f4067ddcdc6a2deec25abc63f6b42dde218c0f8ac73049",
+    "draft-2019-09:unevaluatedItems.json:19": "e319b08ceaa0361e77f501364f8ac3c2fa2dfcebc9e4560135565c302b9d608e",
+    "draft-2019-09:unevaluatedItems.json:20": "9eb81e49baa716577d49cb65dceee49879749ad14fb6ce959004e3d7c9f948b7",
+    "draft-2019-09:unevaluatedItems.json:21": "688e3b6c6637894c1849dfe756ff1c1ed8ee1a5780cb65777d902bc52ab6de13",
+    "draft-2019-09:unevaluatedItems.json:22": "8d9b61f8b03b224ec2b5de61fb55171a697b87e12b1fcbd1a6a3e4bf547991a5",
+    "draft-2019-09:unevaluatedItems.json:23": "8d9b61f8b03b224ec2b5de61fb55171a697b87e12b1fcbd1a6a3e4bf547991a5",
+    "draft-2019-09:unevaluatedItems.json:24": "9e9cf85ae8fa64a75032a443f8285eed541737e77b0f2158099b304c3badff95",
+    "draft-2019-09:unevaluatedItems.json:25": "6ebb1339a5e4cb952b3154e7fa10323723287501373648ae2690040b41475a4e",
+    "draft-2019-09:unevaluatedProperties.json:4": "f7835a7de7fe4f8f2350640df6abea1a832d228db7ea5389651e5c1ed9548bef",
+    "draft-2019-09:unevaluatedProperties.json:8": "a81df94852643163c55b845a76a9c78b191120bc9929343d092d48e8652458a8",
+    "draft-2019-09:unevaluatedProperties.json:9": "b90a4534f02bd0c0a103e51a6cda37235fcba060a08b35609b44053f33ff0e1f",
+    "draft-2019-09:unevaluatedProperties.json:10": "b90a4534f02bd0c0a103e51a6cda37235fcba060a08b35609b44053f33ff0e1f",
+    "draft-2019-09:unevaluatedProperties.json:11": "db5b8c50a6698b8cb03ef3c97e240f7b2d04717e11333a81796484cdcb531c42",
+    "draft-2019-09:unevaluatedProperties.json:12": "06df32916f2ccb40fdcf5e65257f20ded2c7d2a0426711e2d133043083ef9566",
+    "draft-2019-09:unevaluatedProperties.json:13": "3e052301c20defd81559310a036ad8544c04c442a49c8ebcf5959981ad03efe0",
+    "draft-2019-09:unevaluatedProperties.json:14": "1e94faa2871d45652b3a71faccfcbe0c3f410c91534e44463c167302c74dd10a",
+    "draft-2019-09:unevaluatedProperties.json:15": "f197fe3248db53161ceb2723e1d16b80c41a50e98da03b4fffbc5ee012439b48",
+    "draft-2019-09:unevaluatedProperties.json:16": "47bf1335a44511c8783ce496ac4b4ee6841a44c8e6fc86dfc9487811bad15f7e",
+    "draft-2019-09:unevaluatedProperties.json:17": "38eee3540182ba474f77b34ce4fb235a268c8bb576ef591510f28f0a99ecf0e4",
+    "draft-2019-09:unevaluatedProperties.json:18": "b90a4534f02bd0c0a103e51a6cda37235fcba060a08b35609b44053f33ff0e1f",
+    "draft-2019-09:unevaluatedProperties.json:19": "33fcbcafce66113dcb93f018efc508c6304b7296c46b3464ce7d528cdddb80ef",
+    "draft-2019-09:unevaluatedProperties.json:20": "33fcbcafce66113dcb93f018efc508c6304b7296c46b3464ce7d528cdddb80ef",
+    "draft-2019-09:unevaluatedProperties.json:21": "5fa03d4005da82db45f3e97324fa48f75d57c57c4179fdecf1e1e7a4d35266ed",
+    "draft-2019-09:unevaluatedProperties.json:22": "5f7da038038e7ab7480b69a32f134ed2e9e40d47f3934b204a5313a5aca86b66",
+    "draft-2019-09:unevaluatedProperties.json:23": "5f7da038038e7ab7480b69a32f134ed2e9e40d47f3934b204a5313a5aca86b66",
+    "draft-2019-09:unevaluatedProperties.json:24": "b90a4534f02bd0c0a103e51a6cda37235fcba060a08b35609b44053f33ff0e1f",
+    "draft-2019-09:unevaluatedProperties.json:25": "b90a4534f02bd0c0a103e51a6cda37235fcba060a08b35609b44053f33ff0e1f",
+    "draft-2019-09:unevaluatedProperties.json:26": "c9c90617cc424ad741f49ba943680c79cf7328cafcbe187f7c04b5695a1eb65a",
+    "draft-2019-09:unevaluatedProperties.json:27": "c9c90617cc424ad741f49ba943680c79cf7328cafcbe187f7c04b5695a1eb65a",
+    "draft-2019-09:unevaluatedProperties.json:28": "5f7da038038e7ab7480b69a32f134ed2e9e40d47f3934b204a5313a5aca86b66",
+    "draft-2019-09:unevaluatedProperties.json:29": "5f7da038038e7ab7480b69a32f134ed2e9e40d47f3934b204a5313a5aca86b66",
+    "draft-2019-09:unevaluatedProperties.json:30": "3f1f2b6ee2f3a64fd289934d19ad52c7b30f07c3e3d400df854f82383ee8e2a7",
+    "draft-2019-09:unevaluatedProperties.json:31": "3f1f2b6ee2f3a64fd289934d19ad52c7b30f07c3e3d400df854f82383ee8e2a7",
+    "draft-2019-09:unevaluatedProperties.json:32": "3f1f2b6ee2f3a64fd289934d19ad52c7b30f07c3e3d400df854f82383ee8e2a7",
+    "draft-2019-09:unevaluatedProperties.json:33": "aa7dfcd6d71af49b016e83ff1cb79598b1d6bd439a8ebe61bbb064b07f16d262",
+    "draft-2019-09:unevaluatedProperties.json:34": "b90a4534f02bd0c0a103e51a6cda37235fcba060a08b35609b44053f33ff0e1f",
+    "draft-2019-09:unevaluatedProperties.json:35": "2bcc349bcf94df351761d3b965e05decc7afddc014c88c9e2efcad7adf8d3455",
+    "draft-2019-09:unevaluatedProperties.json:39": "a50f8bf19161fd47f0cc11908dff1f84ebdc2b185c2621961d8f2d882a02994b",
+    "draft-2019-09:unevaluatedProperties.json:40": "38eee3540182ba474f77b34ce4fb235a268c8bb576ef591510f28f0a99ecf0e4",
+    "draft-2019-09:unevaluatedProperties.json:42": "eb326214ab76d6c214cd4ba9624d29fef7e3d5ad375a5c447c3f67cedf4bd3af",
+    "draft-2019-09:uniqueItems.json:0": "ac85c5e7f39a9806c442d1436acff3855d6fb66b6c92708bc7b96db89df20562",
+    "draft-2019-09:uniqueItems.json:1": "704557d163f31aeb97445162a026de94ce63fbc1d5dc64ac8b9c995e5cfae30f",
+    "draft-2019-09:uniqueItems.json:2": "384582ed62648e768188cd91edcf7d21e15cc84265b74237e1b0b7672dacc448",
+    "draft-2019-09:uniqueItems.json:3": "ac85c5e7f39a9806c442d1436acff3855d6fb66b6c92708bc7b96db89df20562",
+    "draft-2019-09:uniqueItems.json:4": "704557d163f31aeb97445162a026de94ce63fbc1d5dc64ac8b9c995e5cfae30f",
+    "draft-2019-09:uniqueItems.json:5": "384582ed62648e768188cd91edcf7d21e15cc84265b74237e1b0b7672dacc448",
+    "draft-2019-09:vocabulary.json:0": "2e6292da3a2bd1180b46cb0aea8183066887ea87b0efe79f837e94c7e67d4ca3",
+    "draft-2019-09:vocabulary.json:1": "99b1755aaedac738f4b1ae3c8d01cec355a5ad98143094b4bd8584da03f443fa",
+    "draft-2020-12:additionalProperties.json:0": "f7835a7de7fe4f8f2350640df6abea1a832d228db7ea5389651e5c1ed9548bef",
+    "draft-2020-12:additionalProperties.json:1": "f7835a7de7fe4f8f2350640df6abea1a832d228db7ea5389651e5c1ed9548bef",
+    "draft-2020-12:additionalProperties.json:5": "a33207be89947c888f2d6868285adc17af022e936b220b6bf2325a409cf825ff",
+    "draft-2020-12:additionalProperties.json:8": "38eee3540182ba474f77b34ce4fb235a268c8bb576ef591510f28f0a99ecf0e4",
+    "draft-2020-12:allOf.json:1": "a33207be89947c888f2d6868285adc17af022e936b220b6bf2325a409cf825ff",
+    "draft-2020-12:allOf.json:2": "5d325f062639b1c5bd21d8bf71ce597ed62311e0c2284982308109b0bc72b3db",
+    "draft-2020-12:allOf.json:11": "cfe5668bd62ff8f41016e246313d20cb2d6ee6f00a7e1c263328f4835f3c5b96",
+    "draft-2020-12:anchor.json:0": "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012",
+    "draft-2020-12:anchor.json:1": "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012",
+    "draft-2020-12:anchor.json:2": "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012",
+    "draft-2020-12:anchor.json:3": "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012",
+    "draft-2020-12:anyOf.json:0": "2f36f99af32115e9b61c57402b274072d3bed59a55ed9308a479ffbcd7f235c6",
+    "draft-2020-12:anyOf.json:1": "17133f5c263a9fa679532a30e57f50a183997a84fea12fd53c1e70e701fb8e6c",
+    "draft-2020-12:const.json:1": "a9be553871f07ca70c11f953727ae9382ef9b5e211c85644e63c1ed56bffae22",
+    "draft-2020-12:const.json:2": "a9be553871f07ca70c11f953727ae9382ef9b5e211c85644e63c1ed56bffae22",
+    "draft-2020-12:const.json:6": "a9be553871f07ca70c11f953727ae9382ef9b5e211c85644e63c1ed56bffae22",
+    "draft-2020-12:const.json:7": "a9be553871f07ca70c11f953727ae9382ef9b5e211c85644e63c1ed56bffae22",
+    "draft-2020-12:const.json:8": "a9be553871f07ca70c11f953727ae9382ef9b5e211c85644e63c1ed56bffae22",
+    "draft-2020-12:const.json:9": "a9be553871f07ca70c11f953727ae9382ef9b5e211c85644e63c1ed56bffae22",
+    "draft-2020-12:contains.json:0": "43fad8460bf15af7290788702abe2c94d67d120b54d5a26592328201794ce716",
+    "draft-2020-12:contains.json:1": "43fad8460bf15af7290788702abe2c94d67d120b54d5a26592328201794ce716",
+    "draft-2020-12:contains.json:2": "43fad8460bf15af7290788702abe2c94d67d120b54d5a26592328201794ce716",
+    "draft-2020-12:contains.json:3": "43fad8460bf15af7290788702abe2c94d67d120b54d5a26592328201794ce716",
+    "draft-2020-12:contains.json:4": "b4a1cee48a8f894c6b144be189cdf9c3c533edb2435185090fab666f2f47fd98",
+    "draft-2020-12:contains.json:5": "43fad8460bf15af7290788702abe2c94d67d120b54d5a26592328201794ce716",
+    "draft-2020-12:contains.json:6": "43fad8460bf15af7290788702abe2c94d67d120b54d5a26592328201794ce716",
+    "draft-2020-12:content.json:0": "074774ddbe7fb3cfa210f5fd14b722a09cf9032a048363f220847ae2ed9108f9",
+    "draft-2020-12:content.json:1": "6de154e4edbb0b1fcd57119e98df4d86d460910cd2271505bab13cc951a8808b",
+    "draft-2020-12:content.json:2": "54cd4973e07fa1ea3a7d1b86d21c285489496a520cb9f046a0fd942c06e87877",
+    "draft-2020-12:content.json:3": "79b897a98a00f89a23a16703082e238a8c62ba29637c3f1d2f517547ee9cc9b2",
+    "draft-2020-12:defs.json:0": "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012",
+    "draft-2020-12:dependentRequired.json:0": "e396c654931bb692742a6f4e0c04d8bdee7b4696c2890e8179a4d2772e2b991c",
+    "draft-2020-12:dependentRequired.json:1": "e396c654931bb692742a6f4e0c04d8bdee7b4696c2890e8179a4d2772e2b991c",
+    "draft-2020-12:dependentRequired.json:2": "e396c654931bb692742a6f4e0c04d8bdee7b4696c2890e8179a4d2772e2b991c",
+    "draft-2020-12:dependentRequired.json:3": "e396c654931bb692742a6f4e0c04d8bdee7b4696c2890e8179a4d2772e2b991c",
+    "draft-2020-12:dependentSchemas.json:0": "38eee3540182ba474f77b34ce4fb235a268c8bb576ef591510f28f0a99ecf0e4",
+    "draft-2020-12:dependentSchemas.json:1": "38eee3540182ba474f77b34ce4fb235a268c8bb576ef591510f28f0a99ecf0e4",
+    "draft-2020-12:dependentSchemas.json:2": "38eee3540182ba474f77b34ce4fb235a268c8bb576ef591510f28f0a99ecf0e4",
+    "draft-2020-12:dependentSchemas.json:3": "38eee3540182ba474f77b34ce4fb235a268c8bb576ef591510f28f0a99ecf0e4",
+    "draft-2020-12:dynamicRef.json:0": "016f6f02314738f7072a4db3103e9bee7c0531b5c398abb52a68182ef80cc2ab",
+    "draft-2020-12:dynamicRef.json:1": "ba91c18411537029e6930bb62c1bb715bb1cb371df974a0587beea6a416e331a",
+    "draft-2020-12:dynamicRef.json:2": "14d31a9b9356f44343ee67dd2bc3829ba014ec083f428fe3990563528abe2052",
+    "draft-2020-12:dynamicRef.json:3": "f534de13d84cf19d429bce1a95a443e570f9e82b33ae770cb1fef14103725d70",
+    "draft-2020-12:dynamicRef.json:4": "f534de13d84cf19d429bce1a95a443e570f9e82b33ae770cb1fef14103725d70",
+    "draft-2020-12:dynamicRef.json:5": "f534de13d84cf19d429bce1a95a443e570f9e82b33ae770cb1fef14103725d70",
+    "draft-2020-12:dynamicRef.json:6": "fe9b4cf6495c1dbbbdace639899a68d89aeb372dd171cc76fa3ecb33d2a7f592",
+    "draft-2020-12:dynamicRef.json:7": "02127f7b4a489935865c05d2b04d86c46b78ff9bc98c1b2a36953b08fd8c4761",
+    "draft-2020-12:dynamicRef.json:8": "f534de13d84cf19d429bce1a95a443e570f9e82b33ae770cb1fef14103725d70",
+    "draft-2020-12:dynamicRef.json:9": "2bd665c6b8322684b40d359d1fc828768f065474a9bfa58e0408e5187c206371",
+    "draft-2020-12:dynamicRef.json:10": "c944df738999c388a5d5dd84ef74b60da83037f14dcfd649204c7288edde6a88",
+    "draft-2020-12:dynamicRef.json:11": "de617bb08e2de3dbc74c546b83c9eaf021a7366bd2e49c20d8b3df84b79fb93c",
+    "draft-2020-12:dynamicRef.json:12": "c67a2f0911ac9f54fb2f8c67dd3862868f924d3d6430e559ebe307d5d29165e0",
+    "draft-2020-12:dynamicRef.json:13": "ef62aaebf5d7dab5b8b5be74b5f54a23cd40236205d58e3d7b7d49e405dd52eb",
+    "draft-2020-12:dynamicRef.json:14": "8c676fd28b9420da2d03c4afd8cbdee8438bdfc34dca5278c11e577a3d77767a",
+    "draft-2020-12:dynamicRef.json:15": "c5f3467f113b16205c2cecfd887807416654deddef1e9bd202c9dd6f96ec1df4",
+    "draft-2020-12:dynamicRef.json:16": "1ea766e8c65dd0f4038371e08105cde2489ed88b433049f0089635645392d171",
+    "draft-2020-12:dynamicRef.json:17": "6235774b2c58082ee92ebde1676593fc314fc01cbbc5b3eeb6493689359b82c5",
+    "draft-2020-12:dynamicRef.json:18": "7032310f6e79596f78290867981e79840d8c39757ef572cae9f0bcf66b6aec3c",
+    "draft-2020-12:dynamicRef.json:19": "324ea112084e4e48a9bbd5ef7721996e94d2d2f7eab7814739dced243b156d20",
+    "draft-2020-12:dynamicRef.json:20": "d45ac1b5fa873f5b7ab1aa396251d566b500446f3ca6643ebefa92912bd53851",
+    "draft-2020-12:enum.json:1": "d715592bf2e90d9ac9bf8b9b200cd6572ca253237dbba7c455a2fceada14b9f4",
+    "draft-2020-12:enum.json:6": "041845aeaec76af08fd3c015ac981848f3785581ab85b1a6441a8c9baa0bdce9",
+    "draft-2020-12:enum.json:8": "041845aeaec76af08fd3c015ac981848f3785581ab85b1a6441a8c9baa0bdce9",
+    "draft-2020-12:enum.json:10": "041845aeaec76af08fd3c015ac981848f3785581ab85b1a6441a8c9baa0bdce9",
+    "draft-2020-12:enum.json:12": "041845aeaec76af08fd3c015ac981848f3785581ab85b1a6441a8c9baa0bdce9",
+    "draft-2020-12:exclusiveMaximum.json:0": "4f10b572ee4c0eebdfb87aa7dd0883ba90fb68b6a513027e40323e0dd500ecce",
+    "draft-2020-12:exclusiveMinimum.json:0": "4f10b572ee4c0eebdfb87aa7dd0883ba90fb68b6a513027e40323e0dd500ecce",
+    "draft-2020-12:if-then-else.json:0": "a50f8bf19161fd47f0cc11908dff1f84ebdc2b185c2621961d8f2d882a02994b",
+    "draft-2020-12:if-then-else.json:1": "0dcfcc137e1429303ce33ff7855ed00184cc93007f064a6c7d0abc0c0ff397af",
+    "draft-2020-12:if-then-else.json:2": "4715e81e583334e3d681e1260a7f7f859cc3eb2c5a0bc4f479b8745deb89a676",
+    "draft-2020-12:if-then-else.json:3": "47bf1335a44511c8783ce496ac4b4ee6841a44c8e6fc86dfc9487811bad15f7e",
+    "draft-2020-12:if-then-else.json:4": "f197fe3248db53161ceb2723e1d16b80c41a50e98da03b4fffbc5ee012439b48",
+    "draft-2020-12:if-then-else.json:5": "1e94faa2871d45652b3a71faccfcbe0c3f410c91534e44463c167302c74dd10a",
+    "draft-2020-12:if-then-else.json:6": "eb5514448c08d085b12c1b80aaf4312256da41f2d28fb8c26fab7bacf971ac67",
+    "draft-2020-12:if-then-else.json:7": "1e94faa2871d45652b3a71faccfcbe0c3f410c91534e44463c167302c74dd10a",
+    "draft-2020-12:if-then-else.json:8": "1e94faa2871d45652b3a71faccfcbe0c3f410c91534e44463c167302c74dd10a",
+    "draft-2020-12:if-then-else.json:9": "1e94faa2871d45652b3a71faccfcbe0c3f410c91534e44463c167302c74dd10a",
+    "draft-2020-12:if-then-else.json:10": "47bf1335a44511c8783ce496ac4b4ee6841a44c8e6fc86dfc9487811bad15f7e",
+    "draft-2020-12:if-then-else.json:11": "f197fe3248db53161ceb2723e1d16b80c41a50e98da03b4fffbc5ee012439b48",
+    "draft-2020-12:infinite-loop-detection.json:0": "5f7da038038e7ab7480b69a32f134ed2e9e40d47f3934b204a5313a5aca86b66",
+    "draft-2020-12:items.json:3": "583ef5dc382f2891a84de3236aad63e1a4021979bcff8b594359e7aa247c0177",
+    "draft-2020-12:items.json:5": "583ef5dc382f2891a84de3236aad63e1a4021979bcff8b594359e7aa247c0177",
+    "draft-2020-12:items.json:6": "ea6be7686976c3489fb34d0336cb03f5ec6ee8f9b9c106909bac8735148e0024",
+    "draft-2020-12:items.json:7": "583ef5dc382f2891a84de3236aad63e1a4021979bcff8b594359e7aa247c0177",
+    "draft-2020-12:items.json:8": "583ef5dc382f2891a84de3236aad63e1a4021979bcff8b594359e7aa247c0177",
+    "draft-2020-12:maxContains.json:0": "e95ecb905779ea1066283b348543bbd1574524296d0cad1bfc8f2f29b3f839d0",
+    "draft-2020-12:maxContains.json:1": "419252634efdbc769c3c64350602c55edb04eec69a509d582cb7335db4b94b4e",
+    "draft-2020-12:maxContains.json:2": "419252634efdbc769c3c64350602c55edb04eec69a509d582cb7335db4b94b4e",
+    "draft-2020-12:maxContains.json:3": "c146d59dbfa9f8ba12c381cff9f0b499254526462742f6fb6bc019bee1bbaf89",
+    "draft-2020-12:maxContains.json:4": "c146d59dbfa9f8ba12c381cff9f0b499254526462742f6fb6bc019bee1bbaf89",
+    "draft-2020-12:maxLength.json:0": "9089b797c36de6f4f2e7fa79dc937a94b6971a166589beb2f60250812698858c",
+    "draft-2020-12:maxLength.json:1": "9089b797c36de6f4f2e7fa79dc937a94b6971a166589beb2f60250812698858c",
+    "draft-2020-12:maxProperties.json:0": "318c5862d291cd6e122b716eb450b1e47307278d251ddf88a262b38b23f6ee84",
+    "draft-2020-12:maxProperties.json:1": "318c5862d291cd6e122b716eb450b1e47307278d251ddf88a262b38b23f6ee84",
+    "draft-2020-12:maxProperties.json:2": "318c5862d291cd6e122b716eb450b1e47307278d251ddf88a262b38b23f6ee84",
+    "draft-2020-12:maximum.json:0": "4f10b572ee4c0eebdfb87aa7dd0883ba90fb68b6a513027e40323e0dd500ecce",
+    "draft-2020-12:maximum.json:1": "4f10b572ee4c0eebdfb87aa7dd0883ba90fb68b6a513027e40323e0dd500ecce",
+    "draft-2020-12:minContains.json:0": "11759e97fabff14fa36af1feeabeb856ccb4adfc674399c20e46f8bb12ad5635",
+    "draft-2020-12:minContains.json:1": "a724fdecc8c6eb92044f4c32f9a8db7117fcf70948882057b104a01715ad5a96",
+    "draft-2020-12:minContains.json:2": "a724fdecc8c6eb92044f4c32f9a8db7117fcf70948882057b104a01715ad5a96",
+    "draft-2020-12:minContains.json:3": "a724fdecc8c6eb92044f4c32f9a8db7117fcf70948882057b104a01715ad5a96",
+    "draft-2020-12:minContains.json:4": "c146d59dbfa9f8ba12c381cff9f0b499254526462742f6fb6bc019bee1bbaf89",
+    "draft-2020-12:minContains.json:5": "c146d59dbfa9f8ba12c381cff9f0b499254526462742f6fb6bc019bee1bbaf89",
+    "draft-2020-12:minContains.json:6": "a724fdecc8c6eb92044f4c32f9a8db7117fcf70948882057b104a01715ad5a96",
+    "draft-2020-12:minContains.json:7": "c146d59dbfa9f8ba12c381cff9f0b499254526462742f6fb6bc019bee1bbaf89",
+    "draft-2020-12:minLength.json:0": "7535fc7a05cd123a8b90409188c4d469575a0b19e6e2d0756bd8add366d64aa6",
+    "draft-2020-12:minLength.json:1": "7535fc7a05cd123a8b90409188c4d469575a0b19e6e2d0756bd8add366d64aa6",
+    "draft-2020-12:minProperties.json:0": "396fb2aa57602cf078e04c1a4a82060f47b95d4b94f713b7a18045966ecb2cb8",
+    "draft-2020-12:minProperties.json:1": "396fb2aa57602cf078e04c1a4a82060f47b95d4b94f713b7a18045966ecb2cb8",
+    "draft-2020-12:minimum.json:0": "4f10b572ee4c0eebdfb87aa7dd0883ba90fb68b6a513027e40323e0dd500ecce",
+    "draft-2020-12:minimum.json:1": "4f10b572ee4c0eebdfb87aa7dd0883ba90fb68b6a513027e40323e0dd500ecce",
+    "draft-2020-12:multipleOf.json:0": "7a4bf2899531b11ff238c5121b29124a9459b1ed8e5a3dbf3656ee8c13c5a9bf",
+    "draft-2020-12:multipleOf.json:1": "7a4bf2899531b11ff238c5121b29124a9459b1ed8e5a3dbf3656ee8c13c5a9bf",
+    "draft-2020-12:multipleOf.json:2": "7a4bf2899531b11ff238c5121b29124a9459b1ed8e5a3dbf3656ee8c13c5a9bf",
+    "draft-2020-12:multipleOf.json:3": "7a4bf2899531b11ff238c5121b29124a9459b1ed8e5a3dbf3656ee8c13c5a9bf",
+    "draft-2020-12:multipleOf.json:4": "7a4bf2899531b11ff238c5121b29124a9459b1ed8e5a3dbf3656ee8c13c5a9bf",
+    "draft-2020-12:not.json:0": "3e052301c20defd81559310a036ad8544c04c442a49c8ebcf5959981ad03efe0",
+    "draft-2020-12:not.json:1": "3e052301c20defd81559310a036ad8544c04c442a49c8ebcf5959981ad03efe0",
+    "draft-2020-12:not.json:2": "3e052301c20defd81559310a036ad8544c04c442a49c8ebcf5959981ad03efe0",
+    "draft-2020-12:not.json:7": "3e052301c20defd81559310a036ad8544c04c442a49c8ebcf5959981ad03efe0",
+    "draft-2020-12:not.json:8": "3e052301c20defd81559310a036ad8544c04c442a49c8ebcf5959981ad03efe0",
+    "draft-2020-12:oneOf.json:0": "22269dab9adc1844e414510ee167dacf072c40bac235bc0a84a387f3bc2432bc",
+    "draft-2020-12:oneOf.json:1": "8379938b9b726ff0eed184009528a26031c6426724a0cd32a66d9cf32a0e943b",
+    "draft-2020-12:pattern.json:0": "3ae23edf60660cb751314c741f8a3cf5cf1b6847d2887bab33f9b33cdc689728",
+    "draft-2020-12:pattern.json:1": "3ae23edf60660cb751314c741f8a3cf5cf1b6847d2887bab33f9b33cdc689728",
+    "draft-2020-12:patternProperties.json:0": "f7835a7de7fe4f8f2350640df6abea1a832d228db7ea5389651e5c1ed9548bef",
+    "draft-2020-12:patternProperties.json:1": "f7835a7de7fe4f8f2350640df6abea1a832d228db7ea5389651e5c1ed9548bef",
+    "draft-2020-12:patternProperties.json:2": "f7835a7de7fe4f8f2350640df6abea1a832d228db7ea5389651e5c1ed9548bef",
+    "draft-2020-12:patternProperties.json:3": "f7835a7de7fe4f8f2350640df6abea1a832d228db7ea5389651e5c1ed9548bef",
+    "draft-2020-12:patternProperties.json:4": "f7835a7de7fe4f8f2350640df6abea1a832d228db7ea5389651e5c1ed9548bef",
+    "draft-2020-12:patternProperties.json:5": "f7835a7de7fe4f8f2350640df6abea1a832d228db7ea5389651e5c1ed9548bef",
+    "draft-2020-12:prefixItems.json:0": "583ef5dc382f2891a84de3236aad63e1a4021979bcff8b594359e7aa247c0177",
+    "draft-2020-12:prefixItems.json:1": "583ef5dc382f2891a84de3236aad63e1a4021979bcff8b594359e7aa247c0177",
+    "draft-2020-12:prefixItems.json:2": "583ef5dc382f2891a84de3236aad63e1a4021979bcff8b594359e7aa247c0177",
+    "draft-2020-12:prefixItems.json:3": "583ef5dc382f2891a84de3236aad63e1a4021979bcff8b594359e7aa247c0177",
+    "draft-2020-12:properties.json:1": "f7835a7de7fe4f8f2350640df6abea1a832d228db7ea5389651e5c1ed9548bef",
+    "draft-2020-12:ref.json:0": "aa7dfcd6d71af49b016e83ff1cb79598b1d6bd439a8ebe61bbb064b07f16d262",
+    "draft-2020-12:ref.json:2": "583ef5dc382f2891a84de3236aad63e1a4021979bcff8b594359e7aa247c0177",
+    "draft-2020-12:ref.json:6": "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012",
+    "draft-2020-12:ref.json:11": "965d756687206c6f3e98c4ad532f9e6472d355b0d11f29a3b0ef35d2ee7739d7",
+    "draft-2020-12:ref.json:13": "8f55ec16091700f6b3c582213df0cb9eb5f5a1ce3279a208f5d41331520c186f",
+    "draft-2020-12:ref.json:14": "041845aeaec76af08fd3c015ac981848f3785581ab85b1a6441a8c9baa0bdce9",
+    "draft-2020-12:ref.json:15": "22a8a3d9053996b327771353546579c030b1878951f13c5dfa88311108ff1143",
+    "draft-2020-12:ref.json:16": "22a8a3d9053996b327771353546579c030b1878951f13c5dfa88311108ff1143",
+    "draft-2020-12:ref.json:17": "fee39c184cfcb3ba67d52abc50232f27b829147874c96422d69ad6075119ee4c",
+    "draft-2020-12:ref.json:18": "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012",
+    "draft-2020-12:ref.json:19": "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012",
+    "draft-2020-12:ref.json:20": "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012",
+    "draft-2020-12:ref.json:21": "4f10b572ee4c0eebdfb87aa7dd0883ba90fb68b6a513027e40323e0dd500ecce",
+    "draft-2020-12:ref.json:26": "b3d40056e1a484f7a40299187583e3ae27a85e74cf209d55fadffd4d9a4e5c4b",
+    "draft-2020-12:ref.json:27": "b3d40056e1a484f7a40299187583e3ae27a85e74cf209d55fadffd4d9a4e5c4b",
+    "draft-2020-12:ref.json:28": "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012",
+    "draft-2020-12:ref.json:29": "a50f8bf19161fd47f0cc11908dff1f84ebdc2b185c2621961d8f2d882a02994b",
+    "draft-2020-12:ref.json:30": "0dcfcc137e1429303ce33ff7855ed00184cc93007f064a6c7d0abc0c0ff397af",
+    "draft-2020-12:ref.json:31": "4715e81e583334e3d681e1260a7f7f859cc3eb2c5a0bc4f479b8745deb89a676",
+    "draft-2020-12:ref.json:32": "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012",
+    "draft-2020-12:ref.json:35": "f91e61ee7bdd007294ed922720b95380da54c15fcee24577acc95f33c359f1bb",
+    "draft-2020-12:refRemote.json:2": "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012",
+    "draft-2020-12:refRemote.json:3": "9d3ccd649e58d3d1f51aac9a6a8d774782c2d8bad02ddb344b9adcc7f3cfa995",
+    "draft-2020-12:refRemote.json:4": "90705bfd24c27ed6d969e9229bbbfe51cd229609847f66da870fced6eaea4350",
+    "draft-2020-12:refRemote.json:5": "a49349de0c4a8b7a7f64e591dbe2b00043d85b8841a8e2df690d6acae732038b",
+    "draft-2020-12:refRemote.json:6": "a49349de0c4a8b7a7f64e591dbe2b00043d85b8841a8e2df690d6acae732038b",
+    "draft-2020-12:refRemote.json:7": "b51f820fd9db6757bbdb263bcb57012fe88786cdac604a3b254be28dcc7881d6",
+    "draft-2020-12:refRemote.json:8": "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012",
+    "draft-2020-12:refRemote.json:9": "9d3ccd649e58d3d1f51aac9a6a8d774782c2d8bad02ddb344b9adcc7f3cfa995",
+    "draft-2020-12:refRemote.json:10": "b51f820fd9db6757bbdb263bcb57012fe88786cdac604a3b254be28dcc7881d6",
+    "draft-2020-12:refRemote.json:11": "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012",
+    "draft-2020-12:refRemote.json:12": "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012",
+    "draft-2020-12:refRemote.json:13": "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012",
+    "draft-2020-12:refRemote.json:14": "d18e0129ba5b87d99a166afa67e9bffe6b8d2255b5385e298e698313267e0eb5",
+    "draft-2020-12:required.json:4": "17da1a2b13b01b72ddd2d927613e13734d7df582a26594b4272114825bc2cde8",
+    "draft-2020-12:unevaluatedItems.json:0": "8d9b61f8b03b224ec2b5de61fb55171a697b87e12b1fcbd1a6a3e4bf547991a5",
+    "draft-2020-12:unevaluatedItems.json:1": "8d9b61f8b03b224ec2b5de61fb55171a697b87e12b1fcbd1a6a3e4bf547991a5",
+    "draft-2020-12:unevaluatedItems.json:2": "8d9b61f8b03b224ec2b5de61fb55171a697b87e12b1fcbd1a6a3e4bf547991a5",
+    "draft-2020-12:unevaluatedItems.json:3": "8d9b61f8b03b224ec2b5de61fb55171a697b87e12b1fcbd1a6a3e4bf547991a5",
+    "draft-2020-12:unevaluatedItems.json:4": "8d9b61f8b03b224ec2b5de61fb55171a697b87e12b1fcbd1a6a3e4bf547991a5",
+    "draft-2020-12:unevaluatedItems.json:5": "8d9b61f8b03b224ec2b5de61fb55171a697b87e12b1fcbd1a6a3e4bf547991a5",
+    "draft-2020-12:unevaluatedItems.json:6": "8d9b61f8b03b224ec2b5de61fb55171a697b87e12b1fcbd1a6a3e4bf547991a5",
+    "draft-2020-12:unevaluatedItems.json:7": "8d9b61f8b03b224ec2b5de61fb55171a697b87e12b1fcbd1a6a3e4bf547991a5",
+    "draft-2020-12:unevaluatedItems.json:8": "8d9b61f8b03b224ec2b5de61fb55171a697b87e12b1fcbd1a6a3e4bf547991a5",
+    "draft-2020-12:unevaluatedItems.json:9": "8d9b61f8b03b224ec2b5de61fb55171a697b87e12b1fcbd1a6a3e4bf547991a5",
+    "draft-2020-12:unevaluatedItems.json:10": "e52adcae835018b6362b074d2a591596f6e32d414ceeb8eff32baad1e7d3eb7b",
+    "draft-2020-12:unevaluatedItems.json:11": "8d9b61f8b03b224ec2b5de61fb55171a697b87e12b1fcbd1a6a3e4bf547991a5",
+    "draft-2020-12:unevaluatedItems.json:12": "8d9b61f8b03b224ec2b5de61fb55171a697b87e12b1fcbd1a6a3e4bf547991a5",
+    "draft-2020-12:unevaluatedItems.json:13": "8d9b61f8b03b224ec2b5de61fb55171a697b87e12b1fcbd1a6a3e4bf547991a5",
+    "draft-2020-12:unevaluatedItems.json:14": "83120dadb0620037b556eedada26c912533c8f9ebc176fa653e97a4ceb61c489",
+    "draft-2020-12:unevaluatedItems.json:15": "8d9b61f8b03b224ec2b5de61fb55171a697b87e12b1fcbd1a6a3e4bf547991a5",
+    "draft-2020-12:unevaluatedItems.json:16": "8d9b61f8b03b224ec2b5de61fb55171a697b87e12b1fcbd1a6a3e4bf547991a5",
+    "draft-2020-12:unevaluatedItems.json:17": "8d9b61f8b03b224ec2b5de61fb55171a697b87e12b1fcbd1a6a3e4bf547991a5",
+    "draft-2020-12:unevaluatedItems.json:18": "bb6076d0f701d7c085b870dd95a108badef1885ec3a5e6bcd5e0085c9787792b",
+    "draft-2020-12:unevaluatedItems.json:19": "73652c0e5bbd76d18206dbeb2ca2d6669965a62f5ba1cbdc5996485f104e83dc",
+    "draft-2020-12:unevaluatedItems.json:20": "3acb836426b3fe8efb9fee067b9f566dd01cb07ea97668520627bcca609be479",
+    "draft-2020-12:unevaluatedItems.json:21": "91e9944d0465887635176d0f2fe6cfd0c7ac89ce4e9f8737c55fe48b700456b1",
+    "draft-2020-12:unevaluatedItems.json:22": "505f2797ef61b493ac73c6f2aa1985bfa279e68cdab2fa1db837ef9a6aded5ff",
+    "draft-2020-12:unevaluatedItems.json:23": "9ed13b9ca19d8d5a3694732f4439399c62874042db56c256cc5567c9b6c7f5de",
+    "draft-2020-12:unevaluatedItems.json:24": "4c7bdeb0987ac6de394ccdb25ecb9bc7521e74db51828de2f904cbebb024ab57",
+    "draft-2020-12:unevaluatedItems.json:25": "8d9b61f8b03b224ec2b5de61fb55171a697b87e12b1fcbd1a6a3e4bf547991a5",
+    "draft-2020-12:unevaluatedItems.json:26": "8d9b61f8b03b224ec2b5de61fb55171a697b87e12b1fcbd1a6a3e4bf547991a5",
+    "draft-2020-12:unevaluatedItems.json:27": "9e9cf85ae8fa64a75032a443f8285eed541737e77b0f2158099b304c3badff95",
+    "draft-2020-12:unevaluatedItems.json:28": "8d9b61f8b03b224ec2b5de61fb55171a697b87e12b1fcbd1a6a3e4bf547991a5",
+    "draft-2020-12:unevaluatedProperties.json:4": "f7835a7de7fe4f8f2350640df6abea1a832d228db7ea5389651e5c1ed9548bef",
+    "draft-2020-12:unevaluatedProperties.json:7": "b90a4534f02bd0c0a103e51a6cda37235fcba060a08b35609b44053f33ff0e1f",
+    "draft-2020-12:unevaluatedProperties.json:8": "a81df94852643163c55b845a76a9c78b191120bc9929343d092d48e8652458a8",
+    "draft-2020-12:unevaluatedProperties.json:9": "b90a4534f02bd0c0a103e51a6cda37235fcba060a08b35609b44053f33ff0e1f",
+    "draft-2020-12:unevaluatedProperties.json:10": "b90a4534f02bd0c0a103e51a6cda37235fcba060a08b35609b44053f33ff0e1f",
+    "draft-2020-12:unevaluatedProperties.json:11": "db5b8c50a6698b8cb03ef3c97e240f7b2d04717e11333a81796484cdcb531c42",
+    "draft-2020-12:unevaluatedProperties.json:12": "06df32916f2ccb40fdcf5e65257f20ded2c7d2a0426711e2d133043083ef9566",
+    "draft-2020-12:unevaluatedProperties.json:13": "c3ad2309ddcabfa3da9dc3cfa31c25425ee69d6bfbad7911d268f2ce9218b1ac",
+    "draft-2020-12:unevaluatedProperties.json:14": "1e94faa2871d45652b3a71faccfcbe0c3f410c91534e44463c167302c74dd10a",
+    "draft-2020-12:unevaluatedProperties.json:15": "f197fe3248db53161ceb2723e1d16b80c41a50e98da03b4fffbc5ee012439b48",
+    "draft-2020-12:unevaluatedProperties.json:16": "47bf1335a44511c8783ce496ac4b4ee6841a44c8e6fc86dfc9487811bad15f7e",
+    "draft-2020-12:unevaluatedProperties.json:17": "38eee3540182ba474f77b34ce4fb235a268c8bb576ef591510f28f0a99ecf0e4",
+    "draft-2020-12:unevaluatedProperties.json:18": "b90a4534f02bd0c0a103e51a6cda37235fcba060a08b35609b44053f33ff0e1f",
+    "draft-2020-12:unevaluatedProperties.json:19": "33fcbcafce66113dcb93f018efc508c6304b7296c46b3464ce7d528cdddb80ef",
+    "draft-2020-12:unevaluatedProperties.json:20": "33fcbcafce66113dcb93f018efc508c6304b7296c46b3464ce7d528cdddb80ef",
+    "draft-2020-12:unevaluatedProperties.json:21": "ffddf4e78f8ad8de68442a59ef348e3a9d2392162f3ff4705aa6a346dcb7ecbc",
+    "draft-2020-12:unevaluatedProperties.json:22": "5f7da038038e7ab7480b69a32f134ed2e9e40d47f3934b204a5313a5aca86b66",
+    "draft-2020-12:unevaluatedProperties.json:23": "5f7da038038e7ab7480b69a32f134ed2e9e40d47f3934b204a5313a5aca86b66",
+    "draft-2020-12:unevaluatedProperties.json:24": "b90a4534f02bd0c0a103e51a6cda37235fcba060a08b35609b44053f33ff0e1f",
+    "draft-2020-12:unevaluatedProperties.json:25": "b90a4534f02bd0c0a103e51a6cda37235fcba060a08b35609b44053f33ff0e1f",
+    "draft-2020-12:unevaluatedProperties.json:26": "a33207be89947c888f2d6868285adc17af022e936b220b6bf2325a409cf825ff",
+    "draft-2020-12:unevaluatedProperties.json:28": "5f7da038038e7ab7480b69a32f134ed2e9e40d47f3934b204a5313a5aca86b66",
+    "draft-2020-12:unevaluatedProperties.json:29": "5f7da038038e7ab7480b69a32f134ed2e9e40d47f3934b204a5313a5aca86b66",
+    "draft-2020-12:unevaluatedProperties.json:30": "efdf244b28d51a495c55a7f413178354c6087825b235ecd9fec0106957964dd1",
+    "draft-2020-12:unevaluatedProperties.json:31": "3f1f2b6ee2f3a64fd289934d19ad52c7b30f07c3e3d400df854f82383ee8e2a7",
+    "draft-2020-12:unevaluatedProperties.json:32": "3f1f2b6ee2f3a64fd289934d19ad52c7b30f07c3e3d400df854f82383ee8e2a7",
+    "draft-2020-12:unevaluatedProperties.json:33": "aa7dfcd6d71af49b016e83ff1cb79598b1d6bd439a8ebe61bbb064b07f16d262",
+    "draft-2020-12:unevaluatedProperties.json:34": "b90a4534f02bd0c0a103e51a6cda37235fcba060a08b35609b44053f33ff0e1f",
+    "draft-2020-12:unevaluatedProperties.json:35": "2bcc349bcf94df351761d3b965e05decc7afddc014c88c9e2efcad7adf8d3455",
+    "draft-2020-12:unevaluatedProperties.json:39": "a50f8bf19161fd47f0cc11908dff1f84ebdc2b185c2621961d8f2d882a02994b",
+    "draft-2020-12:unevaluatedProperties.json:40": "38eee3540182ba474f77b34ce4fb235a268c8bb576ef591510f28f0a99ecf0e4",
+    "draft-2020-12:unevaluatedProperties.json:42": "eb326214ab76d6c214cd4ba9624d29fef7e3d5ad375a5c447c3f67cedf4bd3af",
+    "draft-2020-12:uniqueItems.json:0": "ac85c5e7f39a9806c442d1436acff3855d6fb66b6c92708bc7b96db89df20562",
+    "draft-2020-12:uniqueItems.json:1": "ac85c5e7f39a9806c442d1436acff3855d6fb66b6c92708bc7b96db89df20562",
+    "draft-2020-12:uniqueItems.json:2": "ac85c5e7f39a9806c442d1436acff3855d6fb66b6c92708bc7b96db89df20562",
+    "draft-2020-12:uniqueItems.json:3": "ac85c5e7f39a9806c442d1436acff3855d6fb66b6c92708bc7b96db89df20562",
+    "draft-2020-12:uniqueItems.json:4": "ac85c5e7f39a9806c442d1436acff3855d6fb66b6c92708bc7b96db89df20562",
+    "draft-2020-12:uniqueItems.json:5": "ac85c5e7f39a9806c442d1436acff3855d6fb66b6c92708bc7b96db89df20562",
+    "draft-2020-12:vocabulary.json:0": "225a65e522d379cf29e4108f2d5111d14ecf8fdedbd63667ad53aad853707bda",
+    "draft-2020-12:vocabulary.json:1": "4b9db1d96225904d2e24423d70e9a2582e1bd3e69082d345ff00109017edff34"
+  },
+  "oracleGaps": {
+    "compile": {
+      "draft-2019-09:enum.json:14": "compile_exception",
+      "draft-2019-09:ref.json:15": "compile_exception",
+      "draft-2019-09:ref.json:16": "compile_exception",
+      "draft-2019-09:ref.json:28": "compile_exception",
+      "draft-2020-12:dynamicRef.json:9": "compile_exception",
+      "draft-2020-12:dynamicRef.json:10": "compile_exception",
+      "draft-2020-12:dynamicRef.json:12": "compile_exception",
+      "draft-2020-12:enum.json:14": "compile_exception",
+      "draft-2020-12:ref.json:15": "compile_exception",
+      "draft-2020-12:ref.json:16": "compile_exception",
+      "draft-2020-12:ref.json:28": "compile_exception"
+    },
+    "runtime": {
+      "draft-7:properties.json:5:3": ["validity_mismatch"],
+      "draft-7:ref.json:5:1": ["validity_mismatch"],
+      "draft-7:ref.json:6:0": ["validity_mismatch"],
+      "draft-7:ref.json:6:1": ["validity_mismatch"],
+      "draft-2019-09:properties.json:5:3": ["validity_mismatch"],
+      "draft-2019-09:recursiveRef.json:5:1": ["validity_mismatch"],
+      "draft-2019-09:recursiveRef.json:5:2": ["validity_mismatch"],
+      "draft-2019-09:unevaluatedItems.json:9:1": ["validity_mismatch"],
+      "draft-2019-09:unevaluatedItems.json:9:2": ["validity_mismatch"],
+      "draft-2019-09:unevaluatedItems.json:24:0": ["validity_mismatch"],
+      "draft-2019-09:unevaluatedProperties.json:15:0": ["validity_mismatch"],
+      "draft-2019-09:unevaluatedProperties.json:15:3": ["validity_mismatch"],
+      "draft-2019-09:unevaluatedProperties.json:39:0": ["validity_mismatch"],
+      "draft-2019-09:vocabulary.json:0:2": ["validity_mismatch"],
+      "draft-2020-12:dynamicRef.json:0:0": ["validity_mismatch"],
+      "draft-2020-12:dynamicRef.json:1:0": ["validity_mismatch"],
+      "draft-2020-12:dynamicRef.json:3:0": ["validity_mismatch"],
+      "draft-2020-12:dynamicRef.json:4:1": ["validity_mismatch"],
+      "draft-2020-12:dynamicRef.json:5:0": ["validity_mismatch"],
+      "draft-2020-12:dynamicRef.json:6:0": ["validity_mismatch"],
+      "draft-2020-12:dynamicRef.json:7:0": ["validity_mismatch"],
+      "draft-2020-12:dynamicRef.json:8:0": ["validity_mismatch"],
+      "draft-2020-12:dynamicRef.json:11:1": ["validity_mismatch"],
+      "draft-2020-12:dynamicRef.json:11:2": ["validity_mismatch"],
+      "draft-2020-12:dynamicRef.json:14:2": ["validity_mismatch"],
+      "draft-2020-12:dynamicRef.json:15:2": ["validity_mismatch"],
+      "draft-2020-12:dynamicRef.json:16:2": ["validity_mismatch"],
+      "draft-2020-12:dynamicRef.json:17:0": ["runtime_exception"],
+      "draft-2020-12:dynamicRef.json:17:1": ["runtime_exception"],
+      "draft-2020-12:dynamicRef.json:18:1": ["validity_mismatch"],
+      "draft-2020-12:dynamicRef.json:19:0": ["validity_mismatch"],
+      "draft-2020-12:dynamicRef.json:20:0": ["runtime_exception"],
+      "draft-2020-12:dynamicRef.json:20:1": ["runtime_exception"],
+      "draft-2020-12:properties.json:5:3": ["validity_mismatch"],
+      "draft-2020-12:unevaluatedItems.json:8:1": ["validity_mismatch"],
+      "draft-2020-12:unevaluatedItems.json:8:2": ["validity_mismatch"],
+      "draft-2020-12:unevaluatedItems.json:18:0": ["runtime_exception"],
+      "draft-2020-12:unevaluatedItems.json:18:1": ["runtime_exception"],
+      "draft-2020-12:unevaluatedItems.json:21:2": ["validity_mismatch"],
+      "draft-2020-12:unevaluatedItems.json:22:1": ["validity_mismatch"],
+      "draft-2020-12:unevaluatedItems.json:23:4": ["validity_mismatch"],
+      "draft-2020-12:unevaluatedItems.json:23:5": ["validity_mismatch"],
+      "draft-2020-12:unevaluatedItems.json:23:6": ["validity_mismatch"],
+      "draft-2020-12:unevaluatedItems.json:23:7": ["validity_mismatch"],
+      "draft-2020-12:unevaluatedItems.json:24:3": ["validity_mismatch"],
+      "draft-2020-12:unevaluatedItems.json:27:0": ["validity_mismatch"],
+      "draft-2020-12:unevaluatedProperties.json:15:0": ["validity_mismatch"],
+      "draft-2020-12:unevaluatedProperties.json:15:3": ["validity_mismatch"],
+      "draft-2020-12:unevaluatedProperties.json:21:0": ["runtime_exception"],
+      "draft-2020-12:unevaluatedProperties.json:21:1": ["runtime_exception"],
+      "draft-2020-12:unevaluatedProperties.json:39:0": ["validity_mismatch"],
+      "draft-2020-12:vocabulary.json:0:2": ["validity_mismatch"]
+    }
+  },
+  "runtimeGaps": {
+    "draft-7:properties.json:5:2": ["validity_mismatch"],
+    "draft-7:properties.json:5:6": ["parse_identity_mismatch"],
+    "draft-7:propertyNames.json:4:1": ["validity_mismatch"],
+    "draft-7:propertyNames.json:4:2": ["parse_identity_mismatch"],
+    "draft-7:propertyNames.json:5:0": ["parse_identity_mismatch"],
+    "draft-7:propertyNames.json:5:2": ["validity_mismatch"],
+    "draft-7:propertyNames.json:5:3": ["parse_identity_mismatch"],
+    "draft-2019-09:properties.json:5:2": ["validity_mismatch"],
+    "draft-2019-09:properties.json:5:6": ["parse_identity_mismatch"],
+    "draft-2019-09:propertyNames.json:4:1": ["validity_mismatch"],
+    "draft-2019-09:propertyNames.json:4:2": ["parse_identity_mismatch"],
+    "draft-2019-09:propertyNames.json:5:0": ["parse_identity_mismatch"],
+    "draft-2019-09:propertyNames.json:5:2": ["validity_mismatch"],
+    "draft-2019-09:propertyNames.json:5:3": ["parse_identity_mismatch"],
+    "draft-2020-12:pattern.json:2:0": ["validity_mismatch"],
+    "draft-2020-12:pattern.json:2:1": ["validity_mismatch"],
+    "draft-2020-12:properties.json:5:2": ["validity_mismatch"],
+    "draft-2020-12:properties.json:5:6": ["parse_identity_mismatch"],
+    "draft-2020-12:propertyNames.json:4:1": ["validity_mismatch"],
+    "draft-2020-12:propertyNames.json:4:2": ["parse_identity_mismatch"],
+    "draft-2020-12:propertyNames.json:5:0": ["parse_identity_mismatch"],
+    "draft-2020-12:propertyNames.json:5:2": ["validity_mismatch"],
+    "draft-2020-12:propertyNames.json:5:3": ["parse_identity_mismatch"]
+  },
+  "suiteCommit": "b01af8c8d50244a2eb4dd3e01073e24823aa8691",
+  "summary": {
+    "compileGapCaseCount": 1974,
+    "compileGapGroupCount": 602,
+    "conformingCaseCount": 1488,
+    "gapCaseInventorySha256": "c0486a4edec2dafd40297d1ff57ea4d23ee4439e3fe4a0a09cffdf2b8cd281f9",
+    "oracleDiscrepancyCount": 63,
+    "passingCaseInventorySha256": "7c2e7255770d700d934ca1d655f77f564db02979efffcb8daf9a34b2cdb81d53",
+    "runtimeGapCaseCount": 23
+  },
+  "version": 1
+}

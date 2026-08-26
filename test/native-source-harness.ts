@@ -34,6 +34,7 @@ type RunNodeRequest = Readonly<{
   allowedStderr?: ((stderr: string) => boolean) | undefined;
   args: readonly string[];
   cwd?: string;
+  timeoutMs?: number;
 }>;
 
 export const outputText = (output: Uint8Array): string => textDecoder.decode(output);
@@ -75,11 +76,22 @@ export const createTemporaryDirectory = ({
   return mkdtempSync(nodePath.join(rootDirectory, prefix));
 };
 
-export const runNode = ({ allowedStderr, args, cwd }: RunNodeRequest): string => {
+export const runNode = ({ allowedStderr, args, cwd, timeoutMs }: RunNodeRequest): string => {
   const result = spawnSync(nodeExecutable, ["--no-warnings", ...args], {
     ...(cwd === undefined ? {} : { cwd }),
+    ...(timeoutMs === undefined ? {} : { killSignal: "SIGKILL", timeout: timeoutMs }),
     stdio: ["ignore", "pipe", "pipe"],
   });
+
+  if (result.error !== undefined) {
+    if (timeoutMs !== undefined && isRecord(result.error) && result.error["code"] === "ETIMEDOUT")
+      throw new Error(`Node subprocess exceeded its ${timeoutMs.toString()}ms timeout.`, {
+        cause: result.error,
+      });
+    throw new Error(`Node subprocess failed: ${result.error.message}`, { cause: result.error });
+  }
+  if (result.signal !== null)
+    throw new Error(`Node subprocess was terminated by ${result.signal}.`);
 
   const stderr = outputText(result.stderr);
   if (stderr !== "" && allowedStderr?.(stderr) !== true) assert.equal(stderr, "");
