@@ -7,6 +7,10 @@ import { isRecord } from "./structural";
 
 type NativeEmitterClient = ConstructorParameters<typeof Emitter>[0];
 type NativeApiHandle = Readonly<{ client: NativeEmitterClient; close: () => void }>;
+type PrintNativeSourceFilesRequest = Readonly<{
+  beforePrint?: ((index: number) => void) | undefined;
+  sourceFiles: readonly SourceFile[];
+}>;
 
 export const diagnosticText = (
   diagnostics: readonly Readonly<{ code: string; message: string }>[],
@@ -26,17 +30,31 @@ export const optionalArgument = (index: number): string | undefined => process.a
 const isNativeApiHandle = (value: unknown): value is NativeApiHandle =>
   isRecord(value) && value["client"] !== undefined && typeof value["close"] === "function";
 
-export const printNativeSourceFile = (sourceFile: SourceFile): string => {
+export const printNativeSourceFiles = ({
+  beforePrint,
+  sourceFiles,
+}: PrintNativeSourceFilesRequest): readonly string[] => {
+  if (sourceFiles.length === 0) return [];
+
+  beforePrint?.(0);
   const api: unknown = new API({ cwd: process.cwd() });
   if (!isNativeApiHandle(api)) throw new Error("Native TypeScript API client is unavailable.");
   const emitter = new Emitter(api.client);
 
   try {
-    const sourceText = emitter.printNode(sourceFile);
-    return sourceText;
+    return sourceFiles.map((sourceFile, index) => {
+      if (index > 0) beforePrint?.(index);
+      return emitter.printNode(sourceFile);
+    });
   } finally {
     api.close();
   }
+};
+
+export const printNativeSourceFile = (sourceFile: SourceFile): string => {
+  const [sourceText] = printNativeSourceFiles({ sourceFiles: [sourceFile] });
+  if (sourceText === undefined) throw new Error("Native TypeScript emitter returned no source.");
+  return sourceText;
 };
 
 export const writeNativeSourceFile = (sourceFile: SourceFile): void => {

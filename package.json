@@ -46,6 +46,7 @@
     "release:version": "changeset version && bun --no-env-file scripts/publish.ts --sync-jsr-metadata && bun --no-env-file install",
     "runtime:check": "bun --no-env-file scripts/check-runtime-versions.ts",
     "test": "bun --no-env-file run runtime:check && turbo run --concurrency=4 test",
+    "test:conformance:update": "bun --no-env-file run runtime:check && bun --no-env-file packages/input-json-schema/test/official-suite/update-baseline.ts",
     "test:repo": "bun --no-env-file test ./scripts",
     "typecheck": "bun --no-env-file run runtime:check && turbo run --concurrency=4 //#typecheck:configs typecheck",
     "typecheck:configs": "tsgo --project tsconfig.configs.json --noEmit",
