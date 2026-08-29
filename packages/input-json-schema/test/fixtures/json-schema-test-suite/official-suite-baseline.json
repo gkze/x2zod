@@ -1,34 +1,34 @@
 {
   "byDialect": [
     {
-      "compileGapCaseCount": 464,
-      "compileGapGroupCount": 132,
-      "conformingCaseCount": 456,
-      "gapCaseInventorySha256": "ecd2274a82106af97b7165dfe10a20258fec51c22b9a6060e70d937e0e82dac9",
+      "compileGapCaseCount": 340,
+      "compileGapGroupCount": 97,
+      "conformingCaseCount": 580,
+      "gapCaseInventorySha256": "203269d526d513996192f99bf6de745d89fa4f78ec5f09449dd8fa4e2a21b139",
       "oracleDiscrepancyCount": 4,
-      "passingCaseInventorySha256": "3d0c97f343a19774f921dab1eec18c4083ab91550e5a806c378dbad060682328",
+      "passingCaseInventorySha256": "29290a00e9e60882a09aa430771bea5dc927b382d68ee933264c8d42df8af4fe",
       "runtimeGapCaseCount": 7,
       "dialect": "draft-7",
       "testCount": 927
     },
     {
-      "compileGapCaseCount": 746,
-      "compileGapGroupCount": 230,
-      "conformingCaseCount": 506,
-      "gapCaseInventorySha256": "7d7517a5fe2102573d187ba44fe33ab0037720b600812101a14528afd1bdb987",
+      "compileGapCaseCount": 622,
+      "compileGapGroupCount": 195,
+      "conformingCaseCount": 630,
+      "gapCaseInventorySha256": "c45829954260fc3696e19b1cb9f8cadb77a9685d90fa949e5dd036fad622a9a3",
       "oracleDiscrepancyCount": 14,
-      "passingCaseInventorySha256": "a20cd5e5ab12a78199ba898753ac749ab82bebfbe1d853261c60eb994ceab33f",
+      "passingCaseInventorySha256": "a9f3203b3a4e41f76f80712078943c5f16f7b8ab682c175b2de99446af43d175",
       "runtimeGapCaseCount": 7,
       "dialect": "draft-2019-09",
       "testCount": 1259
     },
     {
-      "compileGapCaseCount": 764,
-      "compileGapGroupCount": 240,
-      "conformingCaseCount": 526,
-      "gapCaseInventorySha256": "4c0d75ee5116a9819ab809632dd0bceaeb89f9258118ae481d9a0610d223f6c2",
+      "compileGapCaseCount": 640,
+      "compileGapGroupCount": 205,
+      "conformingCaseCount": 650,
+      "gapCaseInventorySha256": "ab29115eba02d3bc7b7a3a9d92d964f078773b8f6db4632c92ccd0e6af9508eb",
       "oracleDiscrepancyCount": 45,
-      "passingCaseInventorySha256": "b76db37a7b586075f41f1b1e924c186079344cf61b29b3c6445bc3805175b713",
+      "passingCaseInventorySha256": "edd3587df76273cf2be72449e3673e78cfa5d1931b39d4786893320d7ee1e9ac",
       "runtimeGapCaseCount": 9,
       "dialect": "draft-2020-12",
       "testCount": 1299
@@ -62,14 +62,6 @@
         "code": "unsupported_keyword",
         "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: $dynamicRef.",
         "pointer": "/$defs/list/items/$dynamicRef",
-        "severity": "error"
-      }
-    ],
-    "041845aeaec76af08fd3c015ac981848f3785581ab85b1a6441a8c9baa0bdce9": [
-      {
-        "code": "unrepresentable_schema_combination",
-        "message": "Only primitive const and enum values are supported in the first JSON Schema lowering slice.",
-        "pointer": "/enum/0",
         "severity": "error"
       }
     ],
@@ -187,20 +179,6 @@
         "severity": "error"
       }
     ],
-    "17133f5c263a9fa679532a30e57f50a183997a84fea12fd53c1e70e701fb8e6c": [
-      {
-        "code": "unrepresentable_schema_combination",
-        "message": "JSON Schema string constraints without a string type are not supported by this lowering slice.",
-        "pointer": "/anyOf/0/maxLength",
-        "severity": "error"
-      },
-      {
-        "code": "unrepresentable_schema_combination",
-        "message": "JSON Schema string constraints without a string type are not supported by this lowering slice.",
-        "pointer": "/anyOf/1/minLength",
-        "severity": "error"
-      }
-    ],
     "171e78736a37aa3e83d8e57fcdcfee48d3063fd645aec1ecede470cd6e8c383d": [
       {
         "code": "unknown_keyword",
@@ -285,14 +263,6 @@
         "severity": "error"
       }
     ],
-    "22269dab9adc1844e414510ee167dacf072c40bac235bc0a84a387f3bc2432bc": [
-      {
-        "code": "unrepresentable_schema_combination",
-        "message": "JSON Schema numeric bounds without a number or integer type are not supported by this lowering slice.",
-        "pointer": "/oneOf/1",
-        "severity": "error"
-      }
-    ],
     "225a65e522d379cf29e4108f2d5111d14ecf8fdedbd63667ad53aad853707bda": [
       {
         "code": "unsupported_dialect",
@@ -362,14 +332,6 @@
         "code": "unsupported_dialect",
         "message": "JSON Schema dialect is not supported: http://localhost:1234/draft2019-09/metaschema-no-validation.json.",
         "pointer": "/$schema",
-        "severity": "error"
-      }
-    ],
-    "2f36f99af32115e9b61c57402b274072d3bed59a55ed9308a479ffbcd7f235c6": [
-      {
-        "code": "unrepresentable_schema_combination",
-        "message": "JSON Schema numeric bounds without a number or integer type are not supported by this lowering slice.",
-        "pointer": "/anyOf/1",
         "severity": "error"
       }
     ],
@@ -472,14 +434,6 @@
         "code": "unsupported_keyword",
         "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: unevaluatedItems.",
         "pointer": "/properties/foo/unevaluatedItems",
-        "severity": "error"
-      }
-    ],
-    "3ae23edf60660cb751314c741f8a3cf5cf1b6847d2887bab33f9b33cdc689728": [
-      {
-        "code": "unrepresentable_schema_combination",
-        "message": "JSON Schema string constraints without a string type are not supported by this lowering slice.",
-        "pointer": "/pattern",
         "severity": "error"
       }
     ],
@@ -611,14 +565,6 @@
         "severity": "error"
       }
     ],
-    "4f10b572ee4c0eebdfb87aa7dd0883ba90fb68b6a513027e40323e0dd500ecce": [
-      {
-        "code": "unrepresentable_schema_combination",
-        "message": "JSON Schema numeric bounds without a number or integer type are not supported by this lowering slice.",
-        "pointer": "",
-        "severity": "error"
-      }
-    ],
     "505f2797ef61b493ac73c6f2aa1985bfa279e68cdab2fa1db837ef9a6aded5ff": [
       {
         "code": "unsupported_keyword",
@@ -658,20 +604,6 @@
         "code": "unsupported_keyword",
         "message": "Only fixed-length prefixItems tuples are supported in this JSON Schema lowering slice.",
         "pointer": "/prefixItems",
-        "severity": "error"
-      }
-    ],
-    "5d325f062639b1c5bd21d8bf71ce597ed62311e0c2284982308109b0bc72b3db": [
-      {
-        "code": "unrepresentable_schema_combination",
-        "message": "JSON Schema numeric bounds without a number or integer type are not supported by this lowering slice.",
-        "pointer": "/allOf/0",
-        "severity": "error"
-      },
-      {
-        "code": "unrepresentable_schema_combination",
-        "message": "JSON Schema numeric bounds without a number or integer type are not supported by this lowering slice.",
-        "pointer": "/allOf/1",
         "severity": "error"
       }
     ],
@@ -849,14 +781,6 @@
         "severity": "error"
       }
     ],
-    "7535fc7a05cd123a8b90409188c4d469575a0b19e6e2d0756bd8add366d64aa6": [
-      {
-        "code": "unrepresentable_schema_combination",
-        "message": "JSON Schema string constraints without a string type are not supported by this lowering slice.",
-        "pointer": "/minLength",
-        "severity": "error"
-      }
-    ],
     "79b897a98a00f89a23a16703082e238a8c62ba29637c3f1d2f517547ee9cc9b2": [
       {
         "code": "unknown_keyword",
@@ -874,14 +798,6 @@
         "code": "unknown_keyword",
         "message": "JSON Schema keyword is not recognized by the selected source profile: contentSchema.",
         "pointer": "/contentSchema",
-        "severity": "error"
-      }
-    ],
-    "7a4bf2899531b11ff238c5121b29124a9459b1ed8e5a3dbf3656ee8c13c5a9bf": [
-      {
-        "code": "unsupported_keyword",
-        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: multipleOf.",
-        "pointer": "/multipleOf",
         "severity": "error"
       }
     ],
@@ -916,20 +832,6 @@
         "code": "unknown_keyword",
         "message": "JSON Schema keyword is not recognized by the selected source profile: $recursiveRef.",
         "pointer": "/properties/foo/$recursiveRef",
-        "severity": "error"
-      }
-    ],
-    "8379938b9b726ff0eed184009528a26031c6426724a0cd32a66d9cf32a0e943b": [
-      {
-        "code": "unrepresentable_schema_combination",
-        "message": "JSON Schema string constraints without a string type are not supported by this lowering slice.",
-        "pointer": "/oneOf/0/minLength",
-        "severity": "error"
-      },
-      {
-        "code": "unrepresentable_schema_combination",
-        "message": "JSON Schema string constraints without a string type are not supported by this lowering slice.",
-        "pointer": "/oneOf/1/maxLength",
         "severity": "error"
       }
     ],
@@ -1010,14 +912,6 @@
         "code": "unresolved_reference",
         "message": "JSON Schema $ref target was not found. External references must be provided through plugin options.",
         "pointer": "/items/items/$ref",
-        "severity": "error"
-      }
-    ],
-    "9089b797c36de6f4f2e7fa79dc937a94b6971a166589beb2f60250812698858c": [
-      {
-        "code": "unrepresentable_schema_combination",
-        "message": "JSON Schema string constraints without a string type are not supported by this lowering slice.",
-        "pointer": "/maxLength",
         "severity": "error"
       }
     ],
@@ -1239,14 +1133,6 @@
         "severity": "error"
       }
     ],
-    "a9be553871f07ca70c11f953727ae9382ef9b5e211c85644e63c1ed56bffae22": [
-      {
-        "code": "unrepresentable_schema_combination",
-        "message": "Only primitive const and enum values are supported in the first JSON Schema lowering slice.",
-        "pointer": "/const",
-        "severity": "error"
-      }
-    ],
     "aa24b65fcbb41933ad636cd597dfebd79debe0bd9e5f16d577a91987797388e4": [
       {
         "code": "unsupported_keyword",
@@ -1296,20 +1182,6 @@
         "code": "unresolved_reference",
         "message": "JSON Schema $ref target was not found. External references must be provided through plugin options.",
         "pointer": "/$ref",
-        "severity": "error"
-      }
-    ],
-    "b4a1cee48a8f894c6b144be189cdf9c3c533edb2435185090fab666f2f47fd98": [
-      {
-        "code": "unsupported_keyword",
-        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: contains.",
-        "pointer": "/contains",
-        "severity": "error"
-      },
-      {
-        "code": "unsupported_keyword",
-        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: multipleOf.",
-        "pointer": "/items/multipleOf",
         "severity": "error"
       }
     ],
@@ -1507,26 +1379,6 @@
         "severity": "error"
       }
     ],
-    "cfe5668bd62ff8f41016e246313d20cb2d6ee6f00a7e1c263328f4835f3c5b96": [
-      {
-        "code": "unsupported_keyword",
-        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: multipleOf.",
-        "pointer": "/allOf/0/multipleOf",
-        "severity": "error"
-      },
-      {
-        "code": "unsupported_keyword",
-        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: multipleOf.",
-        "pointer": "/anyOf/0/multipleOf",
-        "severity": "error"
-      },
-      {
-        "code": "unsupported_keyword",
-        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: multipleOf.",
-        "pointer": "/oneOf/0/multipleOf",
-        "severity": "error"
-      }
-    ],
     "d18e0129ba5b87d99a166afa67e9bffe6b8d2255b5385e298e698313267e0eb5": [
       {
         "code": "unresolved_reference",
@@ -1572,20 +1424,6 @@
         "code": "unsupported_keyword",
         "message": "Tuple schemas are not supported in the first JSON Schema lowering slice.",
         "pointer": "/items",
-        "severity": "error"
-      }
-    ],
-    "d715592bf2e90d9ac9bf8b9b200cd6572ca253237dbba7c455a2fceada14b9f4": [
-      {
-        "code": "unrepresentable_schema_combination",
-        "message": "Only primitive const and enum values are supported in the first JSON Schema lowering slice.",
-        "pointer": "/enum/2",
-        "severity": "error"
-      },
-      {
-        "code": "unrepresentable_schema_combination",
-        "message": "Only primitive const and enum values are supported in the first JSON Schema lowering slice.",
-        "pointer": "/enum/4",
         "severity": "error"
       }
     ],
@@ -1917,21 +1755,11 @@
     "draft-7:additionalProperties.json:1": "f7835a7de7fe4f8f2350640df6abea1a832d228db7ea5389651e5c1ed9548bef",
     "draft-7:additionalProperties.json:5": "a33207be89947c888f2d6868285adc17af022e936b220b6bf2325a409cf825ff",
     "draft-7:allOf.json:1": "a33207be89947c888f2d6868285adc17af022e936b220b6bf2325a409cf825ff",
-    "draft-7:allOf.json:2": "5d325f062639b1c5bd21d8bf71ce597ed62311e0c2284982308109b0bc72b3db",
-    "draft-7:allOf.json:11": "cfe5668bd62ff8f41016e246313d20cb2d6ee6f00a7e1c263328f4835f3c5b96",
-    "draft-7:anyOf.json:0": "2f36f99af32115e9b61c57402b274072d3bed59a55ed9308a479ffbcd7f235c6",
-    "draft-7:anyOf.json:1": "17133f5c263a9fa679532a30e57f50a183997a84fea12fd53c1e70e701fb8e6c",
-    "draft-7:const.json:1": "a9be553871f07ca70c11f953727ae9382ef9b5e211c85644e63c1ed56bffae22",
-    "draft-7:const.json:2": "a9be553871f07ca70c11f953727ae9382ef9b5e211c85644e63c1ed56bffae22",
-    "draft-7:const.json:6": "a9be553871f07ca70c11f953727ae9382ef9b5e211c85644e63c1ed56bffae22",
-    "draft-7:const.json:7": "a9be553871f07ca70c11f953727ae9382ef9b5e211c85644e63c1ed56bffae22",
-    "draft-7:const.json:8": "a9be553871f07ca70c11f953727ae9382ef9b5e211c85644e63c1ed56bffae22",
-    "draft-7:const.json:9": "a9be553871f07ca70c11f953727ae9382ef9b5e211c85644e63c1ed56bffae22",
     "draft-7:contains.json:0": "43fad8460bf15af7290788702abe2c94d67d120b54d5a26592328201794ce716",
     "draft-7:contains.json:1": "43fad8460bf15af7290788702abe2c94d67d120b54d5a26592328201794ce716",
     "draft-7:contains.json:2": "43fad8460bf15af7290788702abe2c94d67d120b54d5a26592328201794ce716",
     "draft-7:contains.json:3": "43fad8460bf15af7290788702abe2c94d67d120b54d5a26592328201794ce716",
-    "draft-7:contains.json:4": "b4a1cee48a8f894c6b144be189cdf9c3c533edb2435185090fab666f2f47fd98",
+    "draft-7:contains.json:4": "43fad8460bf15af7290788702abe2c94d67d120b54d5a26592328201794ce716",
     "draft-7:contains.json:5": "43fad8460bf15af7290788702abe2c94d67d120b54d5a26592328201794ce716",
     "draft-7:contains.json:6": "43fad8460bf15af7290788702abe2c94d67d120b54d5a26592328201794ce716",
     "draft-7:definitions.json:0": "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012",
@@ -1942,13 +1770,6 @@
     "draft-7:dependencies.json:4": "1dd84139e76f974427feda1aa3c518a181ed9e29bee4f8108e01fd6ca29b00eb",
     "draft-7:dependencies.json:5": "1dd84139e76f974427feda1aa3c518a181ed9e29bee4f8108e01fd6ca29b00eb",
     "draft-7:dependencies.json:6": "1dd84139e76f974427feda1aa3c518a181ed9e29bee4f8108e01fd6ca29b00eb",
-    "draft-7:enum.json:1": "d715592bf2e90d9ac9bf8b9b200cd6572ca253237dbba7c455a2fceada14b9f4",
-    "draft-7:enum.json:6": "041845aeaec76af08fd3c015ac981848f3785581ab85b1a6441a8c9baa0bdce9",
-    "draft-7:enum.json:8": "041845aeaec76af08fd3c015ac981848f3785581ab85b1a6441a8c9baa0bdce9",
-    "draft-7:enum.json:10": "041845aeaec76af08fd3c015ac981848f3785581ab85b1a6441a8c9baa0bdce9",
-    "draft-7:enum.json:12": "041845aeaec76af08fd3c015ac981848f3785581ab85b1a6441a8c9baa0bdce9",
-    "draft-7:exclusiveMaximum.json:0": "4f10b572ee4c0eebdfb87aa7dd0883ba90fb68b6a513027e40323e0dd500ecce",
-    "draft-7:exclusiveMinimum.json:0": "4f10b572ee4c0eebdfb87aa7dd0883ba90fb68b6a513027e40323e0dd500ecce",
     "draft-7:if-then-else.json:0": "a50f8bf19161fd47f0cc11908dff1f84ebdc2b185c2621961d8f2d882a02994b",
     "draft-7:if-then-else.json:1": "0dcfcc137e1429303ce33ff7855ed00184cc93007f064a6c7d0abc0c0ff397af",
     "draft-7:if-then-else.json:2": "4715e81e583334e3d681e1260a7f7f859cc3eb2c5a0bc4f479b8745deb89a676",
@@ -1966,32 +1787,15 @@
     "draft-7:items.json:4": "051dab5e058037ddfc1413e82966c320da305746c03687c92d42547b8ced496c",
     "draft-7:items.json:5": "171e78736a37aa3e83d8e57fcdcfee48d3063fd645aec1ecede470cd6e8c383d",
     "draft-7:items.json:8": "051dab5e058037ddfc1413e82966c320da305746c03687c92d42547b8ced496c",
-    "draft-7:maxLength.json:0": "9089b797c36de6f4f2e7fa79dc937a94b6971a166589beb2f60250812698858c",
-    "draft-7:maxLength.json:1": "9089b797c36de6f4f2e7fa79dc937a94b6971a166589beb2f60250812698858c",
     "draft-7:maxProperties.json:0": "318c5862d291cd6e122b716eb450b1e47307278d251ddf88a262b38b23f6ee84",
     "draft-7:maxProperties.json:1": "318c5862d291cd6e122b716eb450b1e47307278d251ddf88a262b38b23f6ee84",
     "draft-7:maxProperties.json:2": "318c5862d291cd6e122b716eb450b1e47307278d251ddf88a262b38b23f6ee84",
-    "draft-7:maximum.json:0": "4f10b572ee4c0eebdfb87aa7dd0883ba90fb68b6a513027e40323e0dd500ecce",
-    "draft-7:maximum.json:1": "4f10b572ee4c0eebdfb87aa7dd0883ba90fb68b6a513027e40323e0dd500ecce",
-    "draft-7:minLength.json:0": "7535fc7a05cd123a8b90409188c4d469575a0b19e6e2d0756bd8add366d64aa6",
-    "draft-7:minLength.json:1": "7535fc7a05cd123a8b90409188c4d469575a0b19e6e2d0756bd8add366d64aa6",
     "draft-7:minProperties.json:0": "396fb2aa57602cf078e04c1a4a82060f47b95d4b94f713b7a18045966ecb2cb8",
     "draft-7:minProperties.json:1": "396fb2aa57602cf078e04c1a4a82060f47b95d4b94f713b7a18045966ecb2cb8",
-    "draft-7:minimum.json:0": "4f10b572ee4c0eebdfb87aa7dd0883ba90fb68b6a513027e40323e0dd500ecce",
-    "draft-7:minimum.json:1": "4f10b572ee4c0eebdfb87aa7dd0883ba90fb68b6a513027e40323e0dd500ecce",
-    "draft-7:multipleOf.json:0": "7a4bf2899531b11ff238c5121b29124a9459b1ed8e5a3dbf3656ee8c13c5a9bf",
-    "draft-7:multipleOf.json:1": "7a4bf2899531b11ff238c5121b29124a9459b1ed8e5a3dbf3656ee8c13c5a9bf",
-    "draft-7:multipleOf.json:2": "7a4bf2899531b11ff238c5121b29124a9459b1ed8e5a3dbf3656ee8c13c5a9bf",
-    "draft-7:multipleOf.json:3": "7a4bf2899531b11ff238c5121b29124a9459b1ed8e5a3dbf3656ee8c13c5a9bf",
-    "draft-7:multipleOf.json:4": "7a4bf2899531b11ff238c5121b29124a9459b1ed8e5a3dbf3656ee8c13c5a9bf",
     "draft-7:not.json:0": "3e052301c20defd81559310a036ad8544c04c442a49c8ebcf5959981ad03efe0",
     "draft-7:not.json:1": "3e052301c20defd81559310a036ad8544c04c442a49c8ebcf5959981ad03efe0",
     "draft-7:not.json:2": "3e052301c20defd81559310a036ad8544c04c442a49c8ebcf5959981ad03efe0",
     "draft-7:not.json:7": "3e052301c20defd81559310a036ad8544c04c442a49c8ebcf5959981ad03efe0",
-    "draft-7:oneOf.json:0": "22269dab9adc1844e414510ee167dacf072c40bac235bc0a84a387f3bc2432bc",
-    "draft-7:oneOf.json:1": "8379938b9b726ff0eed184009528a26031c6426724a0cd32a66d9cf32a0e943b",
-    "draft-7:pattern.json:0": "3ae23edf60660cb751314c741f8a3cf5cf1b6847d2887bab33f9b33cdc689728",
-    "draft-7:pattern.json:1": "3ae23edf60660cb751314c741f8a3cf5cf1b6847d2887bab33f9b33cdc689728",
     "draft-7:patternProperties.json:0": "f7835a7de7fe4f8f2350640df6abea1a832d228db7ea5389651e5c1ed9548bef",
     "draft-7:patternProperties.json:1": "f7835a7de7fe4f8f2350640df6abea1a832d228db7ea5389651e5c1ed9548bef",
     "draft-7:patternProperties.json:2": "f7835a7de7fe4f8f2350640df6abea1a832d228db7ea5389651e5c1ed9548bef",
@@ -2007,11 +1811,10 @@
     "draft-7:ref.json:14": "fee39c184cfcb3ba67d52abc50232f27b829147874c96422d69ad6075119ee4c",
     "draft-7:ref.json:15": "fee39c184cfcb3ba67d52abc50232f27b829147874c96422d69ad6075119ee4c",
     "draft-7:ref.json:16": "fee39c184cfcb3ba67d52abc50232f27b829147874c96422d69ad6075119ee4c",
-    "draft-7:ref.json:17": "041845aeaec76af08fd3c015ac981848f3785581ab85b1a6441a8c9baa0bdce9",
     "draft-7:ref.json:18": "28996618661f22ad3594cbdf7b9677ac09933ebc454a05cf82abed35c2a354f9",
     "draft-7:ref.json:19": "28996618661f22ad3594cbdf7b9677ac09933ebc454a05cf82abed35c2a354f9",
     "draft-7:ref.json:20": "fee39c184cfcb3ba67d52abc50232f27b829147874c96422d69ad6075119ee4c",
-    "draft-7:ref.json:21": "4f10b572ee4c0eebdfb87aa7dd0883ba90fb68b6a513027e40323e0dd500ecce",
+    "draft-7:ref.json:21": "b3d40056e1a484f7a40299187583e3ae27a85e74cf209d55fadffd4d9a4e5c4b",
     "draft-7:ref.json:26": "b3d40056e1a484f7a40299187583e3ae27a85e74cf209d55fadffd4d9a4e5c4b",
     "draft-7:ref.json:27": "b3d40056e1a484f7a40299187583e3ae27a85e74cf209d55fadffd4d9a4e5c4b",
     "draft-7:ref.json:28": "9f4a2341c4c64e8c9e7c53d5b97f26e9906239a83f663005fc291c42b11d5788",
@@ -2050,25 +1853,15 @@
     "draft-2019-09:additionalProperties.json:5": "a33207be89947c888f2d6868285adc17af022e936b220b6bf2325a409cf825ff",
     "draft-2019-09:additionalProperties.json:8": "38eee3540182ba474f77b34ce4fb235a268c8bb576ef591510f28f0a99ecf0e4",
     "draft-2019-09:allOf.json:1": "a33207be89947c888f2d6868285adc17af022e936b220b6bf2325a409cf825ff",
-    "draft-2019-09:allOf.json:2": "5d325f062639b1c5bd21d8bf71ce597ed62311e0c2284982308109b0bc72b3db",
-    "draft-2019-09:allOf.json:11": "cfe5668bd62ff8f41016e246313d20cb2d6ee6f00a7e1c263328f4835f3c5b96",
     "draft-2019-09:anchor.json:0": "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012",
     "draft-2019-09:anchor.json:1": "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012",
     "draft-2019-09:anchor.json:2": "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012",
     "draft-2019-09:anchor.json:3": "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012",
-    "draft-2019-09:anyOf.json:0": "2f36f99af32115e9b61c57402b274072d3bed59a55ed9308a479ffbcd7f235c6",
-    "draft-2019-09:anyOf.json:1": "17133f5c263a9fa679532a30e57f50a183997a84fea12fd53c1e70e701fb8e6c",
-    "draft-2019-09:const.json:1": "a9be553871f07ca70c11f953727ae9382ef9b5e211c85644e63c1ed56bffae22",
-    "draft-2019-09:const.json:2": "a9be553871f07ca70c11f953727ae9382ef9b5e211c85644e63c1ed56bffae22",
-    "draft-2019-09:const.json:6": "a9be553871f07ca70c11f953727ae9382ef9b5e211c85644e63c1ed56bffae22",
-    "draft-2019-09:const.json:7": "a9be553871f07ca70c11f953727ae9382ef9b5e211c85644e63c1ed56bffae22",
-    "draft-2019-09:const.json:8": "a9be553871f07ca70c11f953727ae9382ef9b5e211c85644e63c1ed56bffae22",
-    "draft-2019-09:const.json:9": "a9be553871f07ca70c11f953727ae9382ef9b5e211c85644e63c1ed56bffae22",
     "draft-2019-09:contains.json:0": "43fad8460bf15af7290788702abe2c94d67d120b54d5a26592328201794ce716",
     "draft-2019-09:contains.json:1": "43fad8460bf15af7290788702abe2c94d67d120b54d5a26592328201794ce716",
     "draft-2019-09:contains.json:2": "43fad8460bf15af7290788702abe2c94d67d120b54d5a26592328201794ce716",
     "draft-2019-09:contains.json:3": "43fad8460bf15af7290788702abe2c94d67d120b54d5a26592328201794ce716",
-    "draft-2019-09:contains.json:4": "b4a1cee48a8f894c6b144be189cdf9c3c533edb2435185090fab666f2f47fd98",
+    "draft-2019-09:contains.json:4": "43fad8460bf15af7290788702abe2c94d67d120b54d5a26592328201794ce716",
     "draft-2019-09:contains.json:5": "43fad8460bf15af7290788702abe2c94d67d120b54d5a26592328201794ce716",
     "draft-2019-09:contains.json:6": "43fad8460bf15af7290788702abe2c94d67d120b54d5a26592328201794ce716",
     "draft-2019-09:content.json:0": "074774ddbe7fb3cfa210f5fd14b722a09cf9032a048363f220847ae2ed9108f9",
@@ -2084,13 +1877,6 @@
     "draft-2019-09:dependentSchemas.json:1": "38eee3540182ba474f77b34ce4fb235a268c8bb576ef591510f28f0a99ecf0e4",
     "draft-2019-09:dependentSchemas.json:2": "38eee3540182ba474f77b34ce4fb235a268c8bb576ef591510f28f0a99ecf0e4",
     "draft-2019-09:dependentSchemas.json:3": "38eee3540182ba474f77b34ce4fb235a268c8bb576ef591510f28f0a99ecf0e4",
-    "draft-2019-09:enum.json:1": "d715592bf2e90d9ac9bf8b9b200cd6572ca253237dbba7c455a2fceada14b9f4",
-    "draft-2019-09:enum.json:6": "041845aeaec76af08fd3c015ac981848f3785581ab85b1a6441a8c9baa0bdce9",
-    "draft-2019-09:enum.json:8": "041845aeaec76af08fd3c015ac981848f3785581ab85b1a6441a8c9baa0bdce9",
-    "draft-2019-09:enum.json:10": "041845aeaec76af08fd3c015ac981848f3785581ab85b1a6441a8c9baa0bdce9",
-    "draft-2019-09:enum.json:12": "041845aeaec76af08fd3c015ac981848f3785581ab85b1a6441a8c9baa0bdce9",
-    "draft-2019-09:exclusiveMaximum.json:0": "4f10b572ee4c0eebdfb87aa7dd0883ba90fb68b6a513027e40323e0dd500ecce",
-    "draft-2019-09:exclusiveMinimum.json:0": "4f10b572ee4c0eebdfb87aa7dd0883ba90fb68b6a513027e40323e0dd500ecce",
     "draft-2019-09:if-then-else.json:0": "a50f8bf19161fd47f0cc11908dff1f84ebdc2b185c2621961d8f2d882a02994b",
     "draft-2019-09:if-then-else.json:1": "0dcfcc137e1429303ce33ff7855ed00184cc93007f064a6c7d0abc0c0ff397af",
     "draft-2019-09:if-then-else.json:2": "4715e81e583334e3d681e1260a7f7f859cc3eb2c5a0bc4f479b8745deb89a676",
@@ -2113,13 +1899,9 @@
     "draft-2019-09:maxContains.json:2": "419252634efdbc769c3c64350602c55edb04eec69a509d582cb7335db4b94b4e",
     "draft-2019-09:maxContains.json:3": "c146d59dbfa9f8ba12c381cff9f0b499254526462742f6fb6bc019bee1bbaf89",
     "draft-2019-09:maxContains.json:4": "c146d59dbfa9f8ba12c381cff9f0b499254526462742f6fb6bc019bee1bbaf89",
-    "draft-2019-09:maxLength.json:0": "9089b797c36de6f4f2e7fa79dc937a94b6971a166589beb2f60250812698858c",
-    "draft-2019-09:maxLength.json:1": "9089b797c36de6f4f2e7fa79dc937a94b6971a166589beb2f60250812698858c",
     "draft-2019-09:maxProperties.json:0": "318c5862d291cd6e122b716eb450b1e47307278d251ddf88a262b38b23f6ee84",
     "draft-2019-09:maxProperties.json:1": "318c5862d291cd6e122b716eb450b1e47307278d251ddf88a262b38b23f6ee84",
     "draft-2019-09:maxProperties.json:2": "318c5862d291cd6e122b716eb450b1e47307278d251ddf88a262b38b23f6ee84",
-    "draft-2019-09:maximum.json:0": "4f10b572ee4c0eebdfb87aa7dd0883ba90fb68b6a513027e40323e0dd500ecce",
-    "draft-2019-09:maximum.json:1": "4f10b572ee4c0eebdfb87aa7dd0883ba90fb68b6a513027e40323e0dd500ecce",
     "draft-2019-09:minContains.json:0": "11759e97fabff14fa36af1feeabeb856ccb4adfc674399c20e46f8bb12ad5635",
     "draft-2019-09:minContains.json:1": "a724fdecc8c6eb92044f4c32f9a8db7117fcf70948882057b104a01715ad5a96",
     "draft-2019-09:minContains.json:2": "a724fdecc8c6eb92044f4c32f9a8db7117fcf70948882057b104a01715ad5a96",
@@ -2128,26 +1910,13 @@
     "draft-2019-09:minContains.json:5": "c146d59dbfa9f8ba12c381cff9f0b499254526462742f6fb6bc019bee1bbaf89",
     "draft-2019-09:minContains.json:6": "a724fdecc8c6eb92044f4c32f9a8db7117fcf70948882057b104a01715ad5a96",
     "draft-2019-09:minContains.json:7": "c146d59dbfa9f8ba12c381cff9f0b499254526462742f6fb6bc019bee1bbaf89",
-    "draft-2019-09:minLength.json:0": "7535fc7a05cd123a8b90409188c4d469575a0b19e6e2d0756bd8add366d64aa6",
-    "draft-2019-09:minLength.json:1": "7535fc7a05cd123a8b90409188c4d469575a0b19e6e2d0756bd8add366d64aa6",
     "draft-2019-09:minProperties.json:0": "396fb2aa57602cf078e04c1a4a82060f47b95d4b94f713b7a18045966ecb2cb8",
     "draft-2019-09:minProperties.json:1": "396fb2aa57602cf078e04c1a4a82060f47b95d4b94f713b7a18045966ecb2cb8",
-    "draft-2019-09:minimum.json:0": "4f10b572ee4c0eebdfb87aa7dd0883ba90fb68b6a513027e40323e0dd500ecce",
-    "draft-2019-09:minimum.json:1": "4f10b572ee4c0eebdfb87aa7dd0883ba90fb68b6a513027e40323e0dd500ecce",
-    "draft-2019-09:multipleOf.json:0": "7a4bf2899531b11ff238c5121b29124a9459b1ed8e5a3dbf3656ee8c13c5a9bf",
-    "draft-2019-09:multipleOf.json:1": "7a4bf2899531b11ff238c5121b29124a9459b1ed8e5a3dbf3656ee8c13c5a9bf",
-    "draft-2019-09:multipleOf.json:2": "7a4bf2899531b11ff238c5121b29124a9459b1ed8e5a3dbf3656ee8c13c5a9bf",
-    "draft-2019-09:multipleOf.json:3": "7a4bf2899531b11ff238c5121b29124a9459b1ed8e5a3dbf3656ee8c13c5a9bf",
-    "draft-2019-09:multipleOf.json:4": "7a4bf2899531b11ff238c5121b29124a9459b1ed8e5a3dbf3656ee8c13c5a9bf",
     "draft-2019-09:not.json:0": "3e052301c20defd81559310a036ad8544c04c442a49c8ebcf5959981ad03efe0",
     "draft-2019-09:not.json:1": "3e052301c20defd81559310a036ad8544c04c442a49c8ebcf5959981ad03efe0",
     "draft-2019-09:not.json:2": "3e052301c20defd81559310a036ad8544c04c442a49c8ebcf5959981ad03efe0",
     "draft-2019-09:not.json:7": "3e052301c20defd81559310a036ad8544c04c442a49c8ebcf5959981ad03efe0",
     "draft-2019-09:not.json:8": "3e052301c20defd81559310a036ad8544c04c442a49c8ebcf5959981ad03efe0",
-    "draft-2019-09:oneOf.json:0": "22269dab9adc1844e414510ee167dacf072c40bac235bc0a84a387f3bc2432bc",
-    "draft-2019-09:oneOf.json:1": "8379938b9b726ff0eed184009528a26031c6426724a0cd32a66d9cf32a0e943b",
-    "draft-2019-09:pattern.json:0": "3ae23edf60660cb751314c741f8a3cf5cf1b6847d2887bab33f9b33cdc689728",
-    "draft-2019-09:pattern.json:1": "3ae23edf60660cb751314c741f8a3cf5cf1b6847d2887bab33f9b33cdc689728",
     "draft-2019-09:patternProperties.json:0": "f7835a7de7fe4f8f2350640df6abea1a832d228db7ea5389651e5c1ed9548bef",
     "draft-2019-09:patternProperties.json:1": "f7835a7de7fe4f8f2350640df6abea1a832d228db7ea5389651e5c1ed9548bef",
     "draft-2019-09:patternProperties.json:2": "f7835a7de7fe4f8f2350640df6abea1a832d228db7ea5389651e5c1ed9548bef",
@@ -2168,14 +1937,13 @@
     "draft-2019-09:ref.json:6": "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012",
     "draft-2019-09:ref.json:11": "965d756687206c6f3e98c4ad532f9e6472d355b0d11f29a3b0ef35d2ee7739d7",
     "draft-2019-09:ref.json:13": "8f55ec16091700f6b3c582213df0cb9eb5f5a1ce3279a208f5d41331520c186f",
-    "draft-2019-09:ref.json:14": "041845aeaec76af08fd3c015ac981848f3785581ab85b1a6441a8c9baa0bdce9",
     "draft-2019-09:ref.json:15": "22a8a3d9053996b327771353546579c030b1878951f13c5dfa88311108ff1143",
     "draft-2019-09:ref.json:16": "22a8a3d9053996b327771353546579c030b1878951f13c5dfa88311108ff1143",
     "draft-2019-09:ref.json:17": "fee39c184cfcb3ba67d52abc50232f27b829147874c96422d69ad6075119ee4c",
     "draft-2019-09:ref.json:18": "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012",
     "draft-2019-09:ref.json:19": "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012",
     "draft-2019-09:ref.json:20": "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012",
-    "draft-2019-09:ref.json:21": "4f10b572ee4c0eebdfb87aa7dd0883ba90fb68b6a513027e40323e0dd500ecce",
+    "draft-2019-09:ref.json:21": "b3d40056e1a484f7a40299187583e3ae27a85e74cf209d55fadffd4d9a4e5c4b",
     "draft-2019-09:ref.json:26": "b3d40056e1a484f7a40299187583e3ae27a85e74cf209d55fadffd4d9a4e5c4b",
     "draft-2019-09:ref.json:27": "b3d40056e1a484f7a40299187583e3ae27a85e74cf209d55fadffd4d9a4e5c4b",
     "draft-2019-09:ref.json:28": "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012",
@@ -2270,25 +2038,15 @@
     "draft-2020-12:additionalProperties.json:5": "a33207be89947c888f2d6868285adc17af022e936b220b6bf2325a409cf825ff",
     "draft-2020-12:additionalProperties.json:8": "38eee3540182ba474f77b34ce4fb235a268c8bb576ef591510f28f0a99ecf0e4",
     "draft-2020-12:allOf.json:1": "a33207be89947c888f2d6868285adc17af022e936b220b6bf2325a409cf825ff",
-    "draft-2020-12:allOf.json:2": "5d325f062639b1c5bd21d8bf71ce597ed62311e0c2284982308109b0bc72b3db",
-    "draft-2020-12:allOf.json:11": "cfe5668bd62ff8f41016e246313d20cb2d6ee6f00a7e1c263328f4835f3c5b96",
     "draft-2020-12:anchor.json:0": "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012",
     "draft-2020-12:anchor.json:1": "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012",
     "draft-2020-12:anchor.json:2": "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012",
     "draft-2020-12:anchor.json:3": "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012",
-    "draft-2020-12:anyOf.json:0": "2f36f99af32115e9b61c57402b274072d3bed59a55ed9308a479ffbcd7f235c6",
-    "draft-2020-12:anyOf.json:1": "17133f5c263a9fa679532a30e57f50a183997a84fea12fd53c1e70e701fb8e6c",
-    "draft-2020-12:const.json:1": "a9be553871f07ca70c11f953727ae9382ef9b5e211c85644e63c1ed56bffae22",
-    "draft-2020-12:const.json:2": "a9be553871f07ca70c11f953727ae9382ef9b5e211c85644e63c1ed56bffae22",
-    "draft-2020-12:const.json:6": "a9be553871f07ca70c11f953727ae9382ef9b5e211c85644e63c1ed56bffae22",
-    "draft-2020-12:const.json:7": "a9be553871f07ca70c11f953727ae9382ef9b5e211c85644e63c1ed56bffae22",
-    "draft-2020-12:const.json:8": "a9be553871f07ca70c11f953727ae9382ef9b5e211c85644e63c1ed56bffae22",
-    "draft-2020-12:const.json:9": "a9be553871f07ca70c11f953727ae9382ef9b5e211c85644e63c1ed56bffae22",
     "draft-2020-12:contains.json:0": "43fad8460bf15af7290788702abe2c94d67d120b54d5a26592328201794ce716",
     "draft-2020-12:contains.json:1": "43fad8460bf15af7290788702abe2c94d67d120b54d5a26592328201794ce716",
     "draft-2020-12:contains.json:2": "43fad8460bf15af7290788702abe2c94d67d120b54d5a26592328201794ce716",
     "draft-2020-12:contains.json:3": "43fad8460bf15af7290788702abe2c94d67d120b54d5a26592328201794ce716",
-    "draft-2020-12:contains.json:4": "b4a1cee48a8f894c6b144be189cdf9c3c533edb2435185090fab666f2f47fd98",
+    "draft-2020-12:contains.json:4": "43fad8460bf15af7290788702abe2c94d67d120b54d5a26592328201794ce716",
     "draft-2020-12:contains.json:5": "43fad8460bf15af7290788702abe2c94d67d120b54d5a26592328201794ce716",
     "draft-2020-12:contains.json:6": "43fad8460bf15af7290788702abe2c94d67d120b54d5a26592328201794ce716",
     "draft-2020-12:content.json:0": "074774ddbe7fb3cfa210f5fd14b722a09cf9032a048363f220847ae2ed9108f9",
@@ -2325,13 +2083,6 @@
     "draft-2020-12:dynamicRef.json:18": "7032310f6e79596f78290867981e79840d8c39757ef572cae9f0bcf66b6aec3c",
     "draft-2020-12:dynamicRef.json:19": "324ea112084e4e48a9bbd5ef7721996e94d2d2f7eab7814739dced243b156d20",
     "draft-2020-12:dynamicRef.json:20": "d45ac1b5fa873f5b7ab1aa396251d566b500446f3ca6643ebefa92912bd53851",
-    "draft-2020-12:enum.json:1": "d715592bf2e90d9ac9bf8b9b200cd6572ca253237dbba7c455a2fceada14b9f4",
-    "draft-2020-12:enum.json:6": "041845aeaec76af08fd3c015ac981848f3785581ab85b1a6441a8c9baa0bdce9",
-    "draft-2020-12:enum.json:8": "041845aeaec76af08fd3c015ac981848f3785581ab85b1a6441a8c9baa0bdce9",
-    "draft-2020-12:enum.json:10": "041845aeaec76af08fd3c015ac981848f3785581ab85b1a6441a8c9baa0bdce9",
-    "draft-2020-12:enum.json:12": "041845aeaec76af08fd3c015ac981848f3785581ab85b1a6441a8c9baa0bdce9",
-    "draft-2020-12:exclusiveMaximum.json:0": "4f10b572ee4c0eebdfb87aa7dd0883ba90fb68b6a513027e40323e0dd500ecce",
-    "draft-2020-12:exclusiveMinimum.json:0": "4f10b572ee4c0eebdfb87aa7dd0883ba90fb68b6a513027e40323e0dd500ecce",
     "draft-2020-12:if-then-else.json:0": "a50f8bf19161fd47f0cc11908dff1f84ebdc2b185c2621961d8f2d882a02994b",
     "draft-2020-12:if-then-else.json:1": "0dcfcc137e1429303ce33ff7855ed00184cc93007f064a6c7d0abc0c0ff397af",
     "draft-2020-12:if-then-else.json:2": "4715e81e583334e3d681e1260a7f7f859cc3eb2c5a0bc4f479b8745deb89a676",
@@ -2355,13 +2106,9 @@
     "draft-2020-12:maxContains.json:2": "419252634efdbc769c3c64350602c55edb04eec69a509d582cb7335db4b94b4e",
     "draft-2020-12:maxContains.json:3": "c146d59dbfa9f8ba12c381cff9f0b499254526462742f6fb6bc019bee1bbaf89",
     "draft-2020-12:maxContains.json:4": "c146d59dbfa9f8ba12c381cff9f0b499254526462742f6fb6bc019bee1bbaf89",
-    "draft-2020-12:maxLength.json:0": "9089b797c36de6f4f2e7fa79dc937a94b6971a166589beb2f60250812698858c",
-    "draft-2020-12:maxLength.json:1": "9089b797c36de6f4f2e7fa79dc937a94b6971a166589beb2f60250812698858c",
     "draft-2020-12:maxProperties.json:0": "318c5862d291cd6e122b716eb450b1e47307278d251ddf88a262b38b23f6ee84",
     "draft-2020-12:maxProperties.json:1": "318c5862d291cd6e122b716eb450b1e47307278d251ddf88a262b38b23f6ee84",
     "draft-2020-12:maxProperties.json:2": "318c5862d291cd6e122b716eb450b1e47307278d251ddf88a262b38b23f6ee84",
-    "draft-2020-12:maximum.json:0": "4f10b572ee4c0eebdfb87aa7dd0883ba90fb68b6a513027e40323e0dd500ecce",
-    "draft-2020-12:maximum.json:1": "4f10b572ee4c0eebdfb87aa7dd0883ba90fb68b6a513027e40323e0dd500ecce",
     "draft-2020-12:minContains.json:0": "11759e97fabff14fa36af1feeabeb856ccb4adfc674399c20e46f8bb12ad5635",
     "draft-2020-12:minContains.json:1": "a724fdecc8c6eb92044f4c32f9a8db7117fcf70948882057b104a01715ad5a96",
     "draft-2020-12:minContains.json:2": "a724fdecc8c6eb92044f4c32f9a8db7117fcf70948882057b104a01715ad5a96",
@@ -2370,26 +2117,13 @@
     "draft-2020-12:minContains.json:5": "c146d59dbfa9f8ba12c381cff9f0b499254526462742f6fb6bc019bee1bbaf89",
     "draft-2020-12:minContains.json:6": "a724fdecc8c6eb92044f4c32f9a8db7117fcf70948882057b104a01715ad5a96",
     "draft-2020-12:minContains.json:7": "c146d59dbfa9f8ba12c381cff9f0b499254526462742f6fb6bc019bee1bbaf89",
-    "draft-2020-12:minLength.json:0": "7535fc7a05cd123a8b90409188c4d469575a0b19e6e2d0756bd8add366d64aa6",
-    "draft-2020-12:minLength.json:1": "7535fc7a05cd123a8b90409188c4d469575a0b19e6e2d0756bd8add366d64aa6",
     "draft-2020-12:minProperties.json:0": "396fb2aa57602cf078e04c1a4a82060f47b95d4b94f713b7a18045966ecb2cb8",
     "draft-2020-12:minProperties.json:1": "396fb2aa57602cf078e04c1a4a82060f47b95d4b94f713b7a18045966ecb2cb8",
-    "draft-2020-12:minimum.json:0": "4f10b572ee4c0eebdfb87aa7dd0883ba90fb68b6a513027e40323e0dd500ecce",
-    "draft-2020-12:minimum.json:1": "4f10b572ee4c0eebdfb87aa7dd0883ba90fb68b6a513027e40323e0dd500ecce",
-    "draft-2020-12:multipleOf.json:0": "7a4bf2899531b11ff238c5121b29124a9459b1ed8e5a3dbf3656ee8c13c5a9bf",
-    "draft-2020-12:multipleOf.json:1": "7a4bf2899531b11ff238c5121b29124a9459b1ed8e5a3dbf3656ee8c13c5a9bf",
-    "draft-2020-12:multipleOf.json:2": "7a4bf2899531b11ff238c5121b29124a9459b1ed8e5a3dbf3656ee8c13c5a9bf",
-    "draft-2020-12:multipleOf.json:3": "7a4bf2899531b11ff238c5121b29124a9459b1ed8e5a3dbf3656ee8c13c5a9bf",
-    "draft-2020-12:multipleOf.json:4": "7a4bf2899531b11ff238c5121b29124a9459b1ed8e5a3dbf3656ee8c13c5a9bf",
     "draft-2020-12:not.json:0": "3e052301c20defd81559310a036ad8544c04c442a49c8ebcf5959981ad03efe0",
     "draft-2020-12:not.json:1": "3e052301c20defd81559310a036ad8544c04c442a49c8ebcf5959981ad03efe0",
     "draft-2020-12:not.json:2": "3e052301c20defd81559310a036ad8544c04c442a49c8ebcf5959981ad03efe0",
     "draft-2020-12:not.json:7": "3e052301c20defd81559310a036ad8544c04c442a49c8ebcf5959981ad03efe0",
     "draft-2020-12:not.json:8": "3e052301c20defd81559310a036ad8544c04c442a49c8ebcf5959981ad03efe0",
-    "draft-2020-12:oneOf.json:0": "22269dab9adc1844e414510ee167dacf072c40bac235bc0a84a387f3bc2432bc",
-    "draft-2020-12:oneOf.json:1": "8379938b9b726ff0eed184009528a26031c6426724a0cd32a66d9cf32a0e943b",
-    "draft-2020-12:pattern.json:0": "3ae23edf60660cb751314c741f8a3cf5cf1b6847d2887bab33f9b33cdc689728",
-    "draft-2020-12:pattern.json:1": "3ae23edf60660cb751314c741f8a3cf5cf1b6847d2887bab33f9b33cdc689728",
     "draft-2020-12:patternProperties.json:0": "f7835a7de7fe4f8f2350640df6abea1a832d228db7ea5389651e5c1ed9548bef",
     "draft-2020-12:patternProperties.json:1": "f7835a7de7fe4f8f2350640df6abea1a832d228db7ea5389651e5c1ed9548bef",
     "draft-2020-12:patternProperties.json:2": "f7835a7de7fe4f8f2350640df6abea1a832d228db7ea5389651e5c1ed9548bef",
@@ -2406,14 +2140,13 @@
     "draft-2020-12:ref.json:6": "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012",
     "draft-2020-12:ref.json:11": "965d756687206c6f3e98c4ad532f9e6472d355b0d11f29a3b0ef35d2ee7739d7",
     "draft-2020-12:ref.json:13": "8f55ec16091700f6b3c582213df0cb9eb5f5a1ce3279a208f5d41331520c186f",
-    "draft-2020-12:ref.json:14": "041845aeaec76af08fd3c015ac981848f3785581ab85b1a6441a8c9baa0bdce9",
     "draft-2020-12:ref.json:15": "22a8a3d9053996b327771353546579c030b1878951f13c5dfa88311108ff1143",
     "draft-2020-12:ref.json:16": "22a8a3d9053996b327771353546579c030b1878951f13c5dfa88311108ff1143",
     "draft-2020-12:ref.json:17": "fee39c184cfcb3ba67d52abc50232f27b829147874c96422d69ad6075119ee4c",
     "draft-2020-12:ref.json:18": "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012",
     "draft-2020-12:ref.json:19": "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012",
     "draft-2020-12:ref.json:20": "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012",
-    "draft-2020-12:ref.json:21": "4f10b572ee4c0eebdfb87aa7dd0883ba90fb68b6a513027e40323e0dd500ecce",
+    "draft-2020-12:ref.json:21": "b3d40056e1a484f7a40299187583e3ae27a85e74cf209d55fadffd4d9a4e5c4b",
     "draft-2020-12:ref.json:26": "b3d40056e1a484f7a40299187583e3ae27a85e74cf209d55fadffd4d9a4e5c4b",
     "draft-2020-12:ref.json:27": "b3d40056e1a484f7a40299187583e3ae27a85e74cf209d55fadffd4d9a4e5c4b",
     "draft-2020-12:ref.json:28": "b404c013f38c234b8ff29105aec9ab075b4abc4493b14130a78d4f97b325a012",
@@ -2602,12 +2335,12 @@
   },
   "suiteCommit": "b01af8c8d50244a2eb4dd3e01073e24823aa8691",
   "summary": {
-    "compileGapCaseCount": 1974,
-    "compileGapGroupCount": 602,
-    "conformingCaseCount": 1488,
-    "gapCaseInventorySha256": "c0486a4edec2dafd40297d1ff57ea4d23ee4439e3fe4a0a09cffdf2b8cd281f9",
+    "compileGapCaseCount": 1602,
+    "compileGapGroupCount": 497,
+    "conformingCaseCount": 1860,
+    "gapCaseInventorySha256": "e7574c81c0834f9164a5d2751b409a8bdfcdb4cf1d89487195cbcafa65182dc6",
     "oracleDiscrepancyCount": 63,
-    "passingCaseInventorySha256": "7c2e7255770d700d934ca1d655f77f564db02979efffcb8daf9a34b2cdb81d53",
+    "passingCaseInventorySha256": "7faa43c82b8c315530c6bc49cd431518d718947ed67f7f9b83d6a73c3f677d6e",
     "runtimeGapCaseCount": 23
   },
   "version": 1

@@ -23,15 +23,11 @@ export type OfficialSuitePrintBatchResult = Readonly<{
   results: readonly OfficialSuitePrintResult[];
 }>;
 
-const preservingJsonSchemaValueSchema: z.ZodType<JsonSchemaValue> = z.custom<JsonSchemaValue>(
-  (value) => jsonSchemaValueSchema.safeParse(value).success,
-);
-
 const officialSuitePrintRequestSchema: z.ZodType<OfficialSuitePrintRequest> = z
   .object({
     dialect: jsonSchemaDialectSchema,
     id: z.string().min(1),
-    schema: preservingJsonSchemaValueSchema,
+    schema: jsonSchemaValueSchema,
   })
   .strict();
 

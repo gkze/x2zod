@@ -1,6 +1,6 @@
 import { z } from "zod/v4";
 
-import { jsonSchemaValueSchema } from "./document";
+import { createJsonSchemaValueSchema } from "./document";
 import type { JsonSchemaValue } from "./document";
 import { jsonSchemaDialects, jsonSchemaSourceProfiles, jsonSchemaValidators } from "./metadata";
 import type { JsonSchemaDialect, JsonSchemaSourceProfile, JsonSchemaValidator } from "./metadata";
@@ -65,7 +65,7 @@ export const jsonSchemaSourceProfileSchema: z.ZodType<
 // Keep the public option input typed as JsonSchemaValue.
 // The document parser's schema intentionally accepts unknown raw input.
 const jsonSchemaInputValueSchema: z.ZodType<JsonSchemaValue, JsonSchemaValue> =
-  z.custom<JsonSchemaValue>((value) => jsonSchemaValueSchema.safeParse(value).success);
+  createJsonSchemaValueSchema<JsonSchemaValue>();
 
 const externalSchemasSchemaValue: z.ZodType<
   Readonly<Record<string, JsonSchemaValue>>,

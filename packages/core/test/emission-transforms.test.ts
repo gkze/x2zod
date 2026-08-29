@@ -274,6 +274,24 @@ void describe("buildZodSourceFile emission transform diagnostics", () => {
     assert.equal(result.ok, false);
     assert.equal(result.diagnostics[0].code, "unsupported_emission_transform");
   });
+
+  void test("rejects object-input preservation across property-key transforms", () => {
+    const result = buildZodSourceFile(
+      rootOnlyModule(
+        zodPlan.preserveObjectInput(
+          zodPlan.strict(
+            zodPlan.object({ ["__proto__"]: zodPlan.string(), snake_key: zodPlan.string() }),
+          ),
+          ["__proto__"],
+        ),
+      ),
+      defaultOutputOptions,
+      camelCasePropertyTransforms,
+    );
+
+    assert.equal(result.ok, false);
+    assert.equal(result.diagnostics[0].code, "unsupported_emission_transform");
+  });
 });
 
 void describe("generated property-key codecs", () => {

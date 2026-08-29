@@ -1,6 +1,7 @@
 import { createDiagnostic } from "./diagnostics";
 import { err, ok } from "./result";
 import type { Result } from "./result";
+import { zodHelperReceiver } from "./zod-helpers";
 import type { ZodDeclaration, ZodExpression, ZodMethodCall, ZodSymbol } from "./zod-plan";
 import { zodMethodMetadataFor } from "./zod-plan-metadata";
 import type { ZodFactoryName, ZodReceiverRequirement } from "./zod-plan-metadata";
@@ -38,15 +39,22 @@ const receiverRequirementDescription = (receiver: ZodReceiverRequirement): strin
   return `a Zod ${receiver} schema receiver`;
 };
 
-const expectedReceiverDescription = (method: ZodMethodCall["method"]): string | undefined => {
-  const receiver = zodMethodMetadataFor(method)?.receiver;
+const callReceiverRequirement = (call: ZodMethodCall): ZodReceiverRequirement | undefined => {
+  const [argument] = call.args;
+  return call.method === "refine" && argument?.kind === "helper"
+    ? zodHelperReceiver(argument.request)
+    : zodMethodMetadataFor(call.method)?.receiver;
+};
+
+const expectedCallReceiverDescription = (call: ZodMethodCall): string | undefined => {
+  const receiver = callReceiverRequirement(call);
   return receiver === undefined || receiver === "any"
     ? undefined
     : receiverRequirementDescription(receiver);
 };
 
-const methodAllowsReceiverKind = (method: ZodMethodCall["method"], kind: ReceiverKind): boolean => {
-  const receiver = zodMethodMetadataFor(method)?.receiver;
+const callAllowsReceiverKind = (call: ZodMethodCall, kind: ReceiverKind): boolean => {
+  const receiver = callReceiverRequirement(call);
   return (
     receiver === undefined ||
     receiver === "any" ||
@@ -73,6 +81,7 @@ const baseObjectShapeKeys = (
       ? new Set(shape.properties.map((property) => property.key))
       : undefined;
   }
+  if (expression.kind === "wrapper") return undefined;
   if (visiting.has(expression.symbol)) return undefined;
 
   const declaration = context.declarations.get(expression.symbol);
@@ -119,6 +128,7 @@ const baseReceiverKind = (
   visiting: ReadonlySet<ZodSymbol> = new Set<ZodSymbol>(),
 ): ReceiverKind | undefined => {
   if (expression.kind === "factory") return expression.factory;
+  if (expression.kind === "wrapper") return "wrapped";
   if (visiting.has(expression.symbol)) return undefined;
 
   const declaration = context.declarations.get(expression.symbol);
@@ -166,10 +176,10 @@ export const validateZodCallReceivers = (
 
   for (const call of expression.calls) {
     if (receiverKind === undefined) return ok(expression);
-    if (!methodAllowsReceiverKind(call.method, receiverKind))
+    if (!callAllowsReceiverKind(call, receiverKind))
       return invalidMethodReceiver(
         call.method,
-        expectedReceiverDescription(call.method) ?? receiverDescription(receiverKind),
+        expectedCallReceiverDescription(call) ?? receiverDescription(receiverKind),
       );
     if (zodMethodMetadataFor(call.method)?.printArgument === requiredKeysPrintStrategy) {
       const missingKeys = missingRequiredKeys(call, shapeKeys);

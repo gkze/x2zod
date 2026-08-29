@@ -1,11 +1,13 @@
-import { createDiagnostic } from "./diagnostics";
+import { createDiagnostic, formatZodError } from "./diagnostics";
 import { err, ok } from "./result";
 import type { Result } from "./result";
+import { zodHelperRequestSchema } from "./zod-helpers";
 import type {
   ZodArgument,
   ZodEmissionModule,
   ZodExpression,
   ZodFactoryExpression,
+  ZodHelperArgument,
   ZodMethodCall,
   ZodSymbol,
 } from "./zod-plan";
@@ -77,6 +79,22 @@ const unsupportedMethod = (method: ZodMethodCall["method"]): Result<never> =>
     }),
   );
 
+const invalidWrapperExpression = (wrapper: string): Result<never> =>
+  err(
+    createDiagnostic({
+      code: "invalid_zod_emission_module",
+      message: `Zod wrapper ${wrapper} expects a direct Zod object expression with valid required own keys.`,
+    }),
+  );
+
+const invalidWrapperOwnKeys = (wrapper: string, keys: readonly string[]): Result<never> =>
+  err(
+    createDiagnostic({
+      code: "invalid_zod_emission_module",
+      message: `Zod wrapper ${wrapper} has invalid required own keys: ${keys.join(", ")}`,
+    }),
+  );
+
 const duplicateObjectKeys = (keys: readonly string[]): Result<never> =>
   err(
     createDiagnostic({
@@ -84,6 +102,18 @@ const duplicateObjectKeys = (keys: readonly string[]): Result<never> =>
       message: `Zod object shape contains duplicate keys: ${keys.join(", ")}`,
     }),
   );
+
+const validateHelperRequest = (argument: ZodHelperArgument): Result<ZodArgument> => {
+  const parsed = zodHelperRequestSchema.safeParse(argument.request);
+  return parsed.success
+    ? ok(argument)
+    : err(
+        createDiagnostic({
+          code: "invalid_zod_emission_module",
+          message: `Zod helper request is invalid: ${formatZodError(parsed.error)}`,
+        }),
+      );
+};
 
 const isStringLiteralArgument = (argument: ZodArgument): argument is StringLiteralArgument =>
   argument.kind === "literal" && typeof argument.value === "string";
@@ -178,6 +208,9 @@ const validateArgumentShape = (
       const validExpression = validateExpressionShape(argument.expression, context);
       return validExpression.ok ? ok(argument) : validExpression;
     }
+    case "helper": {
+      return validateHelperRequest(argument);
+    }
     case "literal": {
       return ok(argument);
     }
@@ -240,6 +273,30 @@ const validateExpressionShape = (
   const validCalls = validateCallShapes(expression.calls, context);
   if (!validCalls.ok) return validCalls;
   if (expression.kind === "reference") return validateZodCallReceivers(expression, context);
+  if (expression.kind === "wrapper") {
+    const validExpression = validateExpressionShape(expression.expression, context);
+    if (!validExpression.ok) return validExpression;
+    if (expression.expression.kind !== "factory" || expression.expression.factory !== "object")
+      return invalidWrapperExpression(expression.wrapper);
+    if (
+      expression.expression.calls.some(
+        (call) => zodMethodMetadataFor(call.method)?.wrapsReceiver === true,
+      )
+    )
+      return invalidWrapperExpression(expression.wrapper);
+    const [shape] = expression.expression.args;
+    if (shape?.kind !== "object") return invalidWrapperExpression(expression.wrapper);
+
+    const duplicateOwnKeys = findDuplicateStrings(expression.requiredOwnKeys);
+    if (duplicateOwnKeys.length > 0)
+      return invalidWrapperOwnKeys(expression.wrapper, duplicateOwnKeys);
+
+    const shapeKeys = new Set(shape.properties.map((property) => property.key));
+    const missingOwnKeys = expression.requiredOwnKeys.filter((key) => !shapeKeys.has(key));
+    if (missingOwnKeys.length > 0) return invalidWrapperOwnKeys(expression.wrapper, missingOwnKeys);
+
+    return validateZodCallReceivers(expression, context);
+  }
 
   const validFactoryArgs = validateFactoryArgs(expression);
   if (!validFactoryArgs.ok) return validFactoryArgs;

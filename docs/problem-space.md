@@ -239,7 +239,8 @@ The cleanest cases produce both useful runtime validation and honest inference:
 - Primitive types.
 - Object properties and `required`.
 - String-only `enum` as `z.enum(...)`.
-- Mixed `enum` or `const` as `z.literal(...)` unions.
+- Primitive `const` and mixed primitive `enum` values as `z.literal(...)` unions.
+- Composite `const` and `enum` values as recursive exact tuples and strict objects.
 - Arrays with homogeneous `items`.
 - Tuples with `prefixItems`.
 - Simple `anyOf` as `z.union(...)`.
