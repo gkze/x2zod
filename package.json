@@ -43,7 +43,7 @@
     "publish:jsr": "bun --no-env-file scripts/publish.ts jsr",
     "publish:npm": "bun --no-env-file scripts/publish.ts npm",
     "publish:packages": "bun --no-env-file scripts/publish.ts",
-    "release:version": "changeset version && bun --no-env-file scripts/publish.ts --sync-jsr-metadata && bun --no-env-file install",
+    "release:version": "changeset version && bun --no-env-file scripts/publish.ts --sync-jsr-metadata && bun --no-env-file install && bun --no-env-file run format:workspace",
     "runtime:check": "bun --no-env-file scripts/check-runtime-versions.ts",
     "test": "bun --no-env-file run runtime:check && turbo run --concurrency=4 test",
     "test:conformance:update": "bun --no-env-file run runtime:check && bun --no-env-file packages/input-json-schema/test/official-suite/update-baseline.ts",

@@ -7,13 +7,5 @@
     "./zod-cli-option-overrides": "./src/zod-cli-option-overrides.ts",
     "./zod-to-optique": "./src/zod-to-optique.ts"
   },
-  "publish": {
-    "exclude": [
-      "test/**"
-    ],
-    "include": [
-      "package.json",
-      "src/**/*.ts"
-    ]
-  }
+  "publish": { "exclude": ["test/**"], "include": ["package.json", "src/**/*.ts"] }
 }

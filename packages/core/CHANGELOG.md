@@ -4,11 +4,12 @@
 
 ### Minor Changes
 
-- 286c6ea: Add typed, deduplicated generated refinements for exact numeric and Unicode string constraints.
+- 286c6ea: Add typed, deduplicated generated refinements for exact numeric and Unicode string
+  constraints.
 
   Preserve type-specific keyword applicability without explicit types, support exact `multipleOf`,
-  count string lengths by Unicode code point, and lower composite `const` and `enum` values into exact
-  tuples and strict objects while preserving special own object keys such as `__proto__`.
+  count string lengths by Unicode code point, and lower composite `const` and `enum` values into
+  exact tuples and strict objects while preserving special own object keys such as `__proto__`.
 
 ## 0.3.0
 
