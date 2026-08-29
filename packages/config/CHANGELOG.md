@@ -1,5 +1,12 @@
 # @x2zod/config
 
+## 0.3.1
+
+### Patch Changes
+
+- Updated dependencies [286c6ea]
+  - @x2zod/core@0.4.0
+
 ## 0.3.0
 
 ### Minor Changes
