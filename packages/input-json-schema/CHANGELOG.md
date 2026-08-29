@@ -1,5 +1,20 @@
 # @x2zod/input-json-schema
 
+## 0.3.0
+
+### Minor Changes
+
+- 286c6ea: Add typed, deduplicated generated refinements for exact numeric and Unicode string constraints.
+
+  Preserve type-specific keyword applicability without explicit types, support exact `multipleOf`,
+  count string lengths by Unicode code point, and lower composite `const` and `enum` values into exact
+  tuples and strict objects while preserving special own object keys such as `__proto__`.
+
+### Patch Changes
+
+- Updated dependencies [286c6ea]
+  - @x2zod/core@0.4.0
+
 ## 0.2.1
 
 ### Patch Changes
