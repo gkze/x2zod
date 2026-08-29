@@ -303,7 +303,7 @@ void describe("jsonSchemaInputPlugin precise lower", () => {
     assert.equal(pair.factory, "tuple");
     assert.deepEqual(
       slug.calls.map((call) => String(call.method)),
-      ["regex", "min", "max", "optional"],
+      ["regex", "refine", "optional"],
     );
     assert.deepEqual(
       tags.calls.map((call) => String(call.method)),
@@ -374,6 +374,25 @@ void describe("jsonSchemaInputPlugin precise diagnostics", () => {
     }
   });
 
+  void test("diagnoses invalid multipleOf values without validator preflight", async () => {
+    const results = await Promise.all(
+      [{ multipleOf: 0 }, { multipleOf: -1 }, { multipleOf: "1" }].map(async (schema) => {
+        const prepared = expectOk(
+          await jsonSchemaInputPlugin.prepare(
+            fileDocument(JSON.stringify(schema)),
+            options({ validator: "none" }),
+          ),
+        );
+        return jsonSchemaInputPlugin.lower(prepared, options({ validator: "none" }));
+      }),
+    );
+
+    for (const result of results) {
+      expectErrCode(result, "invalid_schema_document");
+      assert.ok(diagnosticPointers(result).includes("/multipleOf"));
+    }
+  });
+
   void test("collects unsupported keyword diagnostics from referenced external schemas", async () => {
     const pluginOptions = options({
       externalSchemas: {
@@ -428,7 +447,7 @@ void describe("jsonSchemaInputPlugin regression diagnostics", () => {
     assert.ok(diagnosticPointers(result).includes("/minimum"));
   });
 
-  void test("fails when string pattern constraints omit a string type", async () => {
+  void test("lowers string pattern constraints without an explicit string type", async () => {
     const prepared = expectOk(
       await jsonSchemaInputPlugin.prepare(
         fileDocument(JSON.stringify({ pattern: "^a$" })),
@@ -437,8 +456,9 @@ void describe("jsonSchemaInputPlugin regression diagnostics", () => {
     );
     const result = await jsonSchemaInputPlugin.lower(prepared, options({ validator: "none" }));
 
-    expectErrCode(result, "unrepresentable_schema_combination");
-    assert.ok(diagnosticPointers(result).includes("/pattern"));
+    const root = rootExpression(parseEmissionModule(expectOk(result)));
+    assert.equal(root.kind, "factory");
+    assert.equal(root.factory, "union");
   });
 
   void test("does not resolve partial array-index tokens in JSON Pointers", async () => {

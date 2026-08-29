@@ -49,13 +49,19 @@ import type { Result } from "./result";
 import { createRemapPropertiesHelper, createSourceCodecExpression } from "./source-codecs";
 import { resolveZodDeclarationNames } from "./source-declarations";
 import type { NamedZodDeclaration } from "./source-declarations";
-import { sourceExpressionUsesPropertyMap } from "./source-model";
+import {
+  createZodHelperExpression,
+  createZodHelperStatements,
+  createZodWrapperExpression,
+} from "./source-helpers";
+import { sourceExpressionHelperNames, sourceExpressionUsesPropertyMap } from "./source-model";
 import type { SourceArgument, SourceExpression, SourceMethodCall } from "./source-model";
 import {
   isTypeScriptIdentifier,
   typeScriptIdentifierSchema as typeScriptIdentifierSchemaValue,
 } from "./typescript-identifiers";
 import type { TypeScriptIdentifier as TypeScriptIdentifierValue } from "./typescript-identifiers";
+import type { ZodHelperName } from "./zod-helpers";
 import type { ZodEmissionModule, ZodLiteralValue, ZodSymbol } from "./zod-plan";
 import { zodMethodMetadataFor } from "./zod-plan-metadata";
 import { validateZodEmissionModule } from "./zod-plan-validation";
@@ -190,6 +196,9 @@ const createArgumentExpression = (
     case "expression": {
       return createZodExpression(argument.expression, schemaConstNames);
     }
+    case "helper": {
+      return createZodHelperExpression(argument.request);
+    }
     case "literal": {
       return createLiteralExpression(argument.value);
     }
@@ -297,6 +306,13 @@ const createBaseZodExpression = (
       expression,
     });
 
+  if (expression.kind === "wrapper")
+    return createZodWrapperExpression(
+      expression.wrapper,
+      createZodExpression(expression.expression, schemaConstNames),
+      expression.requiredOwnKeys,
+    );
+
   return createCallExpression(
     createPropertyAccessExpression(
       createIdentifier("z"),
@@ -395,10 +411,15 @@ export const buildZodSourceFile = (
   const needsRemapHelper = sourceModule.value.declarations.some((declaration) =>
     sourceExpressionUsesPropertyMap(declaration.expression),
   );
+  const helperNames = new Set<ZodHelperName>();
+  for (const declaration of sourceModule.value.declarations)
+    for (const helperName of sourceExpressionHelperNames(declaration.expression))
+      helperNames.add(helperName);
 
   return ok({
     sourceFile: createSourceFile([
       createZodImport(output.value.zodImportPath),
+      ...createZodHelperStatements(helperNames),
       ...(needsRemapHelper ? [createRemapPropertiesHelper()] : []),
       ...namedModule.value.declarations.map((declaration) =>
         createSchemaStatementWithNames(

@@ -18,6 +18,7 @@ import {
   ts,
   zodDeclaration,
   zodDeclarationNameHint,
+  zodHelper,
   zodModule,
   zodPlan,
   zodSymbol,
@@ -43,6 +44,8 @@ const bundledCoreFileName = "index.mjs";
 const bundledSourcePrinterFileName = "source-print-helper.mjs";
 const generatedRuntimeFileName = "generated-runtime.ts";
 const maximumCount = 10;
+const firstDivisor = 0.1;
+const secondDivisor = 0.2;
 const defaultOutputOptions = { typeName: "User" } satisfies Parameters<
   typeof buildZodSourceFile
 >[1];
@@ -52,6 +55,7 @@ type RuntimeZodSchema = Readonly<{ safeParse: (value: unknown) => RuntimeParseRe
 type RuntimeUser = Readonly<{
   __proto__: string;
   count: number;
+  maybe?: string | undefined;
   pair: readonly [string, number];
   payload: Readonly<{ value: string }>;
   slug: string;
@@ -227,6 +231,50 @@ void describe("buildZodSourceFile", () => {
   });
 });
 
+void describe("buildZodSourceFile built-in helpers", () => {
+  void test("emits each requested helper once in catalog order", () => {
+    const sourceFile = sourceFileFor(
+      rootOnlyModule(
+        zodPlan.object({
+          first: zodPlan.refine(zodPlan.number(), zodHelper.exactMultipleOf(firstDivisor)),
+          firstPreserved: zodPlan.preserveObjectInput(
+            zodPlan.strict(zodPlan.object({ ["__proto__"]: zodPlan.string() })),
+            ["__proto__"],
+          ),
+          second: zodPlan.refine(zodPlan.number(), zodHelper.exactMultipleOf(secondDivisor)),
+          secondPreserved: zodPlan.preserveObjectInput(
+            zodPlan.strict(zodPlan.object({ ["__proto__"]: zodPlan.string() })),
+            ["__proto__"],
+          ),
+          text: zodPlan.refine(zodPlan.string(), zodHelper.codePointLength(1, 2)),
+        }),
+      ),
+    );
+
+    assert.deepEqual(variableNames(sourceFile), [
+      "x2zodCodePointLength",
+      "x2zodDecimalParts",
+      "x2zodExactMultipleOf",
+      "x2zodPreserveObjectInput",
+      "userSchema",
+    ]);
+  });
+
+  void test("rejects invalid helper requests built through the typed API", () => {
+    const invalidExpressions = [
+      zodPlan.refine(zodPlan.number(), zodHelper.exactMultipleOf(0)),
+      zodPlan.refine(zodPlan.string(), zodHelper.codePointLength(null, null)),
+      zodPlan.refine(zodPlan.string(), zodHelper.codePointLength(2, 1)),
+    ];
+
+    for (const expression of invalidExpressions) {
+      const result = buildZodSourceFile(rootOnlyModule(expression), defaultOutputOptions);
+      assert.equal(result.ok, false);
+      assert.equal(result.diagnostics[0].code, "invalid_zod_emission_module");
+    }
+  });
+});
+
 void describe("buildZodSourceFile declaration ordering and exports", () => {
   void test("orders declarations before their reference sites", () => {
     const middleSymbol = zodSymbol("middle");
@@ -289,6 +337,7 @@ void describe("buildZodSourceFile native printing", () => {
       assert.ok(printedSource.includes("z.tuple"));
       assert.ok(printedSource.includes(".int().gt(0).lte(10)"));
       assert.ok(printedSource.includes('["__proto__"]: z.string()'));
+      assert.ok(printedSource.includes("x2zodPreserveObjectInput"));
       assert.ok(printedSource.includes(".required({ value: true })"));
       assert.ok(printedSource.includes(".min(1).max(2)"));
 
@@ -296,6 +345,7 @@ void describe("buildZodSourceFile native printing", () => {
       const userSchema = await importGeneratedUserSchema(generatedFile);
 
       assert.equal(userSchema.safeParse(validRuntimeUser()).success, true);
+      assert.equal(userSchema.safeParse({ ...validRuntimeUser(), maybe: "present" }).success, true);
       assert.equal(
         userSchema.safeParse({
           count: 1,

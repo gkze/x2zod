@@ -12,17 +12,17 @@ import type {
 import { lowerJsonSchemaArray } from "./array";
 import { lowerJsonSchemaComposition } from "./composition-lower";
 import {
-  applyJsonSchemaNumberBounds,
+  applyJsonSchemaNumberConstraints,
   applyJsonSchemaStringConstraints,
-  firstJsonSchemaStringConstraintPointer,
-  hasJsonSchemaNumberBounds,
+  hasJsonSchemaNumberConstraints,
   hasJsonSchemaStringConstraints,
 } from "./constraints";
 import { addJsonSchemaDiagnostic, resultFromJsonSchemaDiagnostics } from "./diagnostics";
 import type { JsonSchemaDiagnosticInput, JsonSchemaDiagnosticSink } from "./diagnostics";
-import { isJsonArray, isJsonPrimitive, jsonPointerFromPath, jsonStringValues } from "./document";
+import { isJsonArray, jsonPointerFromPath, jsonStringValues } from "./document";
 import type { JsonObject, JsonSchemaValue, JsonValue, ParsedJsonSchemaDocument } from "./document";
 import { collectKeywordDiagnostics } from "./keyword-diagnostics";
+import { lowerJsonLiteral } from "./literal";
 import { jsonSchemaKeywords } from "./metadata";
 import { jsonSchemaDeclarationNameHints } from "./name-hints";
 import { lowerJsonSchemaObject } from "./object";
@@ -105,22 +105,6 @@ const collectSchemaKeywordDiagnostics = (
   });
 };
 
-const lowerLiteralValue = (
-  value: JsonValue,
-  pointer: JsonPointer,
-  context: LoweringContext,
-): ZodExpression => {
-  if (isJsonPrimitive(value)) return zodPlan.literal(value);
-
-  addDiagnostic(context, {
-    code: "unrepresentable_schema_combination",
-    message:
-      "Only primitive const and enum values are supported in the first JSON Schema lowering slice.",
-    pointer,
-  });
-  return zodPlan.unknown();
-};
-
 const lowerEnum = (
   values: JsonValue,
   pointer: JsonPointer,
@@ -140,9 +124,7 @@ const lowerEnum = (
   if (firstStringValue !== undefined && stringValues.length === values.length)
     return zodPlan.enum([firstStringValue, ...remainingStringValues]);
 
-  const expressions = values.map((value, index) =>
-    lowerLiteralValue(value, jsonSchemaPointerWithSegment(pointer, index), context),
-  );
+  const expressions = values.map((value) => lowerJsonLiteral(value));
   return oneOrUnion(expressions);
 };
 
@@ -156,7 +138,7 @@ const lowerTypeName = (typeName: string, request: LowerTypeRequest): ZodExpressi
       return zodPlan.boolean();
     }
     case "integer": {
-      return applyJsonSchemaNumberBounds(
+      return applyJsonSchemaNumberConstraints(
         { expression: zodPlan.integer(), pointer, schema },
         diagnosticSink(context),
       );
@@ -165,7 +147,7 @@ const lowerTypeName = (typeName: string, request: LowerTypeRequest): ZodExpressi
       return zodPlan.null();
     }
     case "number": {
-      return applyJsonSchemaNumberBounds(
+      return applyJsonSchemaNumberConstraints(
         { expression: zodPlan.number(), pointer, schema },
         diagnosticSink(context),
       );
@@ -263,58 +245,42 @@ const lowerObjectSchema = (
     lowerSchema: (childPointer, childSchema) => lowerSchema(childPointer, childSchema, context),
   });
 
-const lowerUntypedConstraintSchema = (
+const anyJsonObject = (): ZodExpression =>
+  zodPlan.preserveObjectInput(zodPlan.passthrough(zodPlan.object({})), []);
+
+const lowerUntypedTypeSpecificSchema = (
   schema: JsonObject,
   pointer: JsonPointer,
   context: LoweringContext,
 ): ZodExpression | undefined => {
-  if (hasJsonSchemaNumberBounds(schema)) {
-    addDiagnostic(context, {
-      code: "unrepresentable_schema_combination",
-      message: [
-        "JSON Schema numeric bounds without a number or integer type",
-        "are not supported by this lowering slice.",
-      ].join(" "),
-      pointer,
-    });
-    return zodPlan.unknown();
-  }
-  if (!hasJsonSchemaStringConstraints(schema)) return undefined;
+  const hasNumberConstraints = hasJsonSchemaNumberConstraints(schema);
+  const hasStringConstraints = hasJsonSchemaStringConstraints(schema);
+  const assertionKind = jsonSchemaUntypedAssertionKind(schema);
+  if (!hasNumberConstraints && !hasStringConstraints && assertionKind === undefined)
+    return undefined;
 
-  applyJsonSchemaStringConstraints(
-    { expression: zodPlan.string(), pointer, schema },
-    diagnosticSink(context),
-  );
-  addDiagnostic(context, {
-    code: "unrepresentable_schema_combination",
-    message: [
-      "JSON Schema string constraints without a string type",
-      "are not supported by this lowering slice.",
-    ].join(" "),
-    pointer: firstJsonSchemaStringConstraintPointer(schema, pointer),
-  });
-  return zodPlan.unknown();
-};
-
-const anyJsonObject = (): ZodExpression => zodPlan.passthrough(zodPlan.object({}));
-
-const lowerUntypedApplicatorSchema = (
-  schema: JsonObject,
-  pointer: JsonPointer,
-  context: LoweringContext,
-): ZodExpression | undefined => {
-  const kind = jsonSchemaUntypedAssertionKind(schema);
-  if (kind === undefined) return undefined;
-
-  const expressions: ZodExpression[] = [];
-  if (kind === "array" || kind === "mixed")
-    expressions.push(lowerArraySchema(schema, pointer, context));
-  else expressions.push(zodPlan.array(zodPlan.unknown()));
-  if (kind === "object" || kind === "mixed")
-    expressions.push(lowerObjectSchema(schema, pointer, context));
-  else expressions.push(anyJsonObject());
-  expressions.push(zodPlan.boolean(), zodPlan.null(), zodPlan.number(), zodPlan.string());
-  return oneOrUnion(expressions);
+  return oneOrUnion([
+    assertionKind === "array" || assertionKind === "mixed"
+      ? lowerArraySchema(schema, pointer, context)
+      : zodPlan.array(zodPlan.unknown()),
+    assertionKind === "object" || assertionKind === "mixed"
+      ? lowerObjectSchema(schema, pointer, context)
+      : anyJsonObject(),
+    zodPlan.boolean(),
+    zodPlan.null(),
+    hasNumberConstraints
+      ? applyJsonSchemaNumberConstraints(
+          { expression: zodPlan.number(), pointer, schema },
+          diagnosticSink(context),
+        )
+      : zodPlan.number(),
+    hasStringConstraints
+      ? applyJsonSchemaStringConstraints(
+          { expression: zodPlan.string(), pointer, schema },
+          diagnosticSink(context),
+        )
+      : zodPlan.string(),
+  ]);
 };
 
 const lowerReference = (
@@ -373,14 +339,7 @@ const lowerSchema = (
   }
   const constValue = schema[jsonSchemaKeywords.const];
   if (constValue !== undefined)
-    return withSiblingAssertions(
-      jsonSchemaKeywords.const,
-      lowerLiteralValue(
-        constValue,
-        jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.const),
-        context,
-      ),
-    );
+    return withSiblingAssertions(jsonSchemaKeywords.const, lowerJsonLiteral(constValue));
   const enumValues = schema[jsonSchemaKeywords.enum];
   if (enumValues !== undefined)
     return withSiblingAssertions(
@@ -430,10 +389,8 @@ const lowerSchema = (
     });
     return zodPlan.unknown();
   }
-  const untypedConstraint = lowerUntypedConstraintSchema(schema, pointer, context);
-  if (untypedConstraint !== undefined) return untypedConstraint;
-  const untypedApplicator = lowerUntypedApplicatorSchema(schema, pointer, context);
-  if (untypedApplicator !== undefined) return untypedApplicator;
+  const untypedTypeSpecific = lowerUntypedTypeSpecificSchema(schema, pointer, context);
+  if (untypedTypeSpecific !== undefined) return untypedTypeSpecific;
 
   return zodPlan.unknown();
 };

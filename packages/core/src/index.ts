@@ -75,6 +75,22 @@ export type {
 export { printSourceFile, printSourceFileSync } from "./source-print";
 export type { SourceFilePrintOptions } from "./source-print";
 export {
+  zodHelper,
+  zodHelperNames,
+  zodHelperReceiver,
+  zodHelperRequestSchema,
+  zodWrapperNames,
+} from "./zod-helpers";
+export type {
+  ZodCodePointLengthHelperRequest,
+  ZodExactMultipleOfHelperRequest,
+  ZodHelperName,
+  ZodHelperReceiver,
+  ZodHelperRequest,
+  ZodHelperRequestInput,
+  ZodWrapperName,
+} from "./zod-helpers";
+export {
   isZodKnownMethodName,
   zodFactoryMetadata,
   zodFactoryNames,
@@ -116,6 +132,7 @@ export {
   zodExpressionSchema,
   zodFactory,
   zodFactoryNameSchema,
+  zodHelperArgument,
   zodLiteralArgument,
   zodLiteralValueSchema,
   zodMethodCallSchema,
@@ -127,6 +144,7 @@ export {
   zodReference,
   zodSymbol,
   zodSymbolSchema,
+  zodWrapper,
 } from "./zod-plan";
 export type {
   ZodArgument,
@@ -146,6 +164,7 @@ export type {
   ZodFactoryExpression,
   ZodFactoryExpressionInput,
   ZodFactoryName,
+  ZodHelperArgument,
   ZodLiteralArgument,
   ZodLiteralValue,
   ZodMethodArgumentsByName,
@@ -158,5 +177,7 @@ export type {
   ZodReferenceExpression,
   ZodReferenceExpressionInput,
   ZodSymbol,
+  ZodWrapperExpression,
+  ZodWrapperExpressionInput,
 } from "./zod-plan";
 export * as ts from "@typescript/native-preview/unstable/ast";

@@ -17,6 +17,9 @@ export const collectZodExpressionReferences = (expression: ZodExpression): reado
       case "expression": {
         return collectZodExpressionReferences(argument.expression);
       }
+      case "helper": {
+        return [];
+      }
       case "literal": {
         return [];
       }
@@ -33,10 +36,25 @@ export const collectZodExpressionReferences = (expression: ZodExpression): reado
     }
   };
 
+  const baseReferences = (): readonly ZodSymbol[] => {
+    switch (expression.kind) {
+      case "factory": {
+        return expression.args.flatMap(collectArgumentReferences);
+      }
+      case "reference": {
+        return [expression.symbol];
+      }
+      case "wrapper": {
+        return collectZodExpressionReferences(expression.expression);
+      }
+      default: {
+        return assertNever(expression);
+      }
+    }
+  };
+
   return uniqueSymbols([
-    ...(expression.kind === "reference"
-      ? [expression.symbol]
-      : expression.args.flatMap(collectArgumentReferences)),
+    ...baseReferences(),
     ...expression.calls.flatMap((call) => call.args.flatMap(collectArgumentReferences)),
   ]);
 };

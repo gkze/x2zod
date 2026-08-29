@@ -1,5 +1,6 @@
 import { createDiagnostic } from "./diagnostics";
 import type { ZodEmissionTransform, ZodPropertyKeyCase } from "./emission-transform-config";
+import { projectZodWrapperExpression } from "./emission-wrapper-transforms";
 import { err, ok } from "./result";
 import type { Result } from "./result";
 import type {
@@ -161,6 +162,9 @@ const projectArgument = (
             schemaArgument: { expression: projection.value.schema, kind: "expression" },
           })
         : projection;
+    }
+    case "helper": {
+      return ok({ changed: false, decodedArgument: argument, schemaArgument: argument });
     }
     case "literal": {
       const decodedValue =
@@ -428,6 +432,16 @@ const projectReferenceExpression = (
   });
 };
 
+const projectWrapperExpression = (
+  expression: Extract<ZodExpression, { kind: "wrapper" }>,
+  context: ProjectionContext,
+): Result<ExpressionProjection> => {
+  const wrapped = context.projectExpression(expression.expression, context);
+  if (!wrapped.ok) return wrapped;
+  const calls = projectCalls(expression.calls, context);
+  return calls.ok ? projectZodWrapperExpression(expression, wrapped.value, calls.value) : calls;
+};
+
 const projectExpression = (
   expression: ZodExpression,
   context: ProjectionContext,
@@ -438,6 +452,9 @@ const projectExpression = (
     }
     case "reference": {
       return projectReferenceExpression(expression, context);
+    }
+    case "wrapper": {
+      return projectWrapperExpression(expression, context);
     }
     default: {
       return assertNever(expression);

@@ -1,13 +1,7 @@
 import type { JsonPointer } from "@x2zod/core";
 
 import type { JsonSchemaDiagnosticSink } from "./diagnostics";
-import {
-  isJsonArray,
-  isJsonObject,
-  isJsonPrimitive,
-  isJsonSchemaValue,
-  jsonStringValues,
-} from "./document";
+import { isJsonArray, isJsonObject, isJsonSchemaValue, jsonStringValues } from "./document";
 import type { JsonObject, JsonSchemaValue, JsonValue } from "./document";
 import {
   jsonSchemaAnyOfAllowedSiblingKeywords,
@@ -71,8 +65,10 @@ const arrayAssertionKeywords: ReadonlySet<string> = new Set([
   jsonSchemaKeywords.prefixItems,
 ]);
 
-const jsonSchemaTypeForLiteral = (value: boolean | null | number | string): string => {
+const jsonSchemaTypeForLiteral = (value: JsonValue): string => {
   if (value === null) return "null";
+  if (isJsonArray(value)) return "array";
+  if (isJsonObject(value)) return "object";
   if (typeof value === "number") return numberTypeName;
   return typeof value;
 };
@@ -95,10 +91,9 @@ const typeAllowsNumberLiteralValue = (types: readonly string[], value: number): 
   types.includes(numberTypeName) || (Number.isInteger(value) && types.includes(integerTypeName));
 
 const typeAllowsLiteralValue = (types: readonly string[], value: JsonValue): boolean =>
-  isJsonPrimitive(value) &&
-  (typeof value === "number"
+  typeof value === "number"
     ? typeAllowsNumberLiteralValue(types, value)
-    : types.includes(jsonSchemaTypeForLiteral(value)));
+    : types.includes(jsonSchemaTypeForLiteral(value));
 
 const isRedundantTypeForEnum = (schema: JsonObject): boolean => {
   const types = schemaTypeNames(schema);

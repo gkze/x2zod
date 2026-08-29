@@ -36,14 +36,78 @@ type LocationCollectionContext = Readonly<{
   locations: Map<JsonPointer, SourceSpan>;
 }>;
 
-const jsonValueSchema: z.ZodType<JsonValue> = z.json();
+type JsonValueNormalization = Readonly<{ ok: false }> | Readonly<{ ok: true; value: JsonValue }>;
 
-const jsonObjectSchema: z.ZodType<JsonObject> = z.record(z.string(), jsonValueSchema).readonly();
+const invalidJsonValueNormalization = { ok: false } as const;
+const normalizedJsonValue = (value: JsonValue): JsonValueNormalization => ({ ok: true, value });
 
-const jsonSchemaValueSchemaValue: z.ZodType<JsonSchemaValue> = z.union([
-  z.boolean(),
-  jsonObjectSchema,
-]);
+const normalizeJsonValue = (value: unknown, ancestors: WeakSet<object>): JsonValueNormalization => {
+  if (value === null || typeof value === "boolean" || typeof value === "string")
+    return normalizedJsonValue(value);
+  if (typeof value === "number")
+    return Number.isFinite(value) ? normalizedJsonValue(value) : invalidJsonValueNormalization;
+  if (typeof value !== "object" || ancestors.has(value)) return invalidJsonValueNormalization;
+
+  ancestors.add(value);
+  try {
+    if (Array.isArray(value)) {
+      const normalizedItems: JsonValue[] = [];
+      let index = 0;
+      while (index < value.length) {
+        if (!Object.hasOwn(value, index)) return invalidJsonValueNormalization;
+        const normalizedItem = normalizeJsonValue(value[index], ancestors);
+        if (!normalizedItem.ok) return normalizedItem;
+        normalizedItems.push(normalizedItem.value);
+        index += 1;
+      }
+      return normalizedJsonValue(normalizedItems);
+    }
+
+    if (!z.util.isPlainObject(value)) return invalidJsonValueNormalization;
+
+    const normalizedEntries: [string, JsonValue][] = [];
+    for (const key of Reflect.ownKeys(value))
+      if (Object.prototype.propertyIsEnumerable.call(value, key)) {
+        if (typeof key !== "string") return invalidJsonValueNormalization;
+        const normalizedProperty = normalizeJsonValue(value[key], ancestors);
+        if (!normalizedProperty.ok) return normalizedProperty;
+        normalizedEntries.push([key, normalizedProperty.value]);
+      }
+    return normalizedJsonValue(Object.fromEntries(normalizedEntries));
+  } finally {
+    ancestors.delete(value);
+  }
+};
+
+const safelyNormalizeJsonValue = (value: unknown): JsonValueNormalization => {
+  try {
+    return normalizeJsonValue(value, new WeakSet<object>());
+  } catch {
+    return invalidJsonValueNormalization;
+  }
+};
+
+const isJsonSchemaRoot = (value: JsonValue): value is JsonSchemaValue =>
+  typeof value === "boolean" ||
+  (typeof value === "object" && value !== null && !Array.isArray(value));
+
+export const createJsonSchemaValueSchema = <TInput>(): z.ZodType<JsonSchemaValue, TInput> =>
+  z.transform<TInput, JsonSchemaValue>((value, context) => {
+    const normalized = safelyNormalizeJsonValue(value);
+    if (normalized.ok && isJsonSchemaRoot(normalized.value))
+      return typeof normalized.value === "boolean"
+        ? normalized.value
+        : Object.freeze(normalized.value);
+
+    context.addIssue({
+      code: "custom",
+      message: "Expected a boolean JSON Schema or an object JSON Schema.",
+    });
+    return z.NEVER;
+  });
+
+const jsonSchemaValueSchemaValue: z.ZodType<JsonSchemaValue> =
+  createJsonSchemaValueSchema<unknown>();
 export const jsonSchemaValueSchema: z.ZodType<JsonSchemaValue> = jsonSchemaValueSchemaValue;
 
 export const isJsonObject = (value: JsonValue | undefined): value is JsonObject =>

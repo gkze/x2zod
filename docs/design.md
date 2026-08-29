@@ -278,21 +278,15 @@ export type ZodExpression =
       readonly annotations: readonly ZodAnnotation[];
     }
   | { readonly kind: "reference"; readonly symbol: ZodSymbol }
-  | { readonly kind: "lazyReference"; readonly symbol: ZodSymbol }
-  | {
-      readonly kind: "helperCall";
-      readonly helper: ZodHelperRequest;
-      readonly args: readonly ZodArgument[];
-      readonly calls: readonly ZodMethodCall[];
-      readonly annotations: readonly ZodAnnotation[];
-    };
+  | { readonly kind: "lazyReference"; readonly symbol: ZodSymbol };
 
 export type ZodMethodCall = { readonly method: string; readonly args: readonly ZodArgument[] };
 ```
 
-For example, the JSON Schema plugin maps `{ "type": "string", "minLength": 3 }` to a planned
-`z.string().min(3)` call chain. Core does not know what `minLength` means; it only knows how to emit
-the requested Zod expression.
+For example, the JSON Schema plugin maps `{ "type": "string", "pattern": "^[a-z]+$" }` to a planned
+`z.string().regex(...)` call chain. String length uses a typed built-in refinement because JSON
+Schema counts Unicode code points while native Zod length checks count UTF-16 code units. Core does
+not know JSON Schema vocabulary; it only emits the requested Zod calls and helper arguments.
 
 Plugins should use builder APIs over raw tagged objects so lowering reads as a binding layer:
 
@@ -304,7 +298,7 @@ const schema = ctx.z
 ```
 
 Internally, that builder records factories, arguments, chained method calls, references, helper
-calls, and annotations. We should avoid bespoke semantic nodes such as `StringMinLengthCheck` or
+arguments, and annotations. We should avoid bespoke semantic nodes such as `StringMinLengthCheck` or
 `ObjectAdditionalPropertiesPolicy` unless the emitter truly needs information that cannot be
 represented as planned Zod calls.
 
@@ -314,13 +308,12 @@ The module-level plan is separate from expression planning:
 export type ZodEmissionModule = {
   readonly root: ZodSymbol;
   readonly declarations: readonly ZodDeclaration[];
-  readonly helpers: readonly ZodHelperRequest[];
 };
 ```
 
 This lets core produce deterministic modules with stable declaration names, self-contained helper
-code, recursive refs, and `export type T = z.infer<typeof schema>` without pushing those policies
-into each plugin.
+code derived from expression requests, recursive refs, and `export type T = z.infer<typeof schema>`
+without pushing those policies into each plugin.
 
 Declarations should carry ordered name hints rather than final TypeScript identifiers. Plugins know
 where a useful source-language name came from; core knows how to make that name legal, unique, and
@@ -341,11 +334,12 @@ export type ZodDeclarationNameHint = {
 
 The escape hatch is helper-backed runtime semantics, not arbitrary plugin-owned source. Semantics
 that native or planned Zod expressions cannot preserve, such as `not`, `if` / `then` / `else`,
-`patternProperties`, deep `const`/`enum`, and general `unevaluated*` bookkeeping, should lower into
-ordinary planned Zod expressions plus helper requests. Exact `oneOf` uses Zod's native exclusive
-union and does not require generated branch-counting code. If a plugin needs raw TypeScript for a
-helper body, that raw source belongs in a typed helper request and must declare its dependencies and
-inferred structural boundary.
+`patternProperties`, and general `unevaluated*` bookkeeping, should lower into ordinary planned Zod
+expressions plus helper requests. Composite `const` and `enum` values lower structurally into exact
+tuples and strict objects. Literal objects with an own `__proto__` additionally use a typed input-
+preserving wrapper because ordinary Zod object parsing treats that name as the legacy prototype
+setter instead of an output data property. Exact `oneOf` uses Zod's native exclusive union and does
+not require generated branch-counting code.
 
 ## Emission Transform Pipeline
 
@@ -375,46 +369,39 @@ room for more core-owned transform kinds.
 
 ## Helper ABI
 
-Helpers use a hybrid model. Core provides a built-in helper catalog for v1 JSON Schema semantics,
-and helper requests may optionally carry plugin-provided source when a future plugin needs behavior
-outside the catalog.
-
-Built-in helpers are the default path. A helper request names the helper, supplies serializable
-configuration, and points at the IR expressions or generated declarations the helper needs:
+Core provides a typed built-in helper catalog for runtime semantics that native Zod calls cannot
+preserve exactly. Refinement helper requests are serializable method arguments:
 
 ```ts
-export type ZodHelperRequest = {
-  readonly helper: ZodHelperId;
-  readonly key: string;
-  readonly args: readonly ZodHelperArgument[];
-};
+export type ZodHelperRequest =
+  | {
+      readonly helper: "codePointLength";
+      readonly minimum: number | null;
+      readonly maximum: number | null;
+    }
+  | { readonly helper: "exactMultipleOf"; readonly divisor: number };
+
+export type ZodHelperArgument = { readonly kind: "helper"; readonly request: ZodHelperRequest };
 ```
 
-`helper` selects a known implementation such as deep equality, deep unique array items, `not`,
-conditionals, pattern-property validation, or `unevaluated*` bookkeeping. `key` is a deterministic
-dedupe key derived from the helper id and configuration. `args` must be IR-safe references,
-literals, or declarations; helper requests should not smuggle arbitrary TypeScript through argument
-strings.
-
-Plugin-provided helpers use the same request shape but add a typed source payload:
+Plugins attach these requests through the normal refinement builder:
 
 ```ts
-export type ZodHelperSource = {
-  readonly exportName: string;
-  readonly source: string;
-  readonly dependencies: readonly ZodHelperDependency[];
-  readonly inferredBoundary: ZodInferredBoundary;
-};
+const bounded = zodPlan.refine(zodPlan.string(), zodHelper.codePointLength(1, 10));
 ```
 
-Core is still responsible for deduplication, name collision handling, declaration-safe placement,
-and formatting. Plugin-provided helper source must be module-local, deterministic, and explicit
-about dependencies. It cannot import arbitrary packages in v1; generated modules remain
-self-contained apart from Zod.
+Schema-level helpers use explicit wrapper expressions rather than pretending to be Zod factories or
+methods. `zodPlan.preserveObjectInput(object, requiredOwnKeys)` wraps a structural object schema and
+retains its inferred input type while enforcing both the wrapped schema and the explicitly listed
+own keys at runtime. Optional fields and additional-key behavior remain the wrapped schema's
+concern. Property-key output transforms fail loudly when they would cross this input-preserving
+boundary.
 
-The v1 implementation should start with the built-in helper catalog only. The typed source payload
-is part of the design so the ABI does not need to be redesigned later, but it should be exercised
-only when a second plugin or a concrete JSON Schema case proves it is needed.
+Core validates each request or wrapper against its receiver, derives the required helper IDs by
+traversing the final source model, and emits one module-local definition per helper ID in catalog
+order. Per-call refinement configuration stays at the `.refine(...)` site. Generated modules remain
+self-contained apart from Zod. Plugin-provided helper source remains deferred until a second input
+plugin or a concrete semantic case proves that the built-in catalog is insufficient.
 
 ## Public API
 

@@ -7,8 +7,8 @@ baseline.
 
 <!-- BEGIN OFFICIAL SUITE SUPPORT SUMMARY -->
 
-At suite commit `b01af8c8d50244a2eb4dd3e01073e24823aa8691`, 1,488 of 3,485 required cases currently
-conform. The baseline records 1,974 cases in 602 schema groups that do not compile and 23 case-level
+At suite commit `b01af8c8d50244a2eb4dd3e01073e24823aa8691`, 1,860 of 3,485 required cases currently
+conform. The baseline records 1,602 cases in 497 schema groups that do not compile and 23 case-level
 runtime gaps. These case counts measure this corpus, not a percentage of JSON Schema semantics: test
 cases and language features are not equally weighted.
 

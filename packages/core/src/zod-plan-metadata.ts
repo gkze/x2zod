@@ -30,7 +30,7 @@ export const zodNoArgumentFactoryNames: readonly [
 export type ZodNoArgumentFactoryName = (typeof zodNoArgumentFactoryNames)[number];
 export type ZodArgumentFactoryName = Exclude<ZodFactoryName, ZodNoArgumentFactoryName>;
 
-export type ZodArgumentKind = "array" | "expression" | "literal" | "object";
+export type ZodArgumentKind = "array" | "expression" | "helper" | "literal" | "object";
 export type ZodArrayElementKind = "expression" | "stringLiteral";
 export type ZodLiteralArgumentValueType = "number" | "string";
 
@@ -64,6 +64,11 @@ const objectArgument = {
 const literalArgument = {
   argumentKind: "literal",
   expected: "one literal argument",
+  kind: "single",
+} satisfies ZodArgumentMetadata;
+const helperArgument = {
+  argumentKind: "helper",
+  expected: "one built-in helper argument",
   kind: "single",
 } satisfies ZodArgumentMetadata;
 const numberLiteralArgument = {
@@ -110,7 +115,7 @@ export const zodFactoryMetadata: Record<ZodFactoryName, ZodFactoryMetadata> = {
   intersection: { args: twoExpressionArguments },
   record: { args: twoExpressionArguments },
   string: { args: noArguments },
-  tuple: { args: expressionArrayArgument(1, "an array of at least one expression argument") },
+  tuple: { args: expressionArrayArgument(0, "an array of expression arguments") },
   union: { args: expressionArrayArgument(2, "an array of at least two expression arguments") },
   unknown: { args: noArguments },
   xor: { args: expressionArrayArgument(2, "an array of at least two expression arguments") },
@@ -128,6 +133,7 @@ export const zodMethodNames = [
   "nullable",
   "optional",
   "passthrough",
+  "refine",
   "regex",
   "required",
   "strict",
@@ -189,6 +195,7 @@ export const zodMethodSpecs: Record<ZodKnownMethodName, ZodMethodSpec> = {
   nullable: wrappingMethodSpec(noArguments),
   optional: wrappingMethodSpec(noArguments),
   passthrough: methodSpec(noArguments, "object"),
+  refine: methodSpec(helperArgument, "any"),
   regex: methodSpec(stringLiteralArgument, "string", "regex"),
   required: methodSpec(uniqueStringLiteralArrayArgument, "object", "requiredKeys"),
   strict: methodSpec(noArguments, "object"),

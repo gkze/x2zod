@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 
-import { parseZodEmissionModule, zodPlan, zodSymbol } from "../src/index";
+import { parseZodEmissionModule, zodHelper, zodPlan, zodSymbol } from "../src/index";
 import type { DiagnosticCode, ZodEmissionModuleInput, ZodExpressionInput } from "../src/index";
+
+const decimalDivisor = 0.1;
 
 const rootModule = (expression: ZodExpressionInput): ZodEmissionModuleInput => ({
   declarations: [{ expression, symbol: "root" }],
@@ -64,6 +66,33 @@ void describe("parseZodEmissionModule method validation", () => {
       factory: "array",
       kind: "factory",
     });
+    expectInvalidRoot({
+      calls: [
+        {
+          args: [{ kind: "helper", request: { divisor: 0, helper: "exactMultipleOf" } }],
+          method: "refine",
+        },
+      ],
+      factory: "number",
+      kind: "factory",
+    });
+  });
+
+  void test("accepts valid built-in refinements and rejects invalid receivers", () => {
+    assert.equal(
+      parseZodEmissionModule(
+        rootModule(zodPlan.refine(zodPlan.number(), zodHelper.exactMultipleOf(decimalDivisor))),
+      ).ok,
+      true,
+    );
+    assert.equal(
+      parseZodEmissionModule(
+        rootModule(zodPlan.refine(zodPlan.string(), zodHelper.codePointLength(1, 2))),
+      ).ok,
+      true,
+    );
+    expectInvalidRoot(zodPlan.refine(zodPlan.string(), zodHelper.exactMultipleOf(decimalDivisor)));
+    expectInvalidRoot(zodPlan.refine(zodPlan.number(), zodHelper.codePointLength(1, 2)));
   });
 
   void test("rejects invalid required keys and duplicate object keys", () => {
@@ -103,7 +132,7 @@ void describe("parseZodEmissionModule receiver validation", () => {
     });
   });
 
-  void test("rejects invalid enum and tuple factory arguments", () => {
+  void test("rejects invalid enum arguments and accepts empty tuples", () => {
     expectInvalidModule(
       {
         declarations: [
@@ -136,22 +165,30 @@ void describe("parseZodEmissionModule receiver validation", () => {
       },
       "invalid_zod_emission_module",
     );
-    expectInvalidModule(
-      {
-        declarations: [
-          {
-            expression: {
-              args: [{ elements: [], kind: "array" }],
-              factory: "tuple",
-              kind: "factory",
-            },
-            symbol: "root",
-          },
-        ],
-        root: "root",
-      },
-      "invalid_zod_emission_module",
+    assert.equal(parseZodEmissionModule(rootModule(zodPlan.tuple([]))).ok, true);
+  });
+
+  void test("accepts object-input wrappers and rejects invalid wrapped receivers", () => {
+    const wrapped = zodPlan.preserveObjectInput(
+      zodPlan.strict(zodPlan.object({ ["__proto__"]: zodPlan.string() })),
+      ["__proto__"],
     );
+
+    assert.equal(parseZodEmissionModule(rootModule(wrapped)).ok, true);
+    expectInvalidRoot(zodPlan.preserveObjectInput(zodPlan.string(), ["__proto__"]));
+    expectInvalidRoot(zodPlan.preserveObjectInput(zodPlan.object({}), ["__proto__"]));
+    expectInvalidRoot(
+      zodPlan.preserveObjectInput(zodPlan.optional(zodPlan.object({ value: zodPlan.string() })), [
+        "value",
+      ]),
+    );
+    expectInvalidRoot(
+      zodPlan.preserveObjectInput(zodPlan.object({ ["__proto__"]: zodPlan.string() }), [
+        "__proto__",
+        "__proto__",
+      ]),
+    );
+    expectInvalidRoot(zodPlan.strict(wrapped));
   });
 });
 

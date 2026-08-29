@@ -44,10 +44,12 @@ const zodPlanFunctionKeys = [
   "object",
   "optional",
   "passthrough",
+  "preserveObjectInput",
   "reference",
   "regex",
   "required",
   "string",
+  "strict",
   "tuple",
   "unknown",
 ] as const satisfies readonly (keyof CoreModule["zodPlan"])[];
@@ -104,17 +106,27 @@ const module = propertyTransformMode
   : core.zodModule(root, [
       core.zodDeclaration(
         root,
-        core.zodPlan.object({
-          ["__proto__"]: core.zodPlan.string(),
-          count: core.zodPlan.lte(core.zodPlan.gt(core.zodPlan.integer(), 0), maximumCount),
-          pair: core.zodPlan.tuple([core.zodPlan.string(), core.zodPlan.number()]),
-          payload: core.zodPlan.required(core.zodPlan.object({ value: core.zodPlan.unknown() }), [
-            "value",
-          ]),
-          slug: core.zodPlan.regex(core.zodPlan.string(), "^[a-z]+$"),
-          status: core.zodPlan.enum(["open", "closed"]),
-          tags: core.zodPlan.max(core.zodPlan.min(core.zodPlan.array(core.zodPlan.string()), 1), 2),
-        }),
+        core.zodPlan.preserveObjectInput(
+          core.zodPlan.strict(
+            core.zodPlan.object({
+              ["__proto__"]: core.zodPlan.string(),
+              count: core.zodPlan.lte(core.zodPlan.gt(core.zodPlan.integer(), 0), maximumCount),
+              maybe: core.zodPlan.optional(core.zodPlan.string()),
+              pair: core.zodPlan.tuple([core.zodPlan.string(), core.zodPlan.number()]),
+              payload: core.zodPlan.required(
+                core.zodPlan.object({ value: core.zodPlan.unknown() }),
+                ["value"],
+              ),
+              slug: core.zodPlan.regex(core.zodPlan.string(), "^[a-z]+$"),
+              status: core.zodPlan.enum(["open", "closed"]),
+              tags: core.zodPlan.max(
+                core.zodPlan.min(core.zodPlan.array(core.zodPlan.string()), 1),
+                2,
+              ),
+            }),
+          ),
+          ["__proto__"],
+        ),
       ),
     ]);
 const result = core.buildZodSourceFile(

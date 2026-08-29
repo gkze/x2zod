@@ -82,7 +82,7 @@ void test("official suite compiler records the active compile request", async ()
       writeFile(
         batchFile,
         JSON.stringify({
-          requests: [{ dialect: "draft-7", id: "unsupported.json", schema: { multipleOf: 2 } }],
+          requests: [{ dialect: "draft-7", id: "unsupported.json", schema: { uniqueItems: true } }],
         }),
       ),
       writeFile(externalSchemasFile, "{}"),
@@ -133,7 +133,7 @@ void test("official suite compiler returns an ordered result for every batch req
         JSON.stringify({
           requests: [
             { dialect: "draft-7", id: "supported.json", schema: { type: "string" } },
-            { dialect: "draft-7", id: "unsupported.json", schema: { multipleOf: 2 } },
+            { dialect: "draft-7", id: "unsupported.json", schema: { uniqueItems: true } },
           ],
         }),
       ),
