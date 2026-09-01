@@ -1,5 +1,5 @@
 import { isJsonObject } from "./document";
-import type { JsonSchemaValue } from "./document";
+import type { JsonObject, JsonSchemaValue } from "./document";
 import { jsonSchemaKeywords } from "./metadata";
 
 const arrayAssertionKeywords: ReadonlySet<string> = new Set([
@@ -7,6 +7,7 @@ const arrayAssertionKeywords: ReadonlySet<string> = new Set([
   jsonSchemaKeywords.maxItems,
   jsonSchemaKeywords.minItems,
   jsonSchemaKeywords.prefixItems,
+  jsonSchemaKeywords.uniqueItems,
 ]);
 
 const objectAssertionKeywords: ReadonlySet<string> = new Set([
@@ -17,6 +18,10 @@ const objectAssertionKeywords: ReadonlySet<string> = new Set([
   jsonSchemaKeywords.unevaluatedProperties,
 ]);
 
+const isActiveArrayAssertionKeyword = (schema: JsonObject, keyword: string): boolean =>
+  arrayAssertionKeywords.has(keyword) &&
+  (keyword !== jsonSchemaKeywords.uniqueItems || schema[jsonSchemaKeywords.uniqueItems] !== false);
+
 export type JsonSchemaUntypedAssertionKind = "array" | "mixed" | "object";
 
 export const jsonSchemaUntypedAssertionKind = (
@@ -24,7 +29,9 @@ export const jsonSchemaUntypedAssertionKind = (
 ): JsonSchemaUntypedAssertionKind | undefined => {
   if (!isJsonObject(schema) || schema[jsonSchemaKeywords.type] !== undefined) return undefined;
   const keywords = Object.keys(schema);
-  const hasArrayAssertions = keywords.some((keyword) => arrayAssertionKeywords.has(keyword));
+  const hasArrayAssertions = keywords.some((keyword) =>
+    isActiveArrayAssertionKeyword(schema, keyword),
+  );
   const hasObjectAssertions = keywords.some((keyword) => objectAssertionKeywords.has(keyword));
   if (hasArrayAssertions && hasObjectAssertions) return "mixed";
   if (hasObjectAssertions) return "object";

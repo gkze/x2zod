@@ -63,7 +63,12 @@ const arrayAssertionKeywords: ReadonlySet<string> = new Set([
   jsonSchemaKeywords.maxItems,
   jsonSchemaKeywords.minItems,
   jsonSchemaKeywords.prefixItems,
+  jsonSchemaKeywords.uniqueItems,
 ]);
+
+const hasActiveArrayAssertion = (schema: JsonObject, keyword: string): boolean =>
+  arrayAssertionKeywords.has(keyword) &&
+  (keyword !== jsonSchemaKeywords.uniqueItems || schema[keyword] === true);
 
 const jsonSchemaTypeForLiteral = (value: JsonValue): string => {
   if (value === null) return "null";
@@ -172,6 +177,10 @@ const isSupportedUnevaluatedPropertiesSibling = (
   );
 };
 
+const isInertSiblingKeyword = (key: string, request: SiblingAssertionRequest): boolean =>
+  key === jsonSchemaKeywords.uniqueItems &&
+  request.schema[jsonSchemaKeywords.uniqueItems] === false;
+
 const isAllowedSiblingKeyword = (
   key: string,
   request: SiblingAssertionRequest,
@@ -180,6 +189,7 @@ const isAllowedSiblingKeyword = (
   key === request.keyword ||
   isMetadataSiblingKeyword(key, context) ||
   isSupportedUnevaluatedPropertiesSibling(key, request) ||
+  isInertSiblingKeyword(key, request) ||
   (allowsTypeSibling(request, context) && key === jsonSchemaKeywords.type);
 
 const canOmitRedundantTypeSibling = (
@@ -187,13 +197,7 @@ const canOmitRedundantTypeSibling = (
   context: SiblingAssertionContext,
 ): boolean =>
   allowsTypeSibling(request, context) &&
-  Object.keys(request.schema).every(
-    (key) =>
-      key === request.keyword ||
-      key === jsonSchemaKeywords.type ||
-      isMetadataSiblingKeyword(key, context) ||
-      isSupportedUnevaluatedPropertiesSibling(key, request),
-  );
+  Object.keys(request.schema).every((key) => isAllowedSiblingKeyword(key, request, context));
 
 export const jsonSchemaSiblingAssertionSchema = (
   request: SiblingAssertionRequest,
@@ -205,6 +209,7 @@ export const jsonSchemaSiblingAssertionSchema = (
       key !== request.keyword &&
       !isMetadataSiblingKeyword(key, context) &&
       !isSupportedUnevaluatedPropertiesSibling(key, request) &&
+      !isInertSiblingKeyword(key, request) &&
       !(omitRedundantType && key === jsonSchemaKeywords.type),
   );
 
@@ -435,7 +440,7 @@ export const hasUnsupportedUntypedArraySiblingIntersection = (
 ): boolean => {
   const hasUntypedArrayAssertions =
     siblingSchema[jsonSchemaKeywords.type] === undefined &&
-    Object.keys(siblingSchema).some((keyword) => arrayAssertionKeywords.has(keyword));
+    Object.keys(siblingSchema).some((keyword) => hasActiveArrayAssertion(siblingSchema, keyword));
   if (
     !hasUntypedArrayAssertions ||
     new UnsafeObjectBoundaryScanner(context).provesArrayOnly(request.schema)

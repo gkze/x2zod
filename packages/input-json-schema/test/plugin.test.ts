@@ -167,7 +167,7 @@ void describe("jsonSchemaInputPlugin lower", () => {
   void test("fails loudly for known unsupported and unknown keywords", async () => {
     const unsupported = expectOk(
       await jsonSchemaInputPlugin.prepare(
-        fileDocument('{ "type": "array", "uniqueItems": true }'),
+        fileDocument('{ "contains": { "type": "string" }, "type": "array" }'),
         options({ validator: "none" }),
       ),
     );
@@ -396,7 +396,7 @@ void describe("jsonSchemaInputPlugin precise diagnostics", () => {
   void test("collects unsupported keyword diagnostics from referenced external schemas", async () => {
     const pluginOptions = options({
       externalSchemas: {
-        [externalSchemaUri]: { $defs: { tags: { type: "array", uniqueItems: true } } },
+        [externalSchemaUri]: { $defs: { tags: { contains: { type: "string" }, type: "array" } } },
       },
       validator: "none",
     });
@@ -410,7 +410,7 @@ void describe("jsonSchemaInputPlugin precise diagnostics", () => {
     const result = await jsonSchemaInputPlugin.lower(prepared, pluginOptions);
 
     expectErrCode(result, "unsupported_keyword");
-    assert.ok(diagnosticPointers(result).includes("/$defs/tags/uniqueItems"));
+    assert.ok(diagnosticPointers(result).includes("/$defs/tags/contains"));
   });
 
   void test("fails before ignoring Draft 7 ref sibling assertions", async () => {

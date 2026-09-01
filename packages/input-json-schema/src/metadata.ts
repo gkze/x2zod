@@ -53,6 +53,7 @@ export const jsonSchemaKeywords = {
   title: "title",
   type: "type",
   unevaluatedProperties: "unevaluatedProperties",
+  uniqueItems: "uniqueItems",
   vocabulary: "$vocabulary",
   writeOnly: "writeOnly",
 } as const;
@@ -104,6 +105,7 @@ export const jsonSchemaSupportedKeywords: ReadonlySet<string> = new Set<string>(
   jsonSchemaKeywords.required,
   jsonSchemaKeywords.type,
   jsonSchemaKeywords.unevaluatedProperties,
+  jsonSchemaKeywords.uniqueItems,
 ]);
 
 export const jsonSchemaUnsupportedStandardKeywords: ReadonlySet<string> = new Set<string>([
@@ -119,7 +121,6 @@ export const jsonSchemaUnsupportedStandardKeywords: ReadonlySet<string> = new Se
   "patternProperties",
   "then",
   "unevaluatedItems",
-  "uniqueItems",
   jsonSchemaKeywords.dynamicAnchor,
   jsonSchemaKeywords.dynamicRef,
 ]);

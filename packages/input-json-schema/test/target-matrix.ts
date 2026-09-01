@@ -249,12 +249,23 @@ const targetMatrixEntries = [
   },
   {
     ...claudeCodeSettingsSchema,
-    expectedCodes: ["unsupported_keyword"],
-    expectedKeywords: ["uniqueItems"],
-    expectedPhase: "lower",
+    exportName: "claudeCodeSettingsSchema",
+    invalidSamples: [
+      {
+        label: "rejects duplicate permission rules",
+        value: { permissions: { allow: ["Read(*)", "Read(*)"] } },
+      },
+    ],
     name: "Claude Code settings",
     pluginOptions: { dialect: "draft-7", validator: "none" },
-    roundTripLevel: "blocked-schema-features",
+    roundTripLevel: "generated-zod",
+    typeName: "ClaudeCodeSettings",
+    validSamples: [
+      {
+        label: "accepts distinct permission rules",
+        value: { permissions: { allow: ["Read(*)", "Bash"] } },
+      },
+    ],
   },
   {
     ...miseConfigSchema,

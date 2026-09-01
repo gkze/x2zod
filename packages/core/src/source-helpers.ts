@@ -43,6 +43,7 @@ import {
   createVariableStatement,
 } from "@typescript/native-preview/unstable/ast/factory";
 
+import { createUniqueItemsHelperStatements, uniqueItemsHelperName } from "./source-unique-items";
 import type { ZodHelperName, ZodHelperRequest, ZodWrapperName } from "./zod-helpers";
 
 const noTokenFlags = 0;
@@ -411,6 +412,9 @@ export const createZodHelperExpression = (request: ZodHelperRequest): Expression
         createNumericLiteral(String(request.divisor), noTokenFlags),
       ]);
     }
+    case "uniqueItems": {
+      return createIdentifier(uniqueItemsHelperName);
+    }
     default: {
       return assertNever(request);
     }
@@ -437,6 +441,7 @@ export const createZodHelperStatements = (
   if (helperNames.has("codePointLength")) statements.push(createCodePointLengthHelper());
   if (helperNames.has("exactMultipleOf"))
     statements.push(createDecimalPartsHelper(), createExactMultipleOfHelper());
+  if (helperNames.has("uniqueItems")) statements.push(...createUniqueItemsHelperStatements());
   if (helperNames.has("preserveObjectInput")) statements.push(createPreserveObjectInputHelper());
   return statements;
 };

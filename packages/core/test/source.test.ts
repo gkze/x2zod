@@ -242,6 +242,8 @@ void describe("buildZodSourceFile built-in helpers", () => {
             ["__proto__"],
           ),
           second: zodPlan.refine(zodPlan.number(), zodHelper.exactMultipleOf(secondDivisor)),
+          firstUnique: zodPlan.refine(zodPlan.array(zodPlan.unknown()), zodHelper.uniqueItems()),
+          secondUnique: zodPlan.refine(zodPlan.array(zodPlan.string()), zodHelper.uniqueItems()),
           secondPreserved: zodPlan.preserveObjectInput(
             zodPlan.strict(zodPlan.object({ ["__proto__"]: zodPlan.string() })),
             ["__proto__"],
@@ -255,6 +257,8 @@ void describe("buildZodSourceFile built-in helpers", () => {
       "x2zodCodePointLength",
       "x2zodDecimalParts",
       "x2zodExactMultipleOf",
+      "x2zodJsonEqual",
+      "x2zodUniqueItems",
       "x2zodPreserveObjectInput",
       "userSchema",
     ]);
