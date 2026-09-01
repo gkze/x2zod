@@ -1,5 +1,11 @@
 # @x2zod/output-oxfmt
 
+## 0.1.9
+
+### Patch Changes
+
+- @x2zod/config@0.3.2
+
 ## 0.1.8
 
 ### Patch Changes

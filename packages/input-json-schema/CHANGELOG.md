@@ -1,5 +1,19 @@
 # @x2zod/input-json-schema
 
+## 0.4.0
+
+### Minor Changes
+
+- 8677011: Add a typed generated helper for deep JSON array-item uniqueness.
+
+  Support `uniqueItems` on non-tuple JSON Schema arrays while preserving accepted values. Tuple and
+  prefix-item uniqueness remain unsupported.
+
+### Patch Changes
+
+- Updated dependencies [8677011]
+  - @x2zod/core@0.5.0
+
 ## 0.3.0
 
 ### Minor Changes

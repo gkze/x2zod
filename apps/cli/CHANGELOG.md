@@ -1,5 +1,13 @@
 # @x2zod/cli
 
+## 0.2.2
+
+### Patch Changes
+
+- Updated dependencies [8677011]
+  - @x2zod/core@0.5.0
+  - @x2zod/config@0.3.2
+
 ## 0.2.1
 
 ### Patch Changes
