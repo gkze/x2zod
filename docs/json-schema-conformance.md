@@ -7,8 +7,8 @@ baseline.
 
 <!-- BEGIN OFFICIAL SUITE SUPPORT SUMMARY -->
 
-At suite commit `b01af8c8d50244a2eb4dd3e01073e24823aa8691`, 1,860 of 3,485 required cases currently
-conform. The baseline records 1,602 cases in 497 schema groups that do not compile and 23 case-level
+At suite commit `b01af8c8d50244a2eb4dd3e01073e24823aa8691`, 1,989 of 3,485 required cases currently
+conform. The baseline records 1,473 cases in 491 schema groups that do not compile and 23 case-level
 runtime gaps. These case counts measure this corpus, not a percentage of JSON Schema semantics: test
 cases and language features are not equally weighted.
 
@@ -78,9 +78,13 @@ The checked-in spike demonstrates deterministic bundled validators for recursive
 2019-09, and Draft 2020-12 schemas with deep `uniqueItems` and Unicode-aware length checks. Ajv's
 raw standalone output still references its `equal` and `ucs2length` runtime modules. The spike
 rewrites those known CommonJS edges for bundling, bundles them, and executes the result with plain
-Node from a temporary directory outside the workspace dependency tree. Production adoption still
+Node from a temporary directory outside the workspace dependency tree.
+
+Production source emission now uses core's typed helper catalog for deep `uniqueItems` comparisons
+on non-tuple arrays. The generated refinement ignores object-key order, distinguishes primitive JSON
+types, and preserves accepted values. Adopting the broader standalone-validator strategy still
 requires a library-grade bundling strategy, structured issue mapping, external-resource coverage,
-and integration with core's typed helper and inferred-boundary model.
+and integration with core's inferred-boundary model.
 
 ## Annotations And Evaluation Output
 

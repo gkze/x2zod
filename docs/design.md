@@ -379,7 +379,8 @@ export type ZodHelperRequest =
       readonly minimum: number | null;
       readonly maximum: number | null;
     }
-  | { readonly helper: "exactMultipleOf"; readonly divisor: number };
+  | { readonly helper: "exactMultipleOf"; readonly divisor: number }
+  | { readonly helper: "uniqueItems" };
 
 export type ZodHelperArgument = { readonly kind: "helper"; readonly request: ZodHelperRequest };
 ```
@@ -388,6 +389,7 @@ Plugins attach these requests through the normal refinement builder:
 
 ```ts
 const bounded = zodPlan.refine(zodPlan.string(), zodHelper.codePointLength(1, 10));
+const unique = zodPlan.refine(zodPlan.array(zodPlan.unknown()), zodHelper.uniqueItems());
 ```
 
 Schema-level helpers use explicit wrapper expressions rather than pretending to be Zod factories or
@@ -692,6 +694,10 @@ sibling assertions, exact `oneOf` through ordinary unions for statically disjoin
 native exclusive union otherwise, ordinary `anyOf` unions, and selected `allOf` object merging and
 intersections. Recognized annotations do not change validation and are not emitted until the
 annotation IR is implemented.
+
+Non-tuple arrays support `uniqueItems` through a generated deep-JSON equality helper. Equality is
+independent of object-key order, distinguishes JSON primitive types, and leaves accepted output
+values unchanged. Tuple and `prefixItems` uniqueness remain outside this bounded slice.
 
 Untyped object and array assertions retain their JSON Schema applicability: they constrain their own
 instance domains and accept the other JSON value domains, including when reached through refs or

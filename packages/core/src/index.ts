@@ -88,6 +88,7 @@ export type {
   ZodHelperReceiver,
   ZodHelperRequest,
   ZodHelperRequestInput,
+  ZodUniqueItemsHelperRequest,
   ZodWrapperName,
 } from "./zod-helpers";
 export {

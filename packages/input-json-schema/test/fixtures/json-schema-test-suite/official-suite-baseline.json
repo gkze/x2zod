@@ -1,34 +1,34 @@
 {
   "byDialect": [
     {
-      "compileGapCaseCount": 340,
-      "compileGapGroupCount": 97,
-      "conformingCaseCount": 580,
-      "gapCaseInventorySha256": "203269d526d513996192f99bf6de745d89fa4f78ec5f09449dd8fa4e2a21b139",
+      "compileGapCaseCount": 297,
+      "compileGapGroupCount": 95,
+      "conformingCaseCount": 623,
+      "gapCaseInventorySha256": "5387b6a215c9c07c242edb0b4fbb17bfcaa0b92289fb545b521b21c67c2f19e3",
       "oracleDiscrepancyCount": 4,
-      "passingCaseInventorySha256": "29290a00e9e60882a09aa430771bea5dc927b382d68ee933264c8d42df8af4fe",
+      "passingCaseInventorySha256": "dc3faa0bf524c22ee331769ffb7810ebbf80e3fb7e131c10a4a42de0de9d2cdc",
       "runtimeGapCaseCount": 7,
       "dialect": "draft-7",
       "testCount": 927
     },
     {
-      "compileGapCaseCount": 622,
-      "compileGapGroupCount": 195,
-      "conformingCaseCount": 630,
-      "gapCaseInventorySha256": "c45829954260fc3696e19b1cb9f8cadb77a9685d90fa949e5dd036fad622a9a3",
+      "compileGapCaseCount": 579,
+      "compileGapGroupCount": 193,
+      "conformingCaseCount": 673,
+      "gapCaseInventorySha256": "5bc49611888c0435dd44a2429ce407786df37c64fe916c028d0641af78d0788b",
       "oracleDiscrepancyCount": 14,
-      "passingCaseInventorySha256": "a9f3203b3a4e41f76f80712078943c5f16f7b8ab682c175b2de99446af43d175",
+      "passingCaseInventorySha256": "dd3d1f438f6bdd415ae6fa2b0a98ec06860b552fb5cc734956e7cd760b7420d2",
       "runtimeGapCaseCount": 7,
       "dialect": "draft-2019-09",
       "testCount": 1259
     },
     {
-      "compileGapCaseCount": 640,
-      "compileGapGroupCount": 205,
-      "conformingCaseCount": 650,
-      "gapCaseInventorySha256": "ab29115eba02d3bc7b7a3a9d92d964f078773b8f6db4632c92ccd0e6af9508eb",
+      "compileGapCaseCount": 597,
+      "compileGapGroupCount": 203,
+      "conformingCaseCount": 693,
+      "gapCaseInventorySha256": "d9678c7346c48b1238a16377a1ee6250440d2eb4040e7aa60acb76460ded7ed1",
       "oracleDiscrepancyCount": 45,
-      "passingCaseInventorySha256": "edd3587df76273cf2be72449e3673e78cfa5d1931b39d4786893320d7ee1e9ac",
+      "passingCaseInventorySha256": "23c267a4abbb951770367657fbbc0ccdd625d28db5cc3079afda14c04f30418f",
       "runtimeGapCaseCount": 9,
       "dialect": "draft-2020-12",
       "testCount": 1299
@@ -379,26 +379,6 @@
         "severity": "error"
       }
     ],
-    "384582ed62648e768188cd91edcf7d21e15cc84265b74237e1b0b7672dacc448": [
-      {
-        "code": "unknown_keyword",
-        "message": "JSON Schema keyword is not recognized by the selected source profile: additionalItems.",
-        "pointer": "/additionalItems",
-        "severity": "error"
-      },
-      {
-        "code": "unsupported_keyword",
-        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: uniqueItems.",
-        "pointer": "/uniqueItems",
-        "severity": "error"
-      },
-      {
-        "code": "unsupported_keyword",
-        "message": "Tuple schemas are not supported in the first JSON Schema lowering slice.",
-        "pointer": "/items",
-        "severity": "error"
-      }
-    ],
     "38eee3540182ba474f77b34ce4fb235a268c8bb576ef591510f28f0a99ecf0e4": [
       {
         "code": "unsupported_keyword",
@@ -742,20 +722,6 @@
         "code": "unsupported_keyword",
         "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: $dynamicRef.",
         "pointer": "/properties/true/$dynamicRef",
-        "severity": "error"
-      }
-    ],
-    "704557d163f31aeb97445162a026de94ce63fbc1d5dc64ac8b9c995e5cfae30f": [
-      {
-        "code": "unsupported_keyword",
-        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: uniqueItems.",
-        "pointer": "/uniqueItems",
-        "severity": "error"
-      },
-      {
-        "code": "unsupported_keyword",
-        "message": "Tuple schemas are not supported in the first JSON Schema lowering slice.",
-        "pointer": "/items",
         "severity": "error"
       }
     ],
@@ -1158,14 +1124,6 @@
         "code": "cyclic_reference",
         "message": "Zod emission module contains a cyclic reference: root -> root",
         "pointer": null,
-        "severity": "error"
-      }
-    ],
-    "ac85c5e7f39a9806c442d1436acff3855d6fb66b6c92708bc7b96db89df20562": [
-      {
-        "code": "unsupported_keyword",
-        "message": "JSON Schema keyword is recognized but not supported in the first lowering slice: uniqueItems.",
-        "pointer": "/uniqueItems",
         "severity": "error"
       }
     ],
@@ -1832,12 +1790,10 @@
     "draft-7:refRemote.json:9": "b51f820fd9db6757bbdb263bcb57012fe88786cdac604a3b254be28dcc7881d6",
     "draft-7:refRemote.json:10": "87dcbc9556367fe8d45d457d45ee257f6776ef9280d1aed4c45d67b82a5f4b0c",
     "draft-7:required.json:4": "17da1a2b13b01b72ddd2d927613e13734d7df582a26594b4272114825bc2cde8",
-    "draft-7:uniqueItems.json:0": "ac85c5e7f39a9806c442d1436acff3855d6fb66b6c92708bc7b96db89df20562",
-    "draft-7:uniqueItems.json:1": "704557d163f31aeb97445162a026de94ce63fbc1d5dc64ac8b9c995e5cfae30f",
-    "draft-7:uniqueItems.json:2": "384582ed62648e768188cd91edcf7d21e15cc84265b74237e1b0b7672dacc448",
-    "draft-7:uniqueItems.json:3": "ac85c5e7f39a9806c442d1436acff3855d6fb66b6c92708bc7b96db89df20562",
-    "draft-7:uniqueItems.json:4": "704557d163f31aeb97445162a026de94ce63fbc1d5dc64ac8b9c995e5cfae30f",
-    "draft-7:uniqueItems.json:5": "384582ed62648e768188cd91edcf7d21e15cc84265b74237e1b0b7672dacc448",
+    "draft-7:uniqueItems.json:1": "051dab5e058037ddfc1413e82966c320da305746c03687c92d42547b8ced496c",
+    "draft-7:uniqueItems.json:2": "73b4710f40367aa4eae2718bfa1814e6ab3758233e089f2f39f30e7f83961bc7",
+    "draft-7:uniqueItems.json:4": "051dab5e058037ddfc1413e82966c320da305746c03687c92d42547b8ced496c",
+    "draft-7:uniqueItems.json:5": "73b4710f40367aa4eae2718bfa1814e6ab3758233e089f2f39f30e7f83961bc7",
     "draft-2019-09:additionalItems.json:0": "73b4710f40367aa4eae2718bfa1814e6ab3758233e089f2f39f30e7f83961bc7",
     "draft-2019-09:additionalItems.json:1": "615762908b43f6aed55670606b11a364a3ec11b80311639ff8846a6cfb1b1c38",
     "draft-2019-09:additionalItems.json:2": "615762908b43f6aed55670606b11a364a3ec11b80311639ff8846a6cfb1b1c38",
@@ -2025,12 +1981,10 @@
     "draft-2019-09:unevaluatedProperties.json:39": "a50f8bf19161fd47f0cc11908dff1f84ebdc2b185c2621961d8f2d882a02994b",
     "draft-2019-09:unevaluatedProperties.json:40": "38eee3540182ba474f77b34ce4fb235a268c8bb576ef591510f28f0a99ecf0e4",
     "draft-2019-09:unevaluatedProperties.json:42": "eb326214ab76d6c214cd4ba9624d29fef7e3d5ad375a5c447c3f67cedf4bd3af",
-    "draft-2019-09:uniqueItems.json:0": "ac85c5e7f39a9806c442d1436acff3855d6fb66b6c92708bc7b96db89df20562",
-    "draft-2019-09:uniqueItems.json:1": "704557d163f31aeb97445162a026de94ce63fbc1d5dc64ac8b9c995e5cfae30f",
-    "draft-2019-09:uniqueItems.json:2": "384582ed62648e768188cd91edcf7d21e15cc84265b74237e1b0b7672dacc448",
-    "draft-2019-09:uniqueItems.json:3": "ac85c5e7f39a9806c442d1436acff3855d6fb66b6c92708bc7b96db89df20562",
-    "draft-2019-09:uniqueItems.json:4": "704557d163f31aeb97445162a026de94ce63fbc1d5dc64ac8b9c995e5cfae30f",
-    "draft-2019-09:uniqueItems.json:5": "384582ed62648e768188cd91edcf7d21e15cc84265b74237e1b0b7672dacc448",
+    "draft-2019-09:uniqueItems.json:1": "051dab5e058037ddfc1413e82966c320da305746c03687c92d42547b8ced496c",
+    "draft-2019-09:uniqueItems.json:2": "73b4710f40367aa4eae2718bfa1814e6ab3758233e089f2f39f30e7f83961bc7",
+    "draft-2019-09:uniqueItems.json:4": "051dab5e058037ddfc1413e82966c320da305746c03687c92d42547b8ced496c",
+    "draft-2019-09:uniqueItems.json:5": "73b4710f40367aa4eae2718bfa1814e6ab3758233e089f2f39f30e7f83961bc7",
     "draft-2019-09:vocabulary.json:0": "2e6292da3a2bd1180b46cb0aea8183066887ea87b0efe79f837e94c7e67d4ca3",
     "draft-2019-09:vocabulary.json:1": "99b1755aaedac738f4b1ae3c8d01cec355a5ad98143094b4bd8584da03f443fa",
     "draft-2020-12:additionalProperties.json:0": "f7835a7de7fe4f8f2350640df6abea1a832d228db7ea5389651e5c1ed9548bef",
@@ -2230,12 +2184,10 @@
     "draft-2020-12:unevaluatedProperties.json:39": "a50f8bf19161fd47f0cc11908dff1f84ebdc2b185c2621961d8f2d882a02994b",
     "draft-2020-12:unevaluatedProperties.json:40": "38eee3540182ba474f77b34ce4fb235a268c8bb576ef591510f28f0a99ecf0e4",
     "draft-2020-12:unevaluatedProperties.json:42": "eb326214ab76d6c214cd4ba9624d29fef7e3d5ad375a5c447c3f67cedf4bd3af",
-    "draft-2020-12:uniqueItems.json:0": "ac85c5e7f39a9806c442d1436acff3855d6fb66b6c92708bc7b96db89df20562",
-    "draft-2020-12:uniqueItems.json:1": "ac85c5e7f39a9806c442d1436acff3855d6fb66b6c92708bc7b96db89df20562",
-    "draft-2020-12:uniqueItems.json:2": "ac85c5e7f39a9806c442d1436acff3855d6fb66b6c92708bc7b96db89df20562",
-    "draft-2020-12:uniqueItems.json:3": "ac85c5e7f39a9806c442d1436acff3855d6fb66b6c92708bc7b96db89df20562",
-    "draft-2020-12:uniqueItems.json:4": "ac85c5e7f39a9806c442d1436acff3855d6fb66b6c92708bc7b96db89df20562",
-    "draft-2020-12:uniqueItems.json:5": "ac85c5e7f39a9806c442d1436acff3855d6fb66b6c92708bc7b96db89df20562",
+    "draft-2020-12:uniqueItems.json:1": "583ef5dc382f2891a84de3236aad63e1a4021979bcff8b594359e7aa247c0177",
+    "draft-2020-12:uniqueItems.json:2": "583ef5dc382f2891a84de3236aad63e1a4021979bcff8b594359e7aa247c0177",
+    "draft-2020-12:uniqueItems.json:4": "583ef5dc382f2891a84de3236aad63e1a4021979bcff8b594359e7aa247c0177",
+    "draft-2020-12:uniqueItems.json:5": "583ef5dc382f2891a84de3236aad63e1a4021979bcff8b594359e7aa247c0177",
     "draft-2020-12:vocabulary.json:0": "225a65e522d379cf29e4108f2d5111d14ecf8fdedbd63667ad53aad853707bda",
     "draft-2020-12:vocabulary.json:1": "4b9db1d96225904d2e24423d70e9a2582e1bd3e69082d345ff00109017edff34"
   },
@@ -2335,12 +2287,12 @@
   },
   "suiteCommit": "b01af8c8d50244a2eb4dd3e01073e24823aa8691",
   "summary": {
-    "compileGapCaseCount": 1602,
-    "compileGapGroupCount": 497,
-    "conformingCaseCount": 1860,
-    "gapCaseInventorySha256": "e7574c81c0834f9164a5d2751b409a8bdfcdb4cf1d89487195cbcafa65182dc6",
+    "compileGapCaseCount": 1473,
+    "compileGapGroupCount": 491,
+    "conformingCaseCount": 1989,
+    "gapCaseInventorySha256": "7948e250b6008eced47ac05a0d2ee60ce15914ac6b275ba322fdfbf63b79f38c",
     "oracleDiscrepancyCount": 63,
-    "passingCaseInventorySha256": "7faa43c82b8c315530c6bc49cd431518d718947ed67f7f9b83d6a73c3f677d6e",
+    "passingCaseInventorySha256": "e13905f2e8907ae34ecd02bc55583bc32a9f8e347e1f16b26cfcd07c5b3acf5b",
     "runtimeGapCaseCount": 23
   },
   "version": 1

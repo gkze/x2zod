@@ -82,6 +82,7 @@ void describe("JSON Schema composition diagnostics", () => {
       (
         [
           ["primitive-const-array-sibling", { const: "source", items: { type: "string" } }],
+          ["primitive-const-unique-sibling", { const: "source", uniqueItems: true }],
           ["primitive-enum-array-sibling", { enum: ["source"], minItems: 1 }],
           [
             "primitive-ref-array-sibling",
@@ -118,9 +119,7 @@ void describe("JSON Schema external composition diagnostics", () => {
           [externalSchemaUri]: {
             $defs: {
               base: {
-                properties: {
-                  tags: { items: { type: "string" }, type: "array", uniqueItems: true },
-                },
+                properties: { tags: { contains: { type: "string" }, type: "array" } },
                 type: "object",
               },
             },
@@ -134,7 +133,7 @@ void describe("JSON Schema external composition diagnostics", () => {
     assert.ok(result.diagnostics.some((diagnostic) => diagnostic.code === "unsupported_keyword"));
     assert.ok(
       result.diagnostics.some(
-        (diagnostic) => diagnostic.location?.pointer === "/$defs/base/properties/tags/uniqueItems",
+        (diagnostic) => diagnostic.location?.pointer === "/$defs/base/properties/tags/contains",
       ),
     );
   });
@@ -144,7 +143,7 @@ void describe("JSON Schema composition validation diagnostics", () => {
   void test("recursively diagnoses unsupported unevaluatedProperties schemas", async () => {
     await assertCompileDiagnostic(
       "unsupported-unevaluated-properties-schema",
-      { type: "object", unevaluatedProperties: { type: "array", uniqueItems: true } },
+      { type: "object", unevaluatedProperties: { contains: { type: "string" }, type: "array" } },
       "unsupported_keyword",
     );
   });

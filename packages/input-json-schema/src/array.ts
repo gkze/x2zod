@@ -1,4 +1,4 @@
-import { zodPlan } from "@x2zod/core";
+import { zodHelper, zodPlan } from "@x2zod/core";
 import type { JsonPointer, ZodExpression } from "@x2zod/core";
 
 import type { JsonSchemaDiagnosticSink } from "./diagnostics";
@@ -15,13 +15,14 @@ type ArrayLoweringContext = JsonSchemaDiagnosticSink &
 const isItemCount = (value: JsonValue | undefined): value is number =>
   typeof value === "number" && Number.isInteger(value) && value >= minimumItemCount;
 
-const collectArrayBoundDiagnostics = (
+const collectArrayAssertionDiagnostics = (
   schema: JsonObject,
   pointer: JsonPointer,
   context: ArrayLoweringContext,
 ): void => {
   const minItems = schema[jsonSchemaKeywords.minItems];
   const maxItems = schema[jsonSchemaKeywords.maxItems];
+  const uniqueItems = schema[jsonSchemaKeywords.uniqueItems];
 
   if (minItems !== undefined && !isItemCount(minItems))
     context.addDiagnostic({
@@ -41,6 +42,12 @@ const collectArrayBoundDiagnostics = (
       message: "JSON Schema minItems cannot be greater than maxItems.",
       pointer: jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.maxItems),
     });
+  if (uniqueItems !== undefined && typeof uniqueItems !== "boolean")
+    context.addDiagnostic({
+      code: "invalid_schema_document",
+      message: "JSON Schema uniqueItems must be a boolean.",
+      pointer: jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.uniqueItems),
+    });
 };
 
 const applyArrayBounds = (expression: ZodExpression, schema: JsonObject): ZodExpression => {
@@ -53,6 +60,14 @@ const applyArrayBounds = (expression: ZodExpression, schema: JsonObject): ZodExp
 
   return bounded;
 };
+
+const applyUniqueItems = (expression: ZodExpression, schema: JsonObject): ZodExpression =>
+  schema[jsonSchemaKeywords.uniqueItems] === true
+    ? zodPlan.refine(expression, zodHelper.uniqueItems())
+    : expression;
+
+const applyArrayAssertions = (expression: ZodExpression, schema: JsonObject): ZodExpression =>
+  applyUniqueItems(applyArrayBounds(expression, schema), schema);
 
 const prefixItemPointer = (pointer: JsonPointer, index: number): JsonPointer =>
   jsonSchemaPointerWithSegment(
@@ -76,9 +91,10 @@ const lowerPrefixItems = (
     return zodPlan.array(zodPlan.unknown());
   }
 
-  collectArrayBoundDiagnostics(schema, pointer, context);
+  collectArrayAssertionDiagnostics(schema, pointer, context);
   const minItems = schema[jsonSchemaKeywords.minItems];
   const maxItems = schema[jsonSchemaKeywords.maxItems];
+  const uniqueItems = schema[jsonSchemaKeywords.uniqueItems];
   if (minItems !== prefixItems.length || maxItems !== prefixItems.length) {
     context.addDiagnostic({
       code: "unsupported_keyword",
@@ -108,6 +124,12 @@ const lowerPrefixItems = (
     });
     return zodPlan.array(zodPlan.unknown());
   }
+  if (typeof uniqueItems === "boolean")
+    context.addDiagnostic({
+      code: "unsupported_keyword",
+      message: "JSON Schema uniqueItems is supported only for non-tuple arrays.",
+      pointer: jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.uniqueItems),
+    });
   return zodPlan.tuple([firstExpression, ...remainingExpressions]);
 };
 
@@ -118,10 +140,10 @@ export const lowerJsonSchemaArray = (
 ): ZodExpression => {
   const tuple = lowerPrefixItems(schema, pointer, context);
   if (tuple !== undefined) return tuple;
-  collectArrayBoundDiagnostics(schema, pointer, context);
+  collectArrayAssertionDiagnostics(schema, pointer, context);
 
   const items = schema[jsonSchemaKeywords.items];
-  if (items === undefined) return applyArrayBounds(zodPlan.array(zodPlan.unknown()), schema);
+  if (items === undefined) return applyArrayAssertions(zodPlan.array(zodPlan.unknown()), schema);
   if (isJsonArray(items)) {
     context.addDiagnostic({
       code: "unsupported_keyword",
@@ -131,7 +153,7 @@ export const lowerJsonSchemaArray = (
     return zodPlan.array(zodPlan.unknown());
   }
   if (isJsonSchemaValue(items))
-    return applyArrayBounds(
+    return applyArrayAssertions(
       zodPlan.array(
         context.lowerSchema(jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.items), items),
       ),
@@ -143,5 +165,5 @@ export const lowerJsonSchemaArray = (
     message: "JSON Schema items must be a boolean schema or schema object.",
     pointer: jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.items),
   });
-  return applyArrayBounds(zodPlan.array(zodPlan.unknown()), schema);
+  return applyArrayAssertions(zodPlan.array(zodPlan.unknown()), schema);
 };

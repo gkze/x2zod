@@ -21,6 +21,7 @@ import {
   compileToZodSource,
   ok,
   zodDeclaration,
+  zodHelper,
   zodModule,
   zodPlan,
   zodSymbol,
@@ -266,6 +267,22 @@ void describe("buildZodSourceFile emission transform diagnostics", () => {
           zodPlan.object({ user_id: zodPlan.string() }),
           zodPlan.object({ team_id: zodPlan.string() }),
         ]),
+      ),
+      defaultOutputOptions,
+      camelCasePropertyTransforms,
+    );
+
+    assert.equal(result.ok, false);
+    assert.equal(result.diagnostics[0].code, "unsupported_emission_transform");
+  });
+
+  void test("rejects unique-item refinements after transformed array elements", () => {
+    const result = buildZodSourceFile(
+      rootOnlyModule(
+        zodPlan.refine(
+          zodPlan.array(zodPlan.object({ snake_key: zodPlan.number() })),
+          zodHelper.uniqueItems(),
+        ),
       ),
       defaultOutputOptions,
       camelCasePropertyTransforms,

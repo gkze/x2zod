@@ -91,8 +91,15 @@ void describe("parseZodEmissionModule method validation", () => {
       ).ok,
       true,
     );
+    assert.equal(
+      parseZodEmissionModule(
+        rootModule(zodPlan.refine(zodPlan.array(zodPlan.unknown()), zodHelper.uniqueItems())),
+      ).ok,
+      true,
+    );
     expectInvalidRoot(zodPlan.refine(zodPlan.string(), zodHelper.exactMultipleOf(decimalDivisor)));
     expectInvalidRoot(zodPlan.refine(zodPlan.number(), zodHelper.codePointLength(1, 2)));
+    expectInvalidRoot(zodPlan.refine(zodPlan.string(), zodHelper.uniqueItems()));
   });
 
   void test("rejects invalid required keys and duplicate object keys", () => {

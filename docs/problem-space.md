@@ -346,11 +346,12 @@ The design discussion after this landscape pass resolved the initial open questi
 - The implemented JSON Schema slice remains narrower than the V1 semantic target, but now includes
   exact `oneOf`, representable composition and ref sibling assertions, and bounded
   `unevaluatedProperties` lowering for direct objects, mergeable object-only `allOf` trees, and the
-  required-key-only `anyOf` / `oneOf` shape exercised by Mise. Untyped object and array assertions
-  preserve their vacuous applicability to other JSON value domains, including through refs, mixed
-  applicator schemas, and schema-valued `unevaluatedProperties`. Dynamic refs, required format
-  assertions, `patternProperties`, general evaluated-property bookkeeping, `unevaluatedItems`, and
-  conditionals still require the corresponding dependency and runtime proof.
+  required-key-only `anyOf` / `oneOf` shape exercised by Mise. Non-tuple arrays support deep
+  `uniqueItems` checks through a generated helper. Untyped object and array assertions preserve
+  their vacuous applicability to other JSON value domains, including through refs, mixed applicator
+  schemas, and schema-valued `unevaluatedProperties`. Dynamic refs, required format assertions,
+  `patternProperties`, general evaluated-property bookkeeping, `unevaluatedItems`, and conditionals
+  still require the corresponding dependency and runtime proof.
 - URI refs are supported through the selected reference strategy. Remote fetching requires explicit
   opt-in; external schemas can be provided through a registry.
 - Generated output imports only Zod by default, with generated helpers deduplicated at module scope.

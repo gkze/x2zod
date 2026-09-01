@@ -16,6 +16,7 @@ import type {
   SourcePropertyKeyMapping,
   SourceReferenceExpression,
 } from "./source-model";
+import { zodHelperReceiver } from "./zod-helpers";
 import type {
   ZodArgument,
   ZodDeclaration,
@@ -127,6 +128,11 @@ const unsupportedTransformComposition = (factory: string): Result<never> =>
 
 const transformedReferenceCall = (call: ZodMethodCall): boolean =>
   zodMethodMetadataFor(call.method)?.wrapsReceiver !== true;
+
+const isArrayHelperRefinement = (call: ZodMethodCall): boolean =>
+  call.method === "refine" &&
+  call.args[0]?.kind === "helper" &&
+  zodHelperReceiver(call.args[0].request) === "array";
 
 const projectArgument = (
   argument: ZodArgument,
@@ -358,6 +364,9 @@ const projectFactoryExpression = (
     schemaArgs.push(projection.value.schemaArgument);
     decodedArgs.push(projection.value.decodedArgument);
   }
+  if (expression.factory === "array" && changed && expression.calls.some(isArrayHelperRefinement))
+    return unsupportedTransformComposition("array helper refinement");
+
   const calls = projectCalls(expression.calls, context);
   if (!calls.ok) return calls;
   changed ||= calls.value.changed;
