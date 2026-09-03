@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "gates": [
+    {
+      "gate": "Gate 0",
+      "capability": "Finite capability registry",
+      "state": "Not claimed",
+      "evidence": "The registry exists; complete implementation and diagnostic evidence remain required"
+    },
+    {
+      "gate": "Gate 1",
+      "capability": "Stock dialect validation semantics",
+      "stateSource": "canonical-baseline",
+      "evidence": "Derived from the validated canonical required-suite baseline"
+    },
+    {
+      "gate": "Gate 2",
+      "capability": "Differential and interaction coverage",
+      "state": "Not claimed",
+      "evidence": "Requires checked-in interaction evidence"
+    },
+    {
+      "gate": "Gate 3",
+      "capability": "Standardized output and annotations",
+      "state": "Not claimed",
+      "evidence": "safeParse is not standardized JSON Schema output"
+    },
+    {
+      "gate": "Gate 4",
+      "capability": "Profiled formats and content",
+      "state": "Not claimed",
+      "evidence": "Named profiles require separate evidence"
+    },
+    {
+      "gate": "Gate 5",
+      "capability": "Lossless JSON-text representation",
+      "state": "Not claimed",
+      "evidence": "Default input remains the JavaScript JSON domain"
+    },
+    {
+      "gate": "Gate 6",
+      "capability": "Resources and release integrity",
+      "state": "Not claimed",
+      "evidence": "Requires reproducibility and release-integrity evidence"
+    }
+  ],
+  "profiles": [
+    ["Stock validation dialects", "Required", "Draft 7, 2019-09, and 2020-12"],
+    ["Validation output", "Required", "Zod acceptance with input-preserving output"],
+    ["Standard annotations", "Recognized", "Output semantics require a separate evaluator profile"],
+    ["Format", "Annotation only", "Assertion requires a named finite profile"],
+    ["Content vocabulary", "Recognized", "Decode and assertion require a named profile"],
+    ["Numbers and JSON text", "JavaScript JSON", "Lossless semantics require a JSON-text profile"],
+    [
+      "External resources",
+      "Explicit registry",
+      "Remote fetch is not implemented; future support must be opt-in and generated code never fetches"
+    ],
+    ["Hyper-Schema", "Unsupported", "Requires a separate link-aware surface"],
+    [
+      "Historical and future drafts",
+      "Unsupported",
+      "Must be explicitly registered, never inferred"
+    ],
+    ["Custom vocabularies", "Unsupported", "Requires a finite registered capability contract"]
+  ]
+}

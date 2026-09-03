@@ -6,8 +6,8 @@ import type { JsonObject, JsonSchemaValue, JsonValue } from "./document";
 import {
   jsonSchemaAnyOfAllowedSiblingKeywords,
   jsonSchemaKeywords,
+  jsonSchemaSourceProfileMetadataKeywords,
   opencodeModelRef,
-  opencodeSourceProfileMetadataKeywords,
 } from "./metadata";
 import type { JsonSchemaDialect, JsonSchemaSourceProfile } from "./options";
 import { jsonSchemaPointerWithSegment } from "./pointer";
@@ -162,7 +162,7 @@ const allowsTypeSibling = (
 
 const isMetadataSiblingKeyword = (key: string, context: SiblingAssertionContext): boolean =>
   jsonSchemaAnyOfAllowedSiblingKeywords.has(key) ||
-  (context.sourceProfile === "opencode" && opencodeSourceProfileMetadataKeywords.has(key));
+  jsonSchemaSourceProfileMetadataKeywords[context.sourceProfile].has(key);
 
 const isSupportedUnevaluatedPropertiesSibling = (
   key: string,
@@ -283,41 +283,23 @@ class UnsafeObjectBoundaryScanner {
   }
 
   public provesObjectOnly(schema: JsonSchemaValue): boolean {
-    if (!isJsonObject(schema)) return false;
-    const types = schemaTypeNames(schema);
-    if (types.length === 1 && types[0] === "object") return true;
-    if (this.referenceProvesObjectOnly(schema)) return true;
-
-    const allOf = schema[jsonSchemaKeywords.allOf];
-    if (
-      isJsonArray(allOf) &&
-      allOf.some((branch) => isJsonSchemaValue(branch) && this.provesObjectOnly(branch))
-    )
-      return true;
-
-    for (const keyword of [jsonSchemaKeywords.anyOf, jsonSchemaKeywords.oneOf]) {
-      const branches = schema[keyword];
-      if (
-        isJsonArray(branches) &&
-        branches.length > 0 &&
-        branches.every((branch) => isJsonSchemaValue(branch) && this.provesObjectOnly(branch))
-      )
-        return true;
-    }
-
-    return false;
+    return this.provesOnly(schema, "object");
   }
 
   public provesArrayOnly(schema: JsonSchemaValue): boolean {
+    return this.provesOnly(schema, "array");
+  }
+
+  private provesOnly(schema: JsonSchemaValue, type: "array" | "object"): boolean {
     if (!isJsonObject(schema)) return false;
     const types = schemaTypeNames(schema);
-    if (types.length === 1 && types[0] === "array") return true;
-    if (this.referenceProvesArrayOnly(schema)) return true;
+    if (types.length === 1 && types[0] === type) return true;
+    if (this.referenceProvesOnly(schema, type)) return true;
 
     const allOf = schema[jsonSchemaKeywords.allOf];
     if (
       isJsonArray(allOf) &&
-      allOf.some((branch) => isJsonSchemaValue(branch) && this.provesArrayOnly(branch))
+      allOf.some((branch) => isJsonSchemaValue(branch) && this.provesOnly(branch, type))
     )
       return true;
 
@@ -326,7 +308,7 @@ class UnsafeObjectBoundaryScanner {
       if (
         isJsonArray(branches) &&
         branches.length > 0 &&
-        branches.every((branch) => isJsonSchemaValue(branch) && this.provesArrayOnly(branch))
+        branches.every((branch) => isJsonSchemaValue(branch) && this.provesOnly(branch, type))
       )
         return true;
     }
@@ -356,15 +338,11 @@ class UnsafeObjectBoundaryScanner {
     );
   }
 
-  private referenceProvesObjectOnly(schema: JsonObject): boolean {
-    return this.referenceResult(schema, this.objectOnlyByAddress, (targetSchema) =>
-      this.provesObjectOnly(targetSchema),
-    );
-  }
-
-  private referenceProvesArrayOnly(schema: JsonObject): boolean {
-    return this.referenceResult(schema, this.arrayOnlyByAddress, (targetSchema) =>
-      this.provesArrayOnly(targetSchema),
+  private referenceProvesOnly(schema: JsonObject, type: "array" | "object"): boolean {
+    return this.referenceResult(
+      schema,
+      type === "array" ? this.arrayOnlyByAddress : this.objectOnlyByAddress,
+      (targetSchema) => this.provesOnly(targetSchema, type),
     );
   }
 
@@ -475,22 +453,6 @@ export const hasUnsupportedObjectSiblingIntersection = (
       "that cannot be preserved by a plain Zod intersection.",
     ].join(" "),
     pointer: jsonSchemaPointerWithSegment(request.pointer, request.keyword),
-  });
-  return true;
-};
-
-export const hasUnsupportedSiblingAssertions = (
-  request: SiblingAssertionRequest,
-  context: SiblingAssertionContext,
-): boolean => {
-  const { keyword, pointer, schema } = request;
-  if (Object.keys(schema).every((key) => isAllowedSiblingKeyword(key, request, context)))
-    return false;
-
-  context.addDiagnostic({
-    code: "unrepresentable_schema_combination",
-    message: `JSON Schema ${keyword} with sibling assertion keywords is not supported by this lowering slice.`,
-    pointer: jsonSchemaPointerWithSegment(pointer, keyword),
   });
   return true;
 };

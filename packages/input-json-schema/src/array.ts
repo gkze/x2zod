@@ -1,16 +1,21 @@
 import { zodHelper, zodPlan } from "@x2zod/core";
 import type { JsonPointer, ZodExpression } from "@x2zod/core";
 
+import { jsonSchemaArrayNeedsBroadRuntimeProjection } from "./array-runtime-projection";
 import type { JsonSchemaDiagnosticSink } from "./diagnostics";
 import { isJsonArray, isJsonSchemaValue } from "./document";
 import type { JsonObject, JsonSchemaValue, JsonValue } from "./document";
 import { jsonSchemaKeywords } from "./metadata";
+import type { JsonSchemaDialect } from "./metadata";
 import { jsonSchemaPointerWithSegment } from "./pointer";
 
 const minimumItemCount = 0;
 
 type ArrayLoweringContext = JsonSchemaDiagnosticSink &
-  Readonly<{ lowerSchema: (pointer: JsonPointer, schema: JsonSchemaValue) => ZodExpression }>;
+  Readonly<{
+    dialect: JsonSchemaDialect;
+    lowerSchema: (pointer: JsonPointer, schema: JsonSchemaValue) => ZodExpression;
+  }>;
 
 const isItemCount = (value: JsonValue | undefined): value is number =>
   typeof value === "number" && Number.isInteger(value) && value >= minimumItemCount;
@@ -69,11 +74,32 @@ const applyUniqueItems = (expression: ZodExpression, schema: JsonObject): ZodExp
 const applyArrayAssertions = (expression: ZodExpression, schema: JsonObject): ZodExpression =>
   applyUniqueItems(applyArrayBounds(expression, schema), schema);
 
-const prefixItemPointer = (pointer: JsonPointer, index: number): JsonPointer =>
-  jsonSchemaPointerWithSegment(
-    jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.prefixItems),
-    index,
-  );
+const arraySchemaEntryPointer = (
+  pointer: JsonPointer,
+  keyword: string,
+  index: number,
+): JsonPointer =>
+  jsonSchemaPointerWithSegment(jsonSchemaPointerWithSegment(pointer, keyword), index);
+
+type SchemaArrayDiagnosticRequest = Readonly<{
+  keyword: string;
+  pointer: JsonPointer;
+  schemas: readonly JsonValue[];
+}>;
+
+const collectSchemaArrayEntryDiagnostics = (
+  request: SchemaArrayDiagnosticRequest,
+  context: ArrayLoweringContext,
+): void => {
+  const { keyword, pointer, schemas } = request;
+  for (const [index, item] of schemas.entries())
+    if (!isJsonSchemaValue(item))
+      context.addDiagnostic({
+        code: "invalid_schema_document",
+        message: `JSON Schema ${keyword} entries must be schemas.`,
+        pointer: arraySchemaEntryPointer(pointer, keyword, index),
+      });
+};
 
 const lowerPrefixItems = (
   schema: JsonObject,
@@ -92,44 +118,29 @@ const lowerPrefixItems = (
   }
 
   collectArrayAssertionDiagnostics(schema, pointer, context);
+  collectSchemaArrayEntryDiagnostics(
+    { keyword: jsonSchemaKeywords.prefixItems, pointer, schemas: prefixItems },
+    context,
+  );
+  if (jsonSchemaArrayNeedsBroadRuntimeProjection(schema))
+    return applyArrayBounds(zodPlan.array(zodPlan.unknown()), schema);
+
   const minItems = schema[jsonSchemaKeywords.minItems];
   const maxItems = schema[jsonSchemaKeywords.maxItems];
-  const uniqueItems = schema[jsonSchemaKeywords.uniqueItems];
-  if (minItems !== prefixItems.length || maxItems !== prefixItems.length) {
-    context.addDiagnostic({
-      code: "unsupported_keyword",
-      message:
-        "Only fixed-length prefixItems tuples are supported in this JSON Schema lowering slice.",
-      pointer: jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.prefixItems),
-    });
+  if (minItems !== prefixItems.length || maxItems !== prefixItems.length)
     return zodPlan.array(zodPlan.unknown());
-  }
 
   const expressions: ZodExpression[] = [];
   for (const [index, item] of prefixItems.entries())
     if (isJsonSchemaValue(item))
-      expressions.push(context.lowerSchema(prefixItemPointer(pointer, index), item));
-    else
-      context.addDiagnostic({
-        code: "invalid_schema_document",
-        message: "JSON Schema prefixItems entries must be schemas.",
-        pointer: prefixItemPointer(pointer, index),
-      });
+      expressions.push(
+        context.lowerSchema(
+          arraySchemaEntryPointer(pointer, jsonSchemaKeywords.prefixItems, index),
+          item,
+        ),
+      );
   const [firstExpression, ...remainingExpressions] = expressions;
-  if (firstExpression === undefined) {
-    context.addDiagnostic({
-      code: "unsupported_keyword",
-      message: "Empty fixed-length prefixItems tuples are not supported by this lowering slice.",
-      pointer: jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.prefixItems),
-    });
-    return zodPlan.array(zodPlan.unknown());
-  }
-  if (typeof uniqueItems === "boolean")
-    context.addDiagnostic({
-      code: "unsupported_keyword",
-      message: "JSON Schema uniqueItems is supported only for non-tuple arrays.",
-      pointer: jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.uniqueItems),
-    });
+  if (firstExpression === undefined) return zodPlan.array(zodPlan.unknown());
   return zodPlan.tuple([firstExpression, ...remainingExpressions]);
 };
 
@@ -145,12 +156,17 @@ export const lowerJsonSchemaArray = (
   const items = schema[jsonSchemaKeywords.items];
   if (items === undefined) return applyArrayAssertions(zodPlan.array(zodPlan.unknown()), schema);
   if (isJsonArray(items)) {
-    context.addDiagnostic({
-      code: "unsupported_keyword",
-      message: "Tuple items are not supported in the first JSON Schema lowering slice.",
-      pointer: jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.items),
-    });
-    return zodPlan.array(zodPlan.unknown());
+    collectSchemaArrayEntryDiagnostics(
+      { keyword: jsonSchemaKeywords.items, pointer, schemas: items },
+      context,
+    );
+    if (context.dialect === "draft-2020-12")
+      context.addDiagnostic({
+        code: "invalid_schema_document",
+        message: "JSON Schema 2020-12 items must be a boolean schema or schema object.",
+        pointer: jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.items),
+      });
+    return applyArrayBounds(zodPlan.array(zodPlan.unknown()), schema);
   }
   if (isJsonSchemaValue(items))
     return applyArrayAssertions(

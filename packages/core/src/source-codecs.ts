@@ -1,7 +1,6 @@
 import { NodeFlags, SyntaxKind } from "@typescript/native-preview/unstable/ast";
 import type {
   Expression,
-  ParameterDeclaration,
   PropertyAssignment,
   PropertyName,
   Statement,
@@ -16,10 +15,8 @@ import {
   createAsExpression,
   createBindingElement,
   createBlock,
-  createCallExpression,
   createContinueStatement,
   createDeleteExpression,
-  createElementAccessExpression,
   createExpressionStatement,
   createForOfStatement,
   createIdentifier,
@@ -27,9 +24,7 @@ import {
   createKeywordExpression,
   createKeywordTypeNode,
   createObjectLiteralExpression,
-  createParameterDeclaration,
   createPrefixUnaryExpression,
-  createPropertyAccessExpression,
   createPropertyAssignment as createNativePropertyAssignment,
   createQualifiedName,
   createReturnStatement,
@@ -45,6 +40,12 @@ import {
   createVariableStatement,
 } from "@typescript/native-preview/unstable/ast/factory";
 
+import {
+  createSourceArrowParameter as createArrowParameter,
+  createSourceElementAccess as createElementAccess,
+  createSourceFunctionCall as createFunctionCall,
+  createSourcePropertyAccess as createPropertyAccess,
+} from "./source-ast";
 import type {
   SourceCodecExpression,
   SourceCodecOperation,
@@ -53,7 +54,7 @@ import type {
 } from "./source-model";
 
 const noTokenFlags = 0;
-const remapPropertiesHelperName = "x2zodRemapProperties";
+export const remapPropertiesHelperName = "x2zodRemapProperties";
 
 type CreateSourceCodecExpressionInput = Readonly<{
   createExpression: (expression: SourceExpression) => Expression;
@@ -64,7 +65,7 @@ type CreateSourceCodecExpressionInput = Readonly<{
 // The implementation accepts undefined for ordinary object properties.
 const omittedNativePropertyType = undefined as never;
 
-const createPropertyAssignment = (
+export const createPropertyAssignment = (
   name: PropertyName,
   initializer: Expression,
   type?: TypeNode,
@@ -76,18 +77,6 @@ const createPropertyAssignment = (
     type ?? omittedNativePropertyType,
     initializer,
   );
-
-const createArrowParameter = (name: string, type?: TypeNode): ParameterDeclaration =>
-  createParameterDeclaration(undefined, undefined, createIdentifier(name), undefined, type);
-
-const createPropertyAccess = (expression: Expression, name: string): Expression =>
-  createPropertyAccessExpression(expression, undefined, createIdentifier(name), NodeFlags.None);
-
-const createElementAccess = (expression: Expression, key: Expression): Expression =>
-  createElementAccessExpression(expression, undefined, key, NodeFlags.None);
-
-const createFunctionCall = (expression: Expression, args: readonly Expression[]): Expression =>
-  createCallExpression(expression, undefined, undefined, args, NodeFlags.None);
 
 const createKeyMappingExpression = (
   mapping: SourcePropertyKeyMapping,
@@ -157,22 +146,11 @@ export const createSourceCodecExpression = ({
   createExpression,
   expression,
 }: CreateSourceCodecExpressionInput): Expression =>
-  createCallExpression(
-    createPropertyAccessExpression(
-      createIdentifier("z"),
-      undefined,
-      createIdentifier("codec"),
-      NodeFlags.None,
-    ),
-    undefined,
-    undefined,
-    [
-      createExpression(expression.input),
-      createExpression(expression.output),
-      createCodecCallbacks(expression.operation),
-    ],
-    NodeFlags.None,
-  );
+  createFunctionCall(createPropertyAccess(createIdentifier("z"), "codec"), [
+    createExpression(expression.input),
+    createExpression(expression.output),
+    createCodecCallbacks(expression.operation),
+  ]);
 
 const createRecordType = (): TypeNode =>
   createTypeReferenceNode(createIdentifier("Record"), [

@@ -1,4 +1,5 @@
 import nodePath from "node:path";
+import { pathToFileURL } from "node:url";
 
 import {
   applyX2ZodOutputProcessors,
@@ -113,6 +114,7 @@ const documentForInput = async (
       {
         source: { kind: "file", path: filePath },
         text: await context.fileSystem.readTextFile(filePath),
+        retrievalUri: pathToFileURL(filePath).href,
       },
       input.mediaType,
     );
@@ -126,7 +128,11 @@ const documentForInput = async (
       );
     const responseMediaType = response.headers.get("content-type")?.split(";")[0];
     return withMediaType(
-      { source: { kind: "uri", uri: input.uri }, text: await response.text() },
+      {
+        source: { kind: "uri", uri: input.uri },
+        text: await response.text(),
+        retrievalUri: input.uri,
+      },
       input.mediaType ?? responseMediaType,
     );
   }

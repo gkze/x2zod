@@ -96,6 +96,25 @@ const miseConfigSchema = fixtureSource(
   "mise-config.schema.json",
   `https://raw.githubusercontent.com/jdx/mise/${miseSchemaCommit}/schema/mise.json`,
 );
+const schemaStorePackageCommit = "d651805897ab2484548bcf3718624b459cb6cf21";
+const schemaStorePackageSchema = fixtureSource(
+  "schemastore-package-schema",
+  "schemastore-package.schema.json",
+  `https://raw.githubusercontent.com/SchemaStore/schemastore/${schemaStorePackageCommit}/src/schemas/json/package.json`,
+);
+const schemaStoreExternalSchemas = Object.fromEntries(
+  [
+    "https://json.schemastore.org/ava.json",
+    "https://json.schemastore.org/eslintrc.json",
+    "https://json.schemastore.org/jscpd.json",
+    "https://json.schemastore.org/madge.json",
+    "https://json.schemastore.org/nodemon.json",
+    "https://json.schemastore.org/semantic-release.json",
+    "https://json.schemastore.org/stylelintrc.json",
+    "https://www.schemastore.org/prettierrc.json",
+    "https://www.schemastore.org/quikrun.json",
+  ].map((uri) => [uri, true]),
+);
 
 const conductorSettingsSample = {
   $schema: conductorSettingsSchema.sourceUrl,
@@ -257,7 +276,7 @@ const targetMatrixEntries = [
       },
     ],
     name: "Claude Code settings",
-    pluginOptions: { dialect: "draft-7", validator: "none" },
+    pluginOptions: { dialect: "draft-7", sourceProfile: "opencode", validator: "none" },
     roundTripLevel: "generated-zod",
     typeName: "ClaudeCodeSettings",
     validSamples: [
@@ -322,10 +341,35 @@ const targetMatrixEntries = [
       },
     ],
     name: "Cursor environment",
-    pluginOptions: { dialect: "draft-2019-09", validator: "none" },
+    pluginOptions: { dialect: "draft-2019-09", sourceProfile: "opencode", validator: "none" },
     roundTripLevel: "generated-zod",
     typeName: "CursorEnvironment",
     validSamples: [{ label: "minimal real Cursor environment", value: cursorEnvironmentSample }],
+  },
+  {
+    ...schemaStorePackageSchema,
+    exportName: "packageJsonSchema",
+    invalidSamples: [{ label: "rejects an empty package name", value: { name: "" } }],
+    name: "SchemaStore package.json",
+    pluginOptions: {
+      dialect: "draft-7",
+      externalSchemas: schemaStoreExternalSchemas,
+      sourceProfile: "schemastore",
+      validator: "ajv",
+    },
+    roundTripLevel: "generated-zod",
+    typeName: "PackageJson",
+    validSamples: [
+      {
+        label: "package with conditional exports and scripts",
+        value: {
+          exports: { "./feature": "./feature.js" },
+          name: "x2zod-fixture",
+          scripts: { build: "bun run build" },
+          version: "1.0.0",
+        },
+      },
+    ],
   },
   {
     name: "Visual Studio Code settings",

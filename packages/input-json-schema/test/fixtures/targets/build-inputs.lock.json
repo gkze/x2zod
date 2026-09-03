@@ -23,6 +23,10 @@
     "https://raw.githubusercontent.com/jdx/mise/e47826c162671248d8a1726d7f3043e9b9c00092/schema/mise.json": {
       "sha256": "587f3a906c4d6c3a860cf0c50ac87046487395cb3e0ff1ba13ffcc7e0e083102",
       "sizeBytes": 110820
+    },
+    "https://raw.githubusercontent.com/SchemaStore/schemastore/d651805897ab2484548bcf3718624b459cb6cf21/src/schemas/json/package.json": {
+      "sha256": "8dafe7f4d62d072351fc32f1ce33f8e0a5a7cc1adc1fd204d81e2fb5120cc1eb",
+      "sizeBytes": 43718
     }
   },
   "version": 1

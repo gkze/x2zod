@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { pathToFileURL } from "node:url";
 
 import { compileToZodSource } from "@x2zod/core";
 
@@ -23,7 +24,11 @@ const pluginOptions =
     : jsonSchemaInputPluginOptionsSchema.parse(JSON.parse(readFileSync(optionsPath, "utf8")));
 
 const result = await compileToZodSource({
-  document: { source: { kind: "file", path: schemaPath }, text: readFileSync(schemaPath, "utf8") },
+  document: {
+    source: { kind: "file", path: schemaPath },
+    text: readFileSync(schemaPath, "utf8"),
+    retrievalUri: pathToFileURL(schemaPath).href,
+  },
   output: { typeName },
   plugin: jsonSchemaInputPlugin,
   pluginOptions,

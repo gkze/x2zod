@@ -56,6 +56,7 @@ void describe("JSON Schema uniqueItems generated runtime semantics", () => {
     assert.equal(result.success, true);
     assert.deepEqual(result.data, duplicates);
     assert.match(source, /export const runtimeCaseSchema = z\.unknown\(\);/u);
+    assert.doesNotMatch(source, /x2zodApplyRuntimePredicate/u);
     assert.doesNotMatch(source, /x2zodUniqueItems/u);
   });
 });

@@ -343,17 +343,17 @@ The design discussion after this landscape pass resolved the initial open questi
   JSON Schema tool owns validation and dialect evidence; source-map parsers own JSON Pointer spans;
   ref and dynamic-ref behavior should be dependency-backed where possible. `x2zod` owns the emission
   lowerer, diagnostics, generated helper ABI, and deterministic TypeScript source.
-- The implemented JSON Schema slice remains narrower than the V1 semantic target, but now includes
-  exact `oneOf`, representable composition and ref sibling assertions, and bounded
-  `unevaluatedProperties` lowering for direct objects, mergeable object-only `allOf` trees, and the
-  required-key-only `anyOf` / `oneOf` shape exercised by Mise. Non-tuple arrays support deep
-  `uniqueItems` checks through a generated helper. Untyped object and array assertions preserve
-  their vacuous applicability to other JSON value domains, including through refs, mixed applicator
-  schemas, and schema-valued `unevaluatedProperties`. Dynamic refs, required format assertions,
-  `patternProperties`, general evaluated-property bookkeeping, `unevaluatedItems`, and conditionals
-  still require the corresponding dependency and runtime proof.
-- URI refs are supported through the selected reference strategy. Remote fetching requires explicit
-  opt-in; external schemas can be provided through a registry.
+- Stock validation uses readable structural Zod where it is exact and a deterministic,
+  source-visible, module-local predicate compiled from the existing validator backend for semantics
+  that native Zod cannot preserve. Together those paths cover the advertised Draft 7, 2019-09, and
+  2020-12 validation vocabularies, including dynamic/recursive references, conditionals,
+  `patternProperties`, composition, and evaluated-item/property behavior. The pinned official-suite
+  baseline is the Gate 1 status authority, and status is derived from its validated attainment facts
+  rather than copied into a registry; targeted differential fixtures remain required for
+  interactions that the suite does not exercise.
+- URI refs are supported through the selected reference strategy. External schemas can be provided
+  through a registry. Remote fetching is not implemented; any future profile requires explicit
+  opt-in and the bounded policy described in the support contract.
 - Generated output imports only Zod by default, with generated helpers deduplicated at module scope.
 - Generated output exports the root schema/type by default; exporting all named ref declarations is
   configurable and opt-in.
@@ -365,19 +365,17 @@ The design discussion after this landscape pass resolved the initial open questi
 - `format`, `default`, `deprecated`, `readOnly`, and `writeOnly` are recognized as validation-inert
   by default and are not emitted until the annotation IR exists.
 - Unknown non-ref keywords fail unless the selected source profile marks them as inert producer
-  metadata. The default profile is strict; the first named profile is `opencode`.
+  metadata. The default profile is strict; named profiles cover exact OpenCode and SchemaStore
+  annotations.
 - Refs emit named schema declarations and use those declarations at reference sites; plugins supply
   ordered name hints, while core owns final TypeScript identifier selection.
 - External registry resources receive the same recursive unsupported- and unknown-keyword
   diagnostics as the root document before specialized composition lowering.
-- Exact `oneOf` uses ordinary unions for statically disjoint branches and Zod's native exclusive
-  union otherwise, while preserving type-specific keyword applicability in each branch. `anyOf`,
-  `allOf`, `not`, and `unevaluatedProperties` are supported only in their explicitly tested slices.
-  Shapes that require annotation bookkeeping, contain branch assertions the object merger cannot
-  preserve, require a plain ref/composition intersection across closed or schema-valued object
-  boundaries, or combine `propertyNames` with a strict boundary fail with
-  `unrepresentable_schema_combination`; `patternProperties`, conditionals, and `unevaluatedItems`
-  remain V1 targets.
+- Native Zod unions, intersections, object merging, and evaluation projections are selected only
+  when they preserve stock semantics and useful inference. The exact generated predicate owns the
+  remaining stock validation behavior instead of relying on structurally lossy approximations.
+  Capabilities outside the stock contract still fail with structured diagnostics rather than
+  degrading to an unconstrained schema.
 - The acceptance corpus includes OpenCode, the Mise `v2026.7.5` schema pinned to peeled commit
   `e47826c162671248d8a1726d7f3043e9b9c00092`, other locked public configuration-schema fixtures, and
   targeted synthetic semantics fixtures. Generated-Zod matrix samples are compared with
@@ -404,6 +402,8 @@ mistakes. The selected policy is source profiles:
 
 - default to the strict `none` profile;
 - ship an explicit `opencode` profile that treats nonstandard `ref` as inert producer metadata;
+- ship an explicit `schemastore` profile that treats `tsType` and `x-intellij-language-injection` as
+  inert producer metadata;
 - reject unknown keys that appear to contain subschemas or alter evaluation unless the active
   profile has an exact documented compatibility rule;
 - report all ignored profile keys in diagnostics.
@@ -421,6 +421,13 @@ The Mise config schema pinned to `v2026.7.5` is a second real-world acceptance c
   1.3.14, Node 26.5.0, prek 0.4.9, ripgrep 14.1.1, and shellcheck 0.11.0.
 - Any Mise construct outside the explicit safe composition and evaluated-property slices remains a
   diagnostic boundary rather than being silently weakened.
+
+The SchemaStore package.json schema at commit `d651805897ab2484548bcf3718624b459cb6cf21` is a third
+real-world acceptance corpus. The target matrix compiles that exact document to importable,
+declaration-emittable Zod and compares package samples with Ajv. Its nine remote references are
+explicitly registered as boolean-schema test resources so this regression measures the package
+document itself; production callers must register the real referenced resources when they need those
+fields' validation semantics.
 
 ## Product Boundary
 

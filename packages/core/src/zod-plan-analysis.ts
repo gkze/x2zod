@@ -1,60 +1,114 @@
-import type { ZodArgument, ZodExpression, ZodSymbol } from "./zod-plan";
-
-const assertNever = (value: never): never => {
-  throw new Error(`Unexpected Zod IR node: ${JSON.stringify(value)}`);
-};
-
-const uniqueSymbols = (symbols: readonly ZodSymbol[]): readonly ZodSymbol[] => [
-  ...new Set(symbols),
-];
+import type { ZodRuntimeProgramId } from "./runtime-program";
+import type { ZodEmissionModule, ZodExpression, ZodSymbol } from "./zod-plan";
+import { walkZodExpression } from "./zod-plan-walker";
 
 export const collectZodExpressionReferences = (expression: ZodExpression): readonly ZodSymbol[] => {
-  const collectArgumentReferences = (argument: ZodArgument): readonly ZodSymbol[] => {
-    switch (argument.kind) {
-      case "array": {
-        return uniqueSymbols(argument.elements.flatMap(collectArgumentReferences));
-      }
-      case "expression": {
-        return collectZodExpressionReferences(argument.expression);
-      }
-      case "helper": {
-        return [];
-      }
-      case "literal": {
-        return [];
-      }
-      case "object": {
-        return uniqueSymbols(
-          argument.properties.flatMap((property) =>
-            collectZodExpressionReferences(property.expression),
-          ),
-        );
-      }
-      default: {
-        return assertNever(argument);
-      }
+  const references = new Set<ZodSymbol>();
+  walkZodExpression(expression, {
+    expression: (current) => {
+      if (current.kind === "reference") references.add(current.symbol);
+      return false;
+    },
+  });
+  return [...references];
+};
+
+const valueDescendingFactories = new Set(["array", "object", "record", "tuple"]);
+
+export const collectSameValueZodExpressionReferences = (
+  expression: ZodExpression,
+): readonly ZodSymbol[] => {
+  const references = new Set<ZodSymbol>();
+  walkZodExpression(expression, {
+    argument: (_argument, context) => (context.call === undefined ? false : "skip"),
+    expression: (current) => {
+      if (current.kind === "reference") references.add(current.symbol);
+      return current.kind === "factory" && valueDescendingFactories.has(current.factory)
+        ? "skip"
+        : false;
+    },
+  });
+  return [...references];
+};
+
+const collectDeclarationCyclePeers = (
+  module: ZodEmissionModule,
+  collectReferences: (expression: ZodExpression) => readonly ZodSymbol[],
+): ReadonlyMap<ZodSymbol, ReadonlySet<ZodSymbol>> => {
+  const declarations = new Map(
+    module.declarations.map((declaration) => [declaration.symbol, declaration]),
+  );
+  const indices = new Map<ZodSymbol, number>();
+  const lowLinks = new Map<ZodSymbol, number>();
+  const onStack = new Set<ZodSymbol>();
+  const stack: ZodSymbol[] = [];
+  const peersBySymbol = new Map<ZodSymbol, ReadonlySet<ZodSymbol>>();
+  let nextIndex = 0;
+
+  const visit = (symbol: ZodSymbol): void => {
+    const index = nextIndex;
+    nextIndex += 1;
+    indices.set(symbol, index);
+    lowLinks.set(symbol, index);
+    onStack.add(symbol);
+    stack.push(symbol);
+
+    const declaration = declarations.get(symbol);
+    const references =
+      declaration === undefined
+        ? []
+        : collectReferences(declaration.expression).filter((reference) =>
+            declarations.has(reference),
+          );
+    for (const reference of references)
+      if (!indices.has(reference)) {
+        visit(reference);
+        lowLinks.set(symbol, Math.min(lowLinks.get(symbol) ?? index, lowLinks.get(reference) ?? 0));
+      } else if (onStack.has(reference))
+        lowLinks.set(symbol, Math.min(lowLinks.get(symbol) ?? index, indices.get(reference) ?? 0));
+
+    if (lowLinks.get(symbol) !== index) return;
+    const component: ZodSymbol[] = [];
+    let member = stack.pop();
+    while (member !== undefined) {
+      onStack.delete(member);
+      component.push(member);
+      if (member === symbol) break;
+      member = stack.pop();
+    }
+
+    const selfReference =
+      component.length === 1 && references.some((reference) => reference === symbol);
+    if (component.length > 1 || selfReference) {
+      const peers = new Set(component);
+      for (const componentSymbol of component) peersBySymbol.set(componentSymbol, peers);
     }
   };
 
-  const baseReferences = (): readonly ZodSymbol[] => {
-    switch (expression.kind) {
-      case "factory": {
-        return expression.args.flatMap(collectArgumentReferences);
-      }
-      case "reference": {
-        return [expression.symbol];
-      }
-      case "wrapper": {
-        return collectZodExpressionReferences(expression.expression);
-      }
-      default: {
-        return assertNever(expression);
-      }
-    }
-  };
+  for (const symbol of declarations.keys()) if (!indices.has(symbol)) visit(symbol);
+  return peersBySymbol;
+};
 
-  return uniqueSymbols([
-    ...baseReferences(),
-    ...expression.calls.flatMap((call) => call.args.flatMap(collectArgumentReferences)),
-  ]);
+export const collectCyclicZodDeclarationPeers = (
+  module: ZodEmissionModule,
+): ReadonlyMap<ZodSymbol, ReadonlySet<ZodSymbol>> =>
+  collectDeclarationCyclePeers(module, collectZodExpressionReferences);
+
+export const collectSameValueCyclicZodDeclarationPeers = (
+  module: ZodEmissionModule,
+): ReadonlyMap<ZodSymbol, ReadonlySet<ZodSymbol>> =>
+  collectDeclarationCyclePeers(module, collectSameValueZodExpressionReferences);
+
+export const collectZodRuntimeProgramReferences = (
+  expression: ZodExpression,
+): readonly ZodRuntimeProgramId[] => {
+  const references = new Set<ZodRuntimeProgramId>();
+  walkZodExpression(expression, {
+    expression: (current) => {
+      if (current.kind === "runtime-guard") references.add(current.program);
+      return false;
+    },
+    siblingOrder: "reverse",
+  });
+  return [...references];
 };

@@ -108,8 +108,8 @@ requires information that existing libraries cannot provide. The intended split 
 
 - use Ajv first for schema-document preflight against selected JSON Schema dialects;
 - use an existing JSON parser/source-map library for JSON Pointer to source-span mapping;
-- spike `@hyperjump/json-schema` before implementing custom dialect, vocabulary, annotation, or
-  dynamic-reference handling;
+- use the recorded `@hyperjump/json-schema` spike below when deciding whether dependency-backed
+  dialect, vocabulary, annotation, or dynamic-reference handling fits the source compiler;
 - use a smaller resolver such as `@apidevtools/json-schema-ref-parser` only if the chosen scope is
   plain ref bundling/dereferencing and Hyperjump is more machinery than needed;
 - keep `json-schema-to-zod`, `zod-from-json-schema`, and Zod's `z.fromJSONSchema()` as comparison
@@ -128,13 +128,24 @@ The tooling-first rule applies to every JSON Schema implementation decision:
 - JSON Pointer/source-span mapping should use an existing parser or source-map library instead of a
   handwritten JSON parser;
 - reference graph construction, dynamic reference behavior, annotation collection, and
-  `unevaluated*` bookkeeping should be dependency-backed unless a spike proves existing libraries
-  cannot expose the needed lowering data;
+  `unevaluated*` bookkeeping should be dependency-backed when a library exposes the stable lowering
+  data and self-contained runtime form required by the generated-source contract;
 - generated runtime helpers may preserve JSON Schema semantics, but their behavior should be tested
   against Ajv or the selected JSON Schema tool on targeted fixtures;
 - existing JSON Schema-to-Zod libraries are comparison oracles, not the compiler architecture. The
   product boundary remains an owned lowering layer that maps prepared JSON Schema data into the
   `@x2zod/core` Zod emission model.
+
+The dependency spike was completed against `@hyperjump/json-schema` 1.17.8 on 2026-09-02. Its stable
+APIs correctly validated a Draft 2020-12 fixture combining external resources, `$dynamicRef`, and
+`unevaluatedProperties`, and its bundler produced a valid compound schema document. It does not
+expose a standalone source emitter. Restoring its serialized compiled schema requires the Hyperjump
+interpreter, while x2zod-generated modules import only Zod. The lowering AST is explicitly
+experimental and contains keyword-handler-specific values rather than a stable resource and
+annotation projection. Depending on that AST would therefore retain the local translation layer
+while coupling it to an unstable API. Hyperjump remains a suitable differential oracle and a
+candidate bundler for a future remote-resource profile, but it does not replace the owned graph or
+generated runtime under the current artifact contract.
 
 ## Input Documents
 
@@ -148,6 +159,7 @@ export type InputDocument = {
   readonly source: InputDocumentSource;
   readonly text: string;
   readonly mediaType?: string;
+  readonly retrievalUri?: string;
 };
 
 export type InputDocumentSource =
@@ -168,23 +180,29 @@ as JSON, YAML, an external URI, or inline test text. The JSON Schema plugin can 
 parser that preserves offsets, map parsed values back to JSON Pointer locations, and attach spans to
 diagnostics returned during preflight, reference resolution, and lowering.
 
+`retrievalUri` is the document's optional canonical base for relative references. Hosts own the
+mapping from source identities to retrieval URIs: the CLI resolves configured file inputs from the
+configuration file's directory and supplies their absolute `file:` URL. URI sources use their URI
+when `retrievalUri` is omitted. Keeping this host concern in the document envelope lets input
+plugins remain runtime-neutral and gives future IDL adapters the same import-resolution boundary.
+
 ## Plugin Option Schemas
 
 Plugin options are declared once as a Zod v4 object schema. The schema is the source of truth for
 the option type, defaults, validation, and CLI help metadata:
 
 ```ts
-export const jsonSchemaOptionsSchema = z.object({
+export const jsonSchemaOptionsSchema = z.strictObject({
   dialect: z
     .enum(["draft-2020-12", "draft-2019-09", "draft-7"])
-    .default("draft-2020-12")
-    .describe("JSON Schema dialect."),
+    .optional()
+    .describe("JSON Schema dialect override; inferred from $schema, otherwise 2020-12."),
+  externalSchemas: withCLI(jsonSchemaRegistrySchema.default({}), { valueMode: "json-file-map" }),
   validator: z.enum(["ajv", "none"]).default("ajv").describe("Schema document validator."),
   sourceProfile: z
-    .enum(["none", "opencode"])
+    .enum(["none", "opencode", "schemastore"])
     .default("none")
     .describe("Source-specific JSON Schema compatibility profile."),
-  allowRemoteRefs: z.boolean().default(false).describe("Allow remote reference fetching."),
 });
 
 export type JsonSchemaOptions = z.infer<typeof jsonSchemaOptionsSchema>;
@@ -193,7 +211,7 @@ export type JsonSchemaOptions = z.infer<typeof jsonSchemaOptionsSchema>;
 Core introspects a supported Zod option-schema subset and maps it to Optique parsers:
 
 - root `z.object(...)` fields become named flags;
-- field names become kebab-case long flags, so `allowRemoteRefs` becomes `--allow-remote-refs`;
+- field names become kebab-case long flags, so `sourceProfile` becomes `--source-profile`;
 - `z.enum(...)` becomes an Optique `choice(...)`;
 - `z.string()`, `z.number()`, `z.int()`, and `z.boolean()` become the corresponding Optique scalar
   parsers or flags;
@@ -212,8 +230,10 @@ plugin Zod option schema
 ```
 
 Unsupported option-schema shapes should fail plugin registration with clear diagnostics. Examples
-include nested objects, broad unions, records, and transforms that change the option object shape in
-ways the CLI adapter cannot model.
+include nested objects, broad unions, records without an explicit supported CLI value mode, and
+transforms that change the option object shape in ways the CLI adapter cannot model. The JSON Schema
+registry uses the `json-file-map` mode, which maps repeatable `ID=FILE` arguments into its validated
+record rather than asking the generic adapter to infer record semantics.
 
 Plugins with no options should declare `z.object({})`; the CLI may use an empty parser internally
 for configured-target invocations that do not select a plugin kind.
@@ -252,7 +272,7 @@ delegate back into the JavaScript runtime through Optique's completion command, 
 options are completed from the user's current config rather than from static shell script logic.
 
 After option parsing, core treats options as opaque `TOptions`. It does not inspect fields such as
-`validator`, `dialect`, `allowRemoteRefs`, or any future plugin-specific setting.
+`validator`, `dialect`, `externalSchemas`, or any future plugin-specific setting.
 
 ## Zod Expression Plan
 
@@ -326,11 +346,13 @@ export type ZodDeclaration = {
   readonly nameHints: readonly ZodDeclarationNameHint[];
 };
 
-export type ZodDeclarationNameHint = {
-  readonly value: string;
-  readonly provenance: "title" | "definitionKey" | "anchor" | "uriSegment" | "pointer" | "explicit";
-};
+export type ZodDeclarationNameHint = { readonly value: string; readonly provenance: string };
 ```
+
+`provenance` is a validated nonempty, adapter-owned label. Core preserves it for consumers but does
+not interpret it when allocating names, so future input plugins can use values such as
+`protobuf/message` or `graphql/type` without extending a core-owned enumeration. Omitting it still
+defaults to `explicit`.
 
 The escape hatch is helper-backed runtime semantics, not arbitrary plugin-owned source. Semantics
 that native or planned Zod expressions cannot preserve, such as `not`, `if` / `then` / `else`,
@@ -404,6 +426,21 @@ traversing the final source model, and emits one module-local definition per hel
 order. Per-call refinement configuration stays at the `.refine(...)` site. Generated modules remain
 self-contained apart from Zod. Plugin-provided helper source remains deferred until a second input
 plugin or a concrete semantic case proves that the built-in catalog is insufficient.
+
+Plugin runtime programs use a schema-language-neutral predicate ABI. Core accepts either a direct
+synchronous arrow/function expression or a zero-argument synchronous initializer whose only return
+belonging to that initializer is one final, direct arrow/function predicate. The initializer form
+allows one-time local setup while keeping the returned callable structurally provable. Every free
+value identifier must be declared inside the expression or appear in core's exported, finite
+`runtimeProgramIntrinsicGlobals` list. Core emits each program as an explicitly typed
+`(value: unknown) => boolean` const and validates that ABI before returning a successful build.
+
+Runtime-program ASTs are trusted compiler-extension input, like the plugin code that constructs
+them; the closure analysis is a determinism and accidental-dependency check, not a security sandbox
+for hostile adapters. It rejects direct host-global, loader, asynchronous, and dynamic-constructor
+forms, but does not claim to prove arbitrary JavaScript effect safety. A plugin must never splice
+untrusted schema text into executable syntax. Generated programs remain source-visible and subject
+to the same review and reproducibility requirements as other generated helpers.
 
 ## Public API
 
@@ -496,7 +533,7 @@ The CLI should:
 - expose JSON Schema plugin options such as `-d` / `--dialect draft-2020-12|draft-2019-09|draft-7`;
 - expose JSON Schema plugin validation options such as `-v` / `--validator ajv|none`, defaulting to
   `ajv`;
-- expose source compatibility profiles such as `-p` / `--source-profile opencode`;
+- expose source compatibility profiles such as `-p` / `--source-profile opencode|schemastore`;
 - support a configurable Zod import path through `-z` / `--zod-import-path`, defaulting to `zod/v4`;
 - support `-e` / `--declaration-export-mode root|all`, defaulting to `root`;
 - support explicit external schemas through repeatable `-E` / `--external-schema ID=FILE`;
@@ -560,9 +597,12 @@ Unknown-keyword compatibility is owned by the JSON Schema plugin through explici
 The default profile is `none`, which rejects unknown non-vocabulary keywords. Named profiles
 describe real producer quirks without weakening global strictness.
 
-For v1, the first named profile is `opencode`. It exists because the OpenCode config schema includes
-both standard `$ref` and a nonstandard `ref` field. Under the `opencode` profile, `ref` is treated
-as inert producer metadata, never as a reference alias and never as validation behavior.
+The `opencode` profile exists because the OpenCode config schema includes both standard `$ref` and a
+nonstandard `ref` field. It treats `ref` as inert producer metadata, never as a reference alias or
+validation behavior. The `schemastore` profile applies the same narrow policy to SchemaStore's
+`tsType` and `x-intellij-language-injection` annotations. It does not weaken unknown-keyword
+handling or resolve SchemaStore's external references; callers still provide those resources through
+the external schema registry.
 
 A source profile may:
 
@@ -604,7 +644,7 @@ new dialect option, source profile, or input plugin:
 
 Dialect selection uses the schema's `$schema` when present. If the caller also supplies a dialect
 option and it conflicts with `$schema`, compilation fails with a diagnostic. If `$schema` is absent,
-the caller or CLI default selects the dialect.
+an explicit caller override selects the dialect; otherwise the plugin defaults to Draft 2020-12.
 
 For Draft 2020-12, the JSON Schema plugin must process `$vocabulary` declarations. Required unknown
 vocabularies fail with an unsupported-vocabulary diagnostic. Optional unknown vocabularies may be
@@ -621,8 +661,7 @@ References:
 - local and external URI refs are supported;
 - Draft 2020-12 `$dynamicAnchor` and `$dynamicRef` are supported;
 - resolved refs emit into the same generated module for v1;
-- external refs resolve from an explicit schema registry map or from remote fetching when remote
-  fetching is explicitly enabled;
+- external refs resolve from an explicit schema registry map;
 - the JSON Schema plugin builds a resource graph with dynamic-anchor tracking before lowering;
 - `$dynamicRef` lowers through the reference model or helper-backed runtime resolution when dynamic
   scope cannot be represented as a plain static ref;
@@ -685,19 +724,25 @@ V1 semantic target:
 Unsupported or unlowerable semantics should fail with diagnostics instead of silently degrading to
 `z.any()`.
 
-Current implementation is narrower than the V1 semantic target. The implemented slice covers
-document parsing, JSON Pointer source-location mapping, Ajv preflight, dialect detection, unknown
-keyword policy, primitives, `const` / `enum`, arrays, objects, required and optional properties,
-`additionalProperties`, validation-inert recognition of `default` / `format` / `deprecated` /
-`readOnly` / `writeOnly`, local/external refs supplied through the explicit registry, representable
-sibling assertions, exact `oneOf` through ordinary unions for statically disjoint branches and Zod's
-native exclusive union otherwise, ordinary `anyOf` unions, and selected `allOf` object merging and
-intersections. Recognized annotations do not change validation and are not emitted until the
-annotation IR is implemented.
+The implementation has two complementary lowering paths. Readable structural Zod is emitted for
+constructs whose semantics and inference remain exact. When structural Zod would narrow or weaken
+the selected dialect, the JSON Schema plugin emits a deterministic, source-visible, module-local
+predicate compiled from the existing validator backend and combines it with the sound structural
+projection. This generated predicate is not an exposed validator product: generated modules remain
+Zod modules, load no schemas, generate no code at runtime, and import only Zod by default.
 
-Non-tuple arrays support `uniqueItems` through a generated deep-JSON equality helper. Equality is
-independent of object-key order, distinguishes JSON primitive types, and leaves accepted output
-values unchanged. Tuple and `prefixItems` uniqueness remain outside this bounded slice.
+The stock validation path covers document parsing, JSON Pointer source-location mapping, schema
+preflight, dialect and vocabulary selection, strict source-profile policy, resource graphs, local
+and explicitly registered external references, recursive and dynamic references, applicators,
+conditionals, evaluated-location behavior, and the validation keywords required by Draft 7, 2019-09,
+and 2020-12. The pinned official-suite baseline and the additional interaction fixtures in
+`docs/json-schema-conformance.md` are the implementation-status authority. Passing the official
+suite is necessary Gate 1 evidence rather than proof of every cross-keyword interaction.
+
+Recognized annotations do not change validation and are not emitted until the annotation IR is
+implemented. Named format, content, standardized-output, lossless-number, remote-resource, custom-
+vocabulary, historical-draft, and future-draft capabilities remain outside the stock claim unless
+their explicit profile or plugin contract is implemented and evidenced.
 
 Untyped object and array assertions retain their JSON Schema applicability: they constrain their own
 instance domains and accept the other JSON value domains, including when reached through refs or
@@ -709,18 +754,13 @@ representable object schemas and across object-only, mergeable `allOf` trees, in
 contributed by refs. It also supports the bounded `anyOf` / `oneOf` object shape used by Mise when
 the root declares every property and branches add only required-key choices.
 
-This is not general evaluated-property annotation bookkeeping. Object merging accepts only metadata,
-`definitions` / `$defs`, `type`, `properties`, `required`, `$ref`, and nested `allOf`; a
-branch-local assertion such as `additionalProperties` fails with an
-`unrepresentable_schema_combination` diagnostic instead of being dropped. `unevaluatedProperties`
-beside a ref or property-evaluating `anyOf` / `oneOf` also fails unless it matches the bounded safe
-object shape above. The `allOf` merge path also fails when the root cannot be proven object-only.
-Plain ref/composition intersections containing closed or schema-valued object boundaries fail rather
-than relying on Zod intersections that can suppress one-sided unknown-key errors; `propertyNames`
-combined with a strict object boundary follows the same rule. `unevaluatedItems`, Draft 2020-12
-vocabularies, required format assertions, dynamic refs, `patternProperties`, conditionals, and the
-remaining composition surface remain V1 target work and require dependency-backed preparation plus
-targeted runtime comparison.
+The readable structural projection remains deliberately conservative. Object merging, native Zod
+unions/intersections, and evaluated-property projections are used only where they preserve the
+wire-language contract and useful inference. Other stock-dialect interactions are enforced by the
+exact generated predicate instead of being silently dropped or rejected merely because native Zod
+cannot represent them. An `unrepresentable_schema_combination` diagnostic is reserved for a schema
+outside the selected capability/profile contract, not for stock semantics supported by the exact
+backend.
 
 The real-world acceptance corpus includes the OpenCode configuration schema and the Mise
 configuration schema from `v2026.7.5`, pinned to peeled commit
@@ -797,13 +837,12 @@ Validator adapter tests:
 - `$schema` and explicit dialect conflict;
 - normalized JSON Pointer diagnostics;
 - Ajv preflight diagnostics normalized to `x2zod` diagnostics;
-- an explicit dependency spike for ref, dialect, vocabulary, and annotation behavior before custom
-  implementations are added.
+- the recorded dependency-spike decision for ref, dialect, vocabulary, and annotation behavior;
 
 Mapper / expression-plan tests:
 
 - strict unknown-keyword failures;
-- `opencode` source-profile handling for inert `ref` metadata;
+- source-profile handling for the exact inert OpenCode and SchemaStore metadata keywords;
 - primitives and boolean schemas;
 - enums and consts;
 - objects, required properties, loose objects, strict objects, and catchalls;

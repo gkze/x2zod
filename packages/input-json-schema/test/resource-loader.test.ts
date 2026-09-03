@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import path from "node:path";
 import { describe, test } from "node:test";
+import { pathToFileURL } from "node:url";
 
 import { createFileSystemResourceLoader } from "../src";
 import type { FilePathResolver, TextFileSystem } from "../src";
@@ -18,6 +19,7 @@ const createMemoryTextFileSystem = (
 });
 
 const nodePathResolver: FilePathResolver = {
+  fileRetrievalUri: (absolutePath) => pathToFileURL(absolutePath).href,
   resolveFilePath: ({ path: filePath, rootDirectory }) => path.resolve(rootDirectory, filePath),
 };
 
@@ -43,6 +45,7 @@ void describe("createFileSystemResourceLoader", () => {
       source: { kind: "file", path: "/workspace/schemas/user.schema.json" },
       text: '{ "type": "object" }\n',
       mediaType: "application/schema+json",
+      retrievalUri: "file:///workspace/schemas/user.schema.json",
     });
   });
 

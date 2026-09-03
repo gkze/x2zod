@@ -5,8 +5,48 @@ import { compileToZodSource } from "@x2zod/core";
 
 import { jsonSchemaInputPlugin } from "../src";
 import type { JsonSchemaValue } from "../src";
+import { compileGeneratedSchema } from "./generated-schema-harness";
 
 const malformedTypeEntry = 7;
+
+type CompositionRuntimeCase = Readonly<{
+  accepted: readonly unknown[];
+  id: string;
+  rejected: readonly unknown[];
+  schema: JsonSchemaValue;
+}>;
+
+const assertCompositionRuntimeParity = async ({
+  accepted,
+  id,
+  rejected,
+  schema,
+}: CompositionRuntimeCase): Promise<void> => {
+  const result = await compileToZodSource({
+    document: { source: { id, kind: "inline" }, text: JSON.stringify(schema) },
+    output: { typeName: "CompositionRuntime" },
+    plugin: jsonSchemaInputPlugin,
+    pluginOptions: { validator: "none" },
+  });
+
+  assert.equal(result.ok, true);
+  const { generatedSchema } = await compileGeneratedSchema(schema);
+
+  for (const value of accepted) {
+    const input = structuredClone(value);
+    const parsed = generatedSchema.safeParse(input);
+    if (!parsed.success) assert.fail(`expected ${JSON.stringify(value)} to be accepted`);
+    assert.deepEqual(parsed.data, value);
+    assert.deepEqual(input, value);
+  }
+
+  for (const value of rejected) {
+    const input = structuredClone(value);
+    const parsed = generatedSchema.safeParse(input);
+    assert.equal(parsed.success, false, `expected ${JSON.stringify(value)} to be rejected`);
+    assert.deepEqual(input, value);
+  }
+};
 
 const assertCompileDiagnostic = async (
   id: string,
@@ -25,10 +65,12 @@ const assertCompileDiagnostic = async (
 };
 
 void describe("JSON Schema composition diagnostics", () => {
-  void test("fails before unsafe strict-object sibling intersections", async () => {
-    await assertCompileDiagnostic(
-      "strict-ref-sibling",
-      {
+  void test("preserves strict-object sibling intersection semantics at runtime", async () => {
+    await assertCompositionRuntimeParity({
+      accepted: [{ base: "base" }],
+      id: "strict-ref-sibling",
+      rejected: [{ base: "base", extra: "extra" }, { base: 1 }],
+      schema: {
         $defs: {
           base: {
             additionalProperties: false,
@@ -40,14 +82,15 @@ void describe("JSON Schema composition diagnostics", () => {
         properties: { extra: { type: "string" } },
         type: "object",
       },
-      "unrepresentable_schema_combination",
-    );
+    });
   });
 
-  void test("fails before unsafe strict-object allOf intersections", async () => {
-    await assertCompileDiagnostic(
-      "strict-all-of",
-      {
+  void test("preserves strict-object allOf intersection semantics at runtime", async () => {
+    await assertCompositionRuntimeParity({
+      accepted: [{ alpha: "alpha" }],
+      id: "strict-all-of",
+      rejected: [{ alpha: "alpha", beta: "beta" }, { beta: "beta" }],
+      schema: {
         allOf: [
           {
             additionalProperties: false,
@@ -57,51 +100,69 @@ void describe("JSON Schema composition diagnostics", () => {
           { properties: { beta: { type: "string" } }, type: "object" },
         ],
       },
-      "unrepresentable_schema_combination",
-    );
+    });
   });
 
-  void test("fails before intersecting propertyNames with a strict object boundary", async () => {
-    await assertCompileDiagnostic(
-      "property-names-strict-object",
-      { propertyNames: { pattern: "^x" }, type: "object", unevaluatedProperties: false },
-      "unrepresentable_schema_combination",
-    );
+  void test("preserves propertyNames and strict object boundary semantics at runtime", async () => {
+    await assertCompositionRuntimeParity({
+      accepted: [{}],
+      id: "property-names-strict-object",
+      rejected: [{ xx: 1 }, { yy: 1 }],
+      schema: { propertyNames: { pattern: "^x" }, type: "object", unevaluatedProperties: false },
+    });
   });
 
-  void test("fails before narrowing non-object values with untyped object siblings", async () => {
-    await assertCompileDiagnostic(
-      "primitive-const-object-sibling",
-      { const: "source", properties: { name: { type: "string" } } },
-      "unrepresentable_schema_combination",
-    );
+  void test("preserves non-object values with untyped object siblings", async () => {
+    await assertCompositionRuntimeParity({
+      accepted: ["source"],
+      id: "primitive-const-object-sibling",
+      rejected: ["other", { name: "source" }, 1],
+      schema: { const: "source", properties: { name: { type: "string" } } },
+    });
   });
 
-  void test("fails before narrowing non-array values with untyped array siblings", async () => {
+  void test("preserves non-array values with untyped array siblings", async () => {
+    const cases = [
+      {
+        accepted: ["source"],
+        id: "primitive-const-array-sibling",
+        rejected: ["other", ["source"], 1],
+        schema: { const: "source", items: { type: "string" } },
+      },
+      {
+        accepted: ["source"],
+        id: "primitive-const-unique-sibling",
+        rejected: ["other", ["source"], 1],
+        schema: { const: "source", uniqueItems: true },
+      },
+      {
+        accepted: ["source"],
+        id: "primitive-enum-array-sibling",
+        rejected: ["other", ["source"], 1],
+        schema: { enum: ["source"], minItems: 1 },
+      },
+      {
+        accepted: ["source", "other"],
+        id: "primitive-ref-array-sibling",
+        rejected: [["source"], 1],
+        schema: {
+          $defs: { value: { type: "string" } },
+          $ref: "#/$defs/value",
+          items: { type: "string" },
+        },
+      },
+    ] satisfies readonly CompositionRuntimeCase[];
+
     await Promise.all(
-      (
-        [
-          ["primitive-const-array-sibling", { const: "source", items: { type: "string" } }],
-          ["primitive-const-unique-sibling", { const: "source", uniqueItems: true }],
-          ["primitive-enum-array-sibling", { enum: ["source"], minItems: 1 }],
-          [
-            "primitive-ref-array-sibling",
-            {
-              $defs: { value: { type: "string" } },
-              $ref: "#/$defs/value",
-              items: { type: "string" },
-            },
-          ],
-        ] satisfies readonly (readonly [string, JsonSchemaValue])[]
-      ).map(async ([id, schema]) => {
-        await assertCompileDiagnostic(id, schema, "unrepresentable_schema_combination");
+      cases.map(async (runtimeCase) => {
+        await assertCompositionRuntimeParity(runtimeCase);
       }),
     );
   });
 });
 
 void describe("JSON Schema external composition diagnostics", () => {
-  void test("diagnoses unsupported keywords in external schemas merged through allOf", async () => {
+  void test("supports exact runtime keywords in external schemas merged through allOf", async () => {
     const externalSchemaUri = "https://schemas.example.test/base.json";
     const result = await compileToZodSource({
       document: {
@@ -129,23 +190,26 @@ void describe("JSON Schema external composition diagnostics", () => {
       },
     });
 
-    assert.equal(result.ok, false);
-    assert.ok(result.diagnostics.some((diagnostic) => diagnostic.code === "unsupported_keyword"));
-    assert.ok(
-      result.diagnostics.some(
-        (diagnostic) => diagnostic.location?.pointer === "/$defs/base/properties/tags/contains",
-      ),
-    );
+    assert.equal(result.ok, true);
   });
 });
 
 void describe("JSON Schema composition validation diagnostics", () => {
-  void test("recursively diagnoses unsupported unevaluatedProperties schemas", async () => {
-    await assertCompileDiagnostic(
-      "unsupported-unevaluated-properties-schema",
-      { type: "object", unevaluatedProperties: { contains: { type: "string" }, type: "array" } },
-      "unsupported_keyword",
-    );
+  void test("supports runtime-backed schemas nested under unevaluatedProperties", async () => {
+    const result = await compileToZodSource({
+      document: {
+        source: { id: "runtime-unevaluated-properties-schema", kind: "inline" },
+        text: JSON.stringify({
+          type: "object",
+          unevaluatedProperties: { contains: { type: "string" }, type: "array" },
+        }),
+      },
+      output: { typeName: "RuntimeUnevaluatedProperties" },
+      plugin: jsonSchemaInputPlugin,
+      pluginOptions: { validator: "none" },
+    });
+
+    assert.equal(result.ok, true);
   });
 
   void test("does not erase malformed redundant type arrays", async () => {
@@ -170,10 +234,16 @@ void describe("JSON Schema composition validation diagnostics", () => {
     );
   });
 
-  void test("fails before intersecting duplicate merged object properties", async () => {
-    await assertCompileDiagnostic(
-      "duplicate-merged-property",
-      {
+  void test("preserves duplicate merged object property semantics at runtime", async () => {
+    await assertCompositionRuntimeParity({
+      accepted: [{ nested: { alpha: "alpha" } }],
+      id: "duplicate-merged-property",
+      rejected: [
+        { nested: { alpha: "alpha", beta: "beta" } },
+        { nested: { beta: "beta" } },
+        { nested: { alpha: "alpha", extra: 1 } },
+      ],
+      schema: {
         allOf: [
           {
             properties: {
@@ -189,8 +259,7 @@ void describe("JSON Schema composition validation diagnostics", () => {
         type: "object",
         unevaluatedProperties: false,
       },
-      "unrepresentable_schema_combination",
-    );
+    });
   });
 
   void test("retains composition keyword-shape validation in specialized lowering", async () => {

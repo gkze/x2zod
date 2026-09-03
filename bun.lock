@@ -35,7 +35,7 @@
     },
     "apps/cli": {
       "name": "@x2zod/cli",
-      "version": "0.2.0",
+      "version": "0.2.2",
       "bin": {
         "x2zod": "bin/x2zod.ts",
       },
@@ -73,7 +73,7 @@
     },
     "packages/config": {
       "name": "@x2zod/config",
-      "version": "0.3.0",
+      "version": "0.3.2",
       "dependencies": {
         "@optique/core": "1.0.2",
         "@x2zod/core": "workspace:*",
@@ -91,7 +91,7 @@
     },
     "packages/core": {
       "name": "@x2zod/core",
-      "version": "0.3.0",
+      "version": "0.5.0",
       "dependencies": {
         "@typescript/native-preview": "7.0.0-dev.20260707.2",
         "zod": "4.4.3",
@@ -113,8 +113,9 @@
     },
     "packages/input-json-schema": {
       "name": "@x2zod/input-json-schema",
-      "version": "0.2.1",
+      "version": "0.4.0",
       "dependencies": {
+        "@typescript/native-preview": "7.0.0-dev.20260707.2",
         "@x2zod/core": "workspace:*",
         "ajv": "8.20.0",
         "jsonc-parser": "3.3.1",
@@ -122,7 +123,6 @@
         "zod": "4.4.3",
       },
       "devDependencies": {
-        "@typescript/native-preview": "7.0.0-dev.20260707.2",
         "@x2zod/build-inputs": "workspace:*",
         "@x2zod/tsconfig": "workspace:*",
         "opencode-ai": "1.17.4",
@@ -130,7 +130,7 @@
     },
     "packages/output-oxfmt": {
       "name": "@x2zod/output-oxfmt",
-      "version": "0.1.6",
+      "version": "0.1.9",
       "dependencies": {
         "@x2zod/config": "workspace:*",
         "oxfmt": "0.54.0",
@@ -142,7 +142,7 @@
     },
     "packages/output-oxlint": {
       "name": "@x2zod/output-oxlint",
-      "version": "0.1.6",
+      "version": "0.1.9",
       "dependencies": {
         "@x2zod/config": "workspace:*",
         "oxlint": "1.69.0",

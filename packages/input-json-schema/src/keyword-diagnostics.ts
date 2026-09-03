@@ -1,71 +1,70 @@
 import type { JsonPointer } from "@x2zod/core";
 
 import type { JsonSchemaDiagnosticSink } from "./diagnostics";
-import { isJsonArray, isJsonObject, isJsonSchemaValue } from "./document";
-import type { JsonSchemaValue, JsonValue } from "./document";
-import { jsonSchemaKeywordPolicy } from "./keyword-policy";
-import { jsonSchemaKeywords, opencodeSourceProfileMetadataKeywords } from "./metadata";
-import type { JsonSchemaInputPluginOptions } from "./options";
+import type { JsonSchemaValue } from "./document";
+import {
+  jsonSchemaKeywordPolicyForDialect,
+  jsonSchemaKeywords,
+  jsonSchemaSourceProfileMetadataKeywords,
+  jsonSchemaValidationKeywords,
+} from "./metadata";
+import type { JsonSchemaDialect, ResolvedJsonSchemaInputPluginOptions } from "./options";
 import { jsonSchemaPointerWithSegment } from "./pointer";
 
 type KeywordDiagnosticsContext = JsonSchemaDiagnosticSink &
-  Readonly<{ options: JsonSchemaInputPluginOptions }>;
+  Readonly<{
+    dialect?: JsonSchemaDialect | undefined;
+    formatAssertionVocabulary?: boolean | undefined;
+    options: ResolvedJsonSchemaInputPluginOptions;
+    policyForPointer?:
+      | ((
+          pointer: JsonPointer,
+          inherited: Readonly<{
+            dialect: JsonSchemaDialect;
+            formatAssertion: boolean;
+            validation: boolean;
+          }>,
+        ) => Readonly<{
+          dialect: JsonSchemaDialect;
+          formatAssertion: boolean;
+          validation: boolean;
+        }>)
+      | undefined;
+    validationVocabulary?: boolean | undefined;
+  }>;
+
+type EffectiveKeywordPolicy = Readonly<{
+  dialect: JsonSchemaDialect;
+  formatAssertion: boolean;
+  validation: boolean;
+}>;
+
+const effectivePolicy = (
+  pointer: JsonPointer,
+  context: KeywordDiagnosticsContext,
+): EffectiveKeywordPolicy => {
+  const inherited = {
+    dialect: context.dialect ?? context.options.dialect,
+    formatAssertion: context.formatAssertionVocabulary ?? false,
+    validation: context.validationVocabulary ?? true,
+  } satisfies EffectiveKeywordPolicy;
+  return context.policyForPointer?.(pointer, inherited) ?? inherited;
+};
 
 const allowProfileKeyword = (
   key: string,
   pointer: JsonPointer,
   context: KeywordDiagnosticsContext,
 ): boolean => {
-  if (
-    context.options.sourceProfile !== "opencode" ||
-    !opencodeSourceProfileMetadataKeywords.has(key)
-  )
+  if (!jsonSchemaSourceProfileMetadataKeywords[context.options.sourceProfile].has(key))
     return false;
   context.addDiagnostic({
     code: "json-schema/ignored-keyword",
-    message: `OpenCode source profile treats nonstandard ${key} as inert metadata.`,
+    message: `${context.options.sourceProfile} source profile accepts nonstandard ${key} as compatibility metadata.`,
     pointer,
     severity: "warning",
   });
   return true;
-};
-
-const collectSchemaMapDiagnostics = (
-  value: JsonValue | undefined,
-  pointer: JsonPointer,
-  context: KeywordDiagnosticsContext,
-): void => {
-  if (!isJsonObject(value)) return;
-  for (const [key, schema] of Object.entries(value))
-    if (isJsonSchemaValue(schema))
-      collectKeywordDiagnostics(schema, jsonSchemaPointerWithSegment(pointer, key), context);
-};
-
-const collectChildSchemaDiagnostics = (
-  value: JsonValue | undefined,
-  pointer: JsonPointer,
-  context: KeywordDiagnosticsContext,
-): void => {
-  if (isJsonArray(value)) {
-    context.addDiagnostic({
-      code: "unsupported_keyword",
-      message: "Tuple schemas are not supported in the first JSON Schema lowering slice.",
-      pointer,
-    });
-    return;
-  }
-  if (isJsonSchemaValue(value)) collectKeywordDiagnostics(value, pointer, context);
-};
-
-const collectSchemaArrayDiagnostics = (
-  value: JsonValue | undefined,
-  pointer: JsonPointer,
-  context: KeywordDiagnosticsContext,
-): void => {
-  if (!isJsonArray(value)) return;
-  for (const [index, schema] of value.entries())
-    if (isJsonSchemaValue(schema))
-      collectKeywordDiagnostics(schema, jsonSchemaPointerWithSegment(pointer, index), context);
 };
 
 export const collectKeywordDiagnostics = (
@@ -75,78 +74,35 @@ export const collectKeywordDiagnostics = (
 ): void => {
   if (typeof schema === "boolean") return;
 
+  const policy = effectivePolicy(pointer, context);
+  const effectiveContext: KeywordDiagnosticsContext = {
+    ...context,
+    dialect: policy.dialect,
+    formatAssertionVocabulary: policy.formatAssertion,
+    validationVocabulary: policy.validation,
+  };
+
   for (const key of Object.keys(schema)) {
     const keyPointer = jsonSchemaPointerWithSegment(pointer, key);
-    const keywordPolicy = jsonSchemaKeywordPolicy(key);
-    if (keywordPolicy !== "supported" && !allowProfileKeyword(key, keyPointer, context))
+    if (key === jsonSchemaKeywords.format && policy.formatAssertion) {
+      const format = schema[key];
       context.addDiagnostic({
-        code: keywordPolicy === "unsupported" ? "unsupported_keyword" : "unknown_keyword",
+        code:
+          typeof format === "string" ? "json-schema/unsupported-format" : "invalid_schema_document",
         message:
-          keywordPolicy === "unsupported"
-            ? `JSON Schema keyword is recognized but not supported in the first lowering slice: ${key}.`
-            : `JSON Schema keyword is not recognized by the selected source profile: ${key}.`,
+          typeof format === "string"
+            ? `JSON Schema format assertion is required but no active format profile implements: ${format}.`
+            : "JSON Schema format must be a string when format assertion is required.",
         pointer: keyPointer,
       });
+    } else if (policy.validation || !jsonSchemaValidationKeywords.has(key)) {
+      const keywordPolicy = jsonSchemaKeywordPolicyForDialect(key, policy.dialect);
+      if (keywordPolicy !== "supported" && !allowProfileKeyword(key, keyPointer, effectiveContext))
+        context.addDiagnostic({
+          code: "unknown_keyword",
+          message: `JSON Schema keyword is not recognized by the selected source profile: ${key}.`,
+          pointer: keyPointer,
+        });
+    }
   }
-
-  collectSchemaMapDiagnostics(
-    schema[jsonSchemaKeywords.dollarDefs],
-    jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.dollarDefs),
-    context,
-  );
-  collectSchemaMapDiagnostics(
-    schema[jsonSchemaKeywords.definitions],
-    jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.definitions),
-    context,
-  );
-  collectSchemaMapDiagnostics(
-    schema[jsonSchemaKeywords.properties],
-    jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.properties),
-    context,
-  );
-  collectChildSchemaDiagnostics(
-    schema[jsonSchemaKeywords.items],
-    jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.items),
-    context,
-  );
-  collectSchemaArrayDiagnostics(
-    schema[jsonSchemaKeywords.prefixItems],
-    jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.prefixItems),
-    context,
-  );
-  collectChildSchemaDiagnostics(
-    schema[jsonSchemaKeywords.additionalProperties],
-    jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.additionalProperties),
-    context,
-  );
-  collectChildSchemaDiagnostics(
-    schema[jsonSchemaKeywords.unevaluatedProperties],
-    jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.unevaluatedProperties),
-    context,
-  );
-  collectSchemaArrayDiagnostics(
-    schema[jsonSchemaKeywords.allOf],
-    jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.allOf),
-    context,
-  );
-  collectSchemaArrayDiagnostics(
-    schema[jsonSchemaKeywords.anyOf],
-    jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.anyOf),
-    context,
-  );
-  collectSchemaArrayDiagnostics(
-    schema[jsonSchemaKeywords.oneOf],
-    jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.oneOf),
-    context,
-  );
-  collectChildSchemaDiagnostics(
-    schema[jsonSchemaKeywords.not],
-    jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.not),
-    context,
-  );
-  collectChildSchemaDiagnostics(
-    schema[jsonSchemaKeywords.propertyNames],
-    jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.propertyNames),
-    context,
-  );
 };

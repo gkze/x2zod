@@ -3,37 +3,25 @@ import { describe, test } from "node:test";
 
 import Ajv2020 from "ajv/dist/2020.js";
 
-import { compileToZodSource } from "@x2zod/core";
-
-import { jsonSchemaInputPlugin } from "../src";
 import { compileGeneratedSchema } from "./generated-schema-harness";
 
 const fractionalNumber = 1.5;
 
 void describe("JSON Schema composition with unevaluatedProperties", () => {
-  void test("fails before intersecting composition with evaluated-property bookkeeping", async () => {
-    const result = await compileToZodSource({
-      document: {
-        source: { id: "composition-unevaluated-properties", kind: "inline" },
-        text: JSON.stringify({
-          oneOf: [
-            { properties: { left: { type: "string" } }, required: ["left"], type: "object" },
-            { properties: { right: { type: "string" } }, required: ["right"], type: "object" },
-          ],
-          unevaluatedProperties: false,
-        }),
-      },
-      output: { typeName: "CompositionUnevaluatedProperties" },
-      plugin: jsonSchemaInputPlugin,
-      pluginOptions: { validator: "none" },
+  void test("uses the exact runtime for composition with evaluated-property bookkeeping", async () => {
+    const { generatedSchema, source } = await compileGeneratedSchema({
+      oneOf: [
+        { properties: { left: { type: "string" } }, required: ["left"], type: "object" },
+        { properties: { right: { type: "string" } }, required: ["right"], type: "object" },
+      ],
+      unevaluatedProperties: false,
     });
 
-    assert.equal(result.ok, false);
-    assert.ok(
-      result.diagnostics.some(
-        (diagnostic) => diagnostic.code === "unrepresentable_schema_combination",
-      ),
-    );
+    assert.match(source, /x2zodRuntimeProgram/u);
+    assert.equal(generatedSchema.safeParse({ left: "yes" }).success, true);
+    assert.equal(generatedSchema.safeParse({ right: "yes" }).success, true);
+    assert.equal(generatedSchema.safeParse({ left: "yes", right: "yes" }).success, false);
+    assert.equal(generatedSchema.safeParse({ left: "yes", unknown: true }).success, false);
   });
 
   void test("allows unevaluatedProperties when composition branches do not evaluate properties", async () => {

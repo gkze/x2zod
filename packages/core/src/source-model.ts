@@ -1,3 +1,4 @@
+import type { ZodRuntimeProgramId } from "./runtime-program";
 import type { ZodHelperName, ZodHelperRequest, ZodWrapperName } from "./zod-helpers";
 import type { ZodDeclarationNameHint, ZodLiteralValue, ZodMethodName, ZodSymbol } from "./zod-plan";
 import type { ZodFactoryName } from "./zod-plan-metadata";
@@ -20,8 +21,8 @@ export type SourceFactoryExpression = Readonly<{
 export type SourceReferenceExpression = Readonly<{
   calls: readonly SourceMethodCall[];
   kind: "reference";
-  outputView: boolean;
   symbol: ZodSymbol;
+  view: "input" | "output" | "schema";
 }>;
 export type SourceWrapperExpression = Readonly<{
   calls: readonly SourceMethodCall[];
@@ -39,6 +40,22 @@ export type SourceWrapperExpressionInput = Readonly<{
 export const sourceWrapperExpression = (
   input: SourceWrapperExpressionInput,
 ): SourceWrapperExpression => ({ ...input, kind: "wrapper" });
+export type SourceRuntimeGuardExpression = Readonly<{
+  calls: readonly SourceMethodCall[];
+  expression: SourceExpression;
+  kind: "runtime-guard";
+  parseStructural: boolean;
+  program: ZodRuntimeProgramId;
+}>;
+export type SourceRuntimeGuardExpressionInput = Readonly<{
+  calls: readonly SourceMethodCall[];
+  expression: SourceExpression;
+  parseStructural: boolean;
+  program: ZodRuntimeProgramId;
+}>;
+export const sourceRuntimeGuardExpression = (
+  input: SourceRuntimeGuardExpressionInput,
+): SourceRuntimeGuardExpression => ({ ...input, kind: "runtime-guard" });
 export type SourceCodecOperation =
   | Readonly<{ kind: "identity" }>
   | Readonly<{ kind: "map-properties"; mappings: readonly SourcePropertyKeyMapping[] }>;
@@ -53,6 +70,7 @@ export type SourceExpression =
   | SourceCodecExpression
   | SourceFactoryExpression
   | SourceReferenceExpression
+  | SourceRuntimeGuardExpression
   | SourceWrapperExpression;
 export type SourceDeclaration = Readonly<{
   expression: SourceExpression;
@@ -64,36 +82,20 @@ export type SourceEmissionModule = Readonly<{
   root: ZodSymbol;
 }>;
 
-export const sourceExpressionUsesPropertyMap = (expression: SourceExpression): boolean => {
-  const expressions = [expression];
-  const argumentsToVisit: SourceArgument[] = [];
+export type SourceExpressionAnalysis = Readonly<{
+  helperNames: ReadonlySet<ZodHelperName>;
+  runtimeGuardParseModes: ReadonlySet<boolean>;
+  usesPropertyMap: boolean;
+}>;
 
-  while (expressions.length > 0 || argumentsToVisit.length > 0) {
-    const currentExpression = expressions.pop();
-    if (currentExpression === undefined) {
-      const argument = argumentsToVisit.pop();
-      if (argument?.kind === "array") argumentsToVisit.push(...argument.elements);
-      else if (argument?.kind === "expression") expressions.push(argument.expression);
-      else if (argument?.kind === "object")
-        expressions.push(...argument.properties.map((property) => property.expression));
-    } else {
-      argumentsToVisit.push(...currentExpression.calls.flatMap((call) => call.args));
-      if (currentExpression.kind === "codec") {
-        if (currentExpression.operation.kind === "map-properties") return true;
-        expressions.push(currentExpression.input, currentExpression.output);
-      } else if (currentExpression.kind === "factory")
-        argumentsToVisit.push(...currentExpression.args);
-      else if (currentExpression.kind === "wrapper") expressions.push(currentExpression.expression);
-    }
-  }
-
-  return false;
+const assertNever = (value: never): never => {
+  throw new Error(`Unexpected source emission node: ${JSON.stringify(value)}`);
 };
 
-export const sourceExpressionHelperNames = (
-  expression: SourceExpression,
-): ReadonlySet<ZodHelperName> => {
-  const helpers = new Set<ZodHelperName>();
+export const analyzeSourceExpression = (expression: SourceExpression): SourceExpressionAnalysis => {
+  const helperNames = new Set<ZodHelperName>();
+  const runtimeGuardParseModes = new Set<boolean>();
+  let usesPropertyMap = false;
   const expressions = [expression];
   const argumentsToVisit: SourceArgument[] = [];
 
@@ -101,23 +103,62 @@ export const sourceExpressionHelperNames = (
     const currentExpression = expressions.pop();
     if (currentExpression === undefined) {
       const argument = argumentsToVisit.pop();
-      if (argument?.kind === "array") argumentsToVisit.push(...argument.elements);
-      else if (argument?.kind === "expression") expressions.push(argument.expression);
-      else if (argument?.kind === "helper") helpers.add(argument.request.helper);
-      else if (argument?.kind === "object")
-        expressions.push(...argument.properties.map((property) => property.expression));
+      if (argument !== undefined)
+        switch (argument.kind) {
+          case "array": {
+            argumentsToVisit.push(...argument.elements);
+            break;
+          }
+          case "expression": {
+            expressions.push(argument.expression);
+            break;
+          }
+          case "helper": {
+            helperNames.add(argument.request.helper);
+            break;
+          }
+          case "literal": {
+            break;
+          }
+          case "object": {
+            expressions.push(...argument.properties.map((property) => property.expression));
+            break;
+          }
+          default: {
+            assertNever(argument);
+          }
+        }
     } else {
       argumentsToVisit.push(...currentExpression.calls.flatMap((call) => call.args));
-      if (currentExpression.kind === "codec")
-        expressions.push(currentExpression.input, currentExpression.output);
-      else if (currentExpression.kind === "factory")
-        argumentsToVisit.push(...currentExpression.args);
-      else if (currentExpression.kind === "wrapper") {
-        helpers.add(currentExpression.wrapper);
-        expressions.push(currentExpression.expression);
+      switch (currentExpression.kind) {
+        case "codec": {
+          usesPropertyMap ||= currentExpression.operation.kind === "map-properties";
+          expressions.push(currentExpression.input, currentExpression.output);
+          break;
+        }
+        case "factory": {
+          argumentsToVisit.push(...currentExpression.args);
+          break;
+        }
+        case "reference": {
+          break;
+        }
+        case "runtime-guard": {
+          runtimeGuardParseModes.add(currentExpression.parseStructural);
+          expressions.push(currentExpression.expression);
+          break;
+        }
+        case "wrapper": {
+          helperNames.add(currentExpression.wrapper);
+          expressions.push(currentExpression.expression);
+          break;
+        }
+        default: {
+          assertNever(currentExpression);
+        }
       }
     }
   }
 
-  return helpers;
+  return { helperNames, runtimeGuardParseModes, usesPropertyMap };
 };

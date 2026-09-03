@@ -1,13 +1,5 @@
-import { zodDeclaration, zodPlan, zodSymbol } from "@x2zod/core";
-import type {
-  Diagnostic,
-  JsonPointer,
-  Result,
-  SourceLocationMap,
-  ZodDeclaration,
-  ZodEmissionModuleInput,
-  ZodExpression,
-} from "@x2zod/core";
+import { zodDeclaration, zodHelper, zodPlan, zodSymbol } from "@x2zod/core";
+import type { JsonPointer, ZodExpression } from "@x2zod/core";
 
 import { lowerJsonSchemaArray } from "./array";
 import { lowerJsonSchemaComposition } from "./composition-lower";
@@ -17,129 +9,88 @@ import {
   hasJsonSchemaNumberConstraints,
   hasJsonSchemaStringConstraints,
 } from "./constraints";
-import { addJsonSchemaDiagnostic, resultFromJsonSchemaDiagnostics } from "./diagnostics";
-import type { JsonSchemaDiagnosticInput, JsonSchemaDiagnosticSink } from "./diagnostics";
-import { isJsonArray, jsonPointerFromPath, jsonStringValues } from "./document";
-import type { JsonObject, JsonSchemaValue, JsonValue, ParsedJsonSchemaDocument } from "./document";
-import { collectKeywordDiagnostics } from "./keyword-diagnostics";
-import { lowerJsonLiteral } from "./literal";
-import { jsonSchemaKeywords } from "./metadata";
+import type { JsonSchemaDiagnosticInput } from "./diagnostics";
+import { isJsonArray } from "./document";
+import type { JsonObject, JsonValue } from "./document";
+import { lowerJsonLiteral, lowerJsonSchemaEnum } from "./literal";
+import {
+  addLoweringDiagnostic as addDiagnostic,
+  loweringDiagnosticSink as diagnosticSink,
+} from "./lower-diagnostics";
+import type {
+  DeclareSchemaRequest,
+  LocatedSchemaRequest,
+  LowerChildSchemaRequest,
+  LowerReferenceRequest,
+  LowerTypeRequest,
+  LoweringContext,
+  JsonSchemaLocationId,
+} from "./lower-types";
+import { isSupportedJsonSchemaMetaSchemaResource } from "./meta-schemas";
+import { jsonSchemaKeywords, jsonSchemaValidationKeywords } from "./metadata";
 import { jsonSchemaDeclarationNameHints } from "./name-hints";
 import { lowerJsonSchemaObject } from "./object";
-import type { JsonSchemaInputPluginOptions } from "./options";
+import type { ResolvedJsonSchemaInputPluginOptions } from "./options";
 import { emptyPointer, jsonSchemaPointerWithSegment } from "./pointer";
-import { jsonSchemaAddress, resolveJsonSchemaReference } from "./reference";
-import type { JsonSchemaAddress } from "./reference";
+import type { JsonSchemaAddress, JsonSchemaReferenceResolver } from "./reference";
 import { jsonSchemaUntypedAssertionKind } from "./schema-applicability";
-import { hasUnsupportedSiblingAssertions } from "./sibling-assertions";
 import { lowerJsonSchemaSiblingIntersection } from "./sibling-intersection";
 import { oneOrUnion } from "./zod-expressions";
 
 const rootSymbol = "root";
 
-type LoweringContext = Readonly<{
-  declarations: Map<JsonSchemaAddress, ZodDeclaration>;
-  diagnostics: Diagnostic[];
-  document: ParsedJsonSchemaDocument;
-  locations?: SourceLocationMap;
-  options: JsonSchemaInputPluginOptions;
-  diagnosedExternalSchemas: Set<JsonSchemaAddress>;
-  visiting: Set<JsonSchemaAddress>;
-}>;
+type JsonSchemaDialectPolicy =
+  LoweringContext["resourcePolicies"] extends ReadonlyMap<JsonSchemaLocationId, infer TPolicy>
+    ? TPolicy
+    : never;
 
-type LowerTypeRequest = Readonly<{
-  context: LoweringContext;
-  pointer: JsonPointer;
-  schema: JsonObject;
-  typeValuePointer: JsonPointer;
-}>;
-
-type DeclareSchemaRequest = Readonly<{
-  address: JsonSchemaAddress;
-  pointer: JsonPointer;
-  schema: JsonSchemaValue;
-}>;
-
-const addDiagnostic = (context: LoweringContext, input: JsonSchemaDiagnosticInput): void => {
-  addJsonSchemaDiagnostic(context.diagnostics, input, context.locations);
-};
-
-const diagnosticSink = (context: LoweringContext): JsonSchemaDiagnosticSink => ({
-  addDiagnostic: (input): void => {
-    addDiagnostic(context, input);
-  },
-});
+const policyForLocation = (
+  context: LoweringContext,
+  location: JsonSchemaLocationId,
+): JsonSchemaDialectPolicy =>
+  context.resourcePolicies.get(location) ?? {
+    applicator: true,
+    dialect: context.options.dialect,
+    formatAssertion: context.formatAssertionVocabulary,
+    unevaluated: true,
+    validation: context.validationVocabulary,
+  };
 
 const siblingAssertionContext = (
   context: LoweringContext,
+  location: JsonSchemaLocationId,
 ): Readonly<{
   addDiagnostic: (input: JsonSchemaDiagnosticInput) => void;
-  dialect: JsonSchemaInputPluginOptions["dialect"];
-  resolveReference: (ref: string) => ReturnType<typeof resolveJsonSchemaReference>;
-  sourceProfile: JsonSchemaInputPluginOptions["sourceProfile"];
+  dialect: ResolvedJsonSchemaInputPluginOptions["dialect"];
+  resolveReference: (ref: string) => ReturnType<JsonSchemaReferenceResolver["resolve"]>;
+  sourceProfile: ResolvedJsonSchemaInputPluginOptions["sourceProfile"];
 }> => ({
   ...diagnosticSink(context),
-  dialect: context.options.dialect,
-  resolveReference: (reference): ReturnType<typeof resolveJsonSchemaReference> =>
-    resolveJsonSchemaReference(reference, context.document.schema, context.options),
+  dialect: policyForLocation(context, location).dialect,
+  resolveReference: (reference): ReturnType<JsonSchemaReferenceResolver["resolve"]> =>
+    context.references.resolve(reference, location),
   sourceProfile: context.options.sourceProfile,
 });
 
-const symbolForAddress = (address: JsonSchemaAddress): string =>
+export const symbolForAddress = (address: JsonSchemaAddress): string =>
   address === emptyPointer ? rootSymbol : `schema:${address}`;
-
-const isExternalSchemaAddress = (request: DeclareSchemaRequest): boolean =>
-  request.address !== jsonSchemaAddress(request.pointer);
-
-const collectSchemaKeywordDiagnostics = (
-  request: DeclareSchemaRequest,
-  context: LoweringContext,
-): void => {
-  if (!isExternalSchemaAddress(request)) return;
-  if (context.diagnosedExternalSchemas.has(request.address)) return;
-
-  context.diagnosedExternalSchemas.add(request.address);
-  collectKeywordDiagnostics(request.schema, request.pointer, {
-    ...diagnosticSink(context),
-    options: context.options,
-  });
-};
-
-const lowerEnum = (
-  values: JsonValue,
-  pointer: JsonPointer,
-  context: LoweringContext,
-): ZodExpression => {
-  if (!isJsonArray(values)) {
-    addDiagnostic(context, {
-      code: "invalid_schema_document",
-      message: "JSON Schema enum must be an array.",
-      pointer,
-    });
-    return zodPlan.unknown();
-  }
-
-  const stringValues = jsonStringValues(values);
-  const [firstStringValue, ...remainingStringValues] = stringValues;
-  if (firstStringValue !== undefined && stringValues.length === values.length)
-    return zodPlan.enum([firstStringValue, ...remainingStringValues]);
-
-  const expressions = values.map((value) => lowerJsonLiteral(value));
-  return oneOrUnion(expressions);
-};
 
 const lowerTypeName = (typeName: string, request: LowerTypeRequest): ZodExpression => {
   const { context, pointer, schema, typeValuePointer } = request;
   switch (typeName) {
     case "array": {
-      return lowerArraySchema(schema, pointer, context);
+      return lowerArraySchema(request);
     }
     case "boolean": {
       return zodPlan.boolean();
     }
     case "integer": {
       return applyJsonSchemaNumberConstraints(
-        { expression: zodPlan.integer(), pointer, schema },
+        {
+          expression: zodPlan.refine(zodPlan.number(), zodHelper.exactMultipleOf(1)),
+          pointer,
+          schema,
+        },
         diagnosticSink(context),
       );
     }
@@ -153,7 +104,7 @@ const lowerTypeName = (typeName: string, request: LowerTypeRequest): ZodExpressi
       );
     }
     case "object": {
-      return lowerObjectSchema(schema, pointer, context);
+      return lowerObjectSchema(request);
     }
     case "string": {
       return applyJsonSchemaStringConstraints(
@@ -225,34 +176,55 @@ const lowerTypeArray = (
   return oneOrUnion(expressions);
 };
 
-const lowerArraySchema = (
-  schema: JsonObject,
+const childLocation = (
   pointer: JsonPointer,
+  parent: JsonSchemaLocationId,
   context: LoweringContext,
-): ZodExpression =>
-  lowerJsonSchemaArray(schema, pointer, {
-    ...diagnosticSink(context),
-    lowerSchema: (childPointer, childSchema) => lowerSchema(childPointer, childSchema, context),
+): JsonSchemaLocationId => context.references.location(pointer, parent)?.id ?? parent;
+
+const lowerChildSchema = (request: LowerChildSchemaRequest): ZodExpression =>
+  lowerJsonSchema({
+    ...request,
+    location: childLocation(request.pointer, request.parent, request.context),
   });
 
-const lowerObjectSchema = (
-  schema: JsonObject,
-  pointer: JsonPointer,
-  context: LoweringContext,
-): ZodExpression =>
+const childSchemaLowerer =
+  (context: LoweringContext, parent: JsonSchemaLocationId) =>
+  (pointer: JsonPointer, schema: LowerChildSchemaRequest["schema"]): ZodExpression =>
+    lowerChildSchema({ context, parent, pointer, schema });
+
+const lowerArraySchema = ({
+  context,
+  location,
+  pointer,
+  schema,
+}: LocatedSchemaRequest<JsonObject>): ZodExpression =>
+  lowerJsonSchemaArray(schema, pointer, {
+    ...diagnosticSink(context),
+    dialect: policyForLocation(context, location).dialect,
+    lowerSchema: childSchemaLowerer(context, location),
+  });
+
+const lowerObjectSchema = ({
+  context,
+  location,
+  pointer,
+  schema,
+}: LocatedSchemaRequest<JsonObject>): ZodExpression =>
   lowerJsonSchemaObject(schema, pointer, {
     ...diagnosticSink(context),
-    lowerSchema: (childPointer, childSchema) => lowerSchema(childPointer, childSchema, context),
+    lowerSchema: childSchemaLowerer(context, location),
   });
 
 const anyJsonObject = (): ZodExpression =>
   zodPlan.preserveObjectInput(zodPlan.passthrough(zodPlan.object({})), []);
 
-const lowerUntypedTypeSpecificSchema = (
-  schema: JsonObject,
-  pointer: JsonPointer,
-  context: LoweringContext,
-): ZodExpression | undefined => {
+const lowerUntypedTypeSpecificSchema = ({
+  context,
+  location,
+  pointer,
+  schema,
+}: LocatedSchemaRequest<JsonObject>): ZodExpression | undefined => {
   const hasNumberConstraints = hasJsonSchemaNumberConstraints(schema);
   const hasStringConstraints = hasJsonSchemaStringConstraints(schema);
   const assertionKind = jsonSchemaUntypedAssertionKind(schema);
@@ -261,10 +233,10 @@ const lowerUntypedTypeSpecificSchema = (
 
   return oneOrUnion([
     assertionKind === "array" || assertionKind === "mixed"
-      ? lowerArraySchema(schema, pointer, context)
+      ? lowerArraySchema({ context, location, pointer, schema })
       : zodPlan.array(zodPlan.unknown()),
     assertionKind === "object" || assertionKind === "mixed"
-      ? lowerObjectSchema(schema, pointer, context)
+      ? lowerObjectSchema({ context, location, pointer, schema })
       : anyJsonObject(),
     zodPlan.boolean(),
     zodPlan.null(),
@@ -283,12 +255,13 @@ const lowerUntypedTypeSpecificSchema = (
   ]);
 };
 
-const lowerReference = (
-  ref: string,
-  pointer: JsonPointer,
-  context: LoweringContext,
-): ZodExpression => {
-  const target = resolveJsonSchemaReference(ref, context.document.schema, context.options);
+const lowerReference = ({
+  context,
+  location,
+  pointer,
+  ref,
+}: LowerReferenceRequest): ZodExpression => {
+  const target = context.references.resolve(ref, location);
   if (target === undefined) {
     addDiagnostic(context, {
       code: "unresolved_reference",
@@ -301,84 +274,112 @@ const lowerReference = (
     return zodPlan.unknown();
   }
 
+  const targetLocation = context.references.graph.location(target.location);
+  if (
+    targetLocation !== undefined &&
+    isSupportedJsonSchemaMetaSchemaResource(targetLocation.resourceUri)
+  )
+    return zodPlan.unknown();
   declareSchema(target, context);
   return zodPlan.reference(zodSymbol(symbolForAddress(target.address)));
 };
 
-const lowerSchema = (
-  pointer: JsonPointer,
-  schema: JsonSchemaValue,
-  context: LoweringContext,
-): ZodExpression => {
+type LowerCompositionRequest = Readonly<{
+  context: LoweringContext;
+  dialect: ResolvedJsonSchemaInputPluginOptions["dialect"];
+  location: JsonSchemaLocationId;
+  pointer: JsonPointer;
+  schema: JsonObject;
+}>;
+
+const lowerComposition = ({
+  context,
+  dialect,
+  location,
+  pointer,
+  schema,
+}: LowerCompositionRequest): ZodExpression | undefined =>
+  lowerJsonSchemaComposition(schema, pointer, {
+    ...diagnosticSink(context),
+    lowerSchema: childSchemaLowerer(context, location),
+    resolveReference: (reference) => context.references.resolve(reference, location),
+    dialect,
+    sourceProfile: context.options.sourceProfile,
+  });
+
+export const lowerJsonSchema = ({
+  context,
+  location,
+  pointer,
+  schema,
+}: LocatedSchemaRequest): ZodExpression => {
   if (schema === true) return zodPlan.unknown();
   if (schema === false) return zodPlan.never();
 
+  const policy = policyForLocation(context, location);
+  const effectiveSchema = policy.validation
+    ? schema
+    : Object.fromEntries(
+        Object.entries(schema).filter(([key]) => !jsonSchemaValidationKeywords.has(key)),
+      );
+
   const withSiblingAssertions = (keyword: string, expression: ZodExpression): ZodExpression =>
     lowerJsonSchemaSiblingIntersection(
-      { expression, keyword, pointer, schema },
+      { expression, keyword, pointer, schema: effectiveSchema },
       {
-        ...siblingAssertionContext(context),
-        lowerSchema: (childPointer, childSchema) => lowerSchema(childPointer, childSchema, context),
+        ...siblingAssertionContext(context, location),
+        lowerSchema: childSchemaLowerer(context, location),
       },
     );
 
-  const ref = schema[jsonSchemaKeywords.ref];
+  const ref = effectiveSchema[jsonSchemaKeywords.ref];
   if (typeof ref === "string") {
-    if (
-      context.options.dialect === "draft-7" &&
-      hasUnsupportedSiblingAssertions(
-        { keyword: jsonSchemaKeywords.ref, pointer, schema },
-        siblingAssertionContext(context),
-      )
-    )
-      return zodPlan.unknown();
-    return withSiblingAssertions(
-      jsonSchemaKeywords.ref,
-      lowerReference(ref, jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.ref), context),
-    );
+    const referenceExpression = lowerReference({
+      context,
+      location,
+      pointer: jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.ref),
+      ref,
+    });
+    return policy.dialect === "draft-7"
+      ? referenceExpression
+      : withSiblingAssertions(jsonSchemaKeywords.ref, referenceExpression);
   }
-  const constValue = schema[jsonSchemaKeywords.const];
+  const constValue = effectiveSchema[jsonSchemaKeywords.const];
   if (constValue !== undefined)
     return withSiblingAssertions(jsonSchemaKeywords.const, lowerJsonLiteral(constValue));
-  const enumValues = schema[jsonSchemaKeywords.enum];
+  const enumValues = effectiveSchema[jsonSchemaKeywords.enum];
   if (enumValues !== undefined)
     return withSiblingAssertions(
       jsonSchemaKeywords.enum,
-      lowerEnum(
+      lowerJsonSchemaEnum(
         enumValues,
         jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.enum),
-        context,
+        diagnosticSink(context),
       ),
     );
-  const compositionExpression = lowerJsonSchemaComposition(schema, pointer, {
-    ...diagnosticSink(context),
-    lowerSchema: (childPointer, childSchema) => lowerSchema(childPointer, childSchema, context),
-    resolveReference: (reference) => {
-      const target = resolveJsonSchemaReference(
-        reference,
-        context.document.schema,
-        context.options,
-      );
-      if (target !== undefined) collectSchemaKeywordDiagnostics(target, context);
-      return target;
-    },
-    dialect: context.options.dialect,
-    sourceProfile: context.options.sourceProfile,
+  const compositionExpression = lowerComposition({
+    context,
+    dialect: policy.dialect,
+    location,
+    pointer,
+    schema: effectiveSchema,
   });
   if (compositionExpression !== undefined) return compositionExpression;
-  const typeValue = schema[jsonSchemaKeywords.type];
+  const typeValue = effectiveSchema[jsonSchemaKeywords.type];
   if (isJsonArray(typeValue))
     return lowerTypeArray(typeValue, {
       context,
+      location,
       pointer,
-      schema,
+      schema: effectiveSchema,
       typeValuePointer: jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.type),
     });
   if (typeof typeValue === "string")
     return lowerTypeName(typeValue, {
       context,
+      location,
       pointer,
-      schema,
+      schema: effectiveSchema,
       typeValuePointer: jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.type),
     });
   if (typeValue !== undefined) {
@@ -389,20 +390,24 @@ const lowerSchema = (
     });
     return zodPlan.unknown();
   }
-  const untypedTypeSpecific = lowerUntypedTypeSpecificSchema(schema, pointer, context);
+  const untypedTypeSpecific = lowerUntypedTypeSpecificSchema({
+    context,
+    location,
+    pointer,
+    schema: effectiveSchema,
+  });
   if (untypedTypeSpecific !== undefined) return untypedTypeSpecific;
 
   return zodPlan.unknown();
 };
 
-const declareSchema = (request: DeclareSchemaRequest, context: LoweringContext): void => {
-  const { address, pointer, schema } = request;
+export const declareSchema = (request: DeclareSchemaRequest, context: LoweringContext): void => {
+  const { address, location, pointer, schema } = request;
   if (context.declarations.has(address)) return;
   if (context.visiting.has(address)) return;
 
-  collectSchemaKeywordDiagnostics(request, context);
   context.visiting.add(address);
-  const expression = lowerSchema(pointer, schema, context);
+  const expression = lowerJsonSchema({ context, location, pointer, schema });
   context.visiting.delete(address);
   context.declarations.set(
     address,
@@ -411,44 +416,5 @@ const declareSchema = (request: DeclareSchemaRequest, context: LoweringContext):
       expression,
       jsonSchemaDeclarationNameHints(pointer, schema),
     ),
-  );
-};
-
-export const lowerJsonSchemaDocument = (
-  document: ParsedJsonSchemaDocument,
-  options: JsonSchemaInputPluginOptions,
-  locations?: SourceLocationMap,
-): Result<ZodEmissionModuleInput> => {
-  const context: LoweringContext = {
-    declarations: new Map<JsonSchemaAddress, ZodDeclaration>(),
-    diagnosedExternalSchemas: new Set<JsonSchemaAddress>(),
-    diagnostics: [],
-    document,
-    options,
-    visiting: new Set<JsonSchemaAddress>(),
-    ...(locations === undefined ? {} : { locations }),
-  };
-  collectKeywordDiagnostics(document.schema, jsonPointerFromPath([]), {
-    ...diagnosticSink(context),
-    options,
-  });
-  if (context.diagnostics.some((diagnostic) => diagnostic.severity === "error"))
-    return resultFromJsonSchemaDiagnostics(
-      { declarations: [], root: rootSymbol },
-      context.diagnostics,
-    );
-
-  declareSchema(
-    {
-      address: jsonSchemaAddress(emptyPointer),
-      pointer: jsonPointerFromPath([]),
-      schema: document.schema,
-    },
-    context,
-  );
-
-  return resultFromJsonSchemaDiagnostics(
-    { declarations: [...context.declarations.values()], root: rootSymbol },
-    context.diagnostics,
   );
 };

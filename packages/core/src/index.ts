@@ -59,6 +59,17 @@ export type {
 export { collectResultDiagnostics, err, ok } from "./result";
 export type { NonEmptyReadonlyArray, Result, ResultErr, ResultOk } from "./result";
 export {
+  zodRuntimeProgram,
+  zodRuntimeProgramIdSchema,
+  zodRuntimeProgramSchema,
+} from "./runtime-program";
+export type {
+  ZodRuntimeProgram,
+  ZodRuntimeProgramId,
+  ZodRuntimeProgramInput,
+} from "./runtime-program";
+export { runtimeProgramIntrinsicGlobals } from "./runtime-program-closure";
+export {
   buildZodSourceFile,
   declarationExportModeSchema,
   resolveZodSourceOutputOptions,
@@ -143,6 +154,7 @@ export {
   zodObjectShapeArgument,
   zodPlan,
   zodReference,
+  zodRuntimeGuard,
   zodSymbol,
   zodSymbolSchema,
   zodWrapper,
@@ -177,6 +189,10 @@ export type {
   ZodObjectPropertyInput,
   ZodReferenceExpression,
   ZodReferenceExpressionInput,
+  ZodRegexFlags,
+  ZodRuntimeGuardExpression,
+  ZodRuntimeGuardExpressionInput,
+  ZodRuntimeGuardPlacement,
   ZodSymbol,
   ZodWrapperExpression,
   ZodWrapperExpressionInput,

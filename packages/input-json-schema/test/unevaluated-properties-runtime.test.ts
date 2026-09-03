@@ -7,7 +7,10 @@ import { compileToZodSource } from "@x2zod/core";
 
 import { jsonSchemaInputPlugin } from "../src";
 import type { JsonSchemaValue } from "../src";
-import { compileGeneratedSchema } from "./generated-schema-harness";
+import {
+  compileGeneratedSchema,
+  verifyGeneratedSchemaRuntimeIsolation,
+} from "./generated-schema-harness";
 
 const fixtureSchema = (): JsonSchemaValue => ({
   $defs: {
@@ -131,53 +134,69 @@ void describe("JSON Schema unevaluatedProperties value applicability", () => {
 });
 
 void describe("JSON Schema schema-valued unevaluatedProperties", () => {
-  void test("fails before narrowing a root that also permits non-object values", async () => {
+  void test("preserves root non-object values with unevaluatedProperties", async () => {
+    const schema = {
+      allOf: [{ properties: { name: { type: "string" } } }],
+      type: ["object", "null"],
+      unevaluatedProperties: false,
+    } satisfies JsonSchemaValue;
     const result = await compileToZodSource({
-      document: {
-        source: { id: "mixed-root", kind: "inline" },
-        text: JSON.stringify({
-          allOf: [{ properties: { name: { type: "string" } } }],
-          type: ["object", "null"],
-          unevaluatedProperties: false,
-        }),
-      },
+      document: { source: { id: "mixed-root", kind: "inline" }, text: JSON.stringify(schema) },
       output: { typeName: "MixedRoot" },
       plugin: jsonSchemaInputPlugin,
       pluginOptions: { validator: "none" },
     });
 
-    assert.equal(result.ok, false);
-    assert.ok(
-      result.diagnostics.some(
-        (diagnostic) => diagnostic.code === "unrepresentable_schema_combination",
-      ),
-    );
+    assert.equal(result.ok, true);
+    const { generatedSchema } = await compileGeneratedSchema(schema);
+    for (const [value, accepted] of [
+      [null, true],
+      [{}, true],
+      [{ name: "tool" }, true],
+      [{ name: 1 }, false],
+      [1, false],
+    ] as const) {
+      const input = structuredClone(value);
+      const parsed = generatedSchema.safeParse(input);
+      assert.equal(parsed.success, accepted);
+      if (parsed.success) assert.deepEqual(parsed.data, value);
+      assert.deepEqual(input, value);
+    }
   });
 
-  void test("fails before dropping branch-local object assertions", async () => {
+  void test("preserves branch-local object assertions with unevaluatedProperties", async () => {
+    const schema = {
+      allOf: [
+        { additionalProperties: false, type: "object" },
+        { properties: { name: { type: "string" } }, type: "object" },
+      ],
+      type: "object",
+      unevaluatedProperties: false,
+    } satisfies JsonSchemaValue;
     const result = await compileToZodSource({
       document: {
         source: { id: "branch-assertion", kind: "inline" },
-        text: JSON.stringify({
-          allOf: [
-            { additionalProperties: false, type: "object" },
-            { properties: { name: { type: "string" } }, type: "object" },
-          ],
-          type: "object",
-          unevaluatedProperties: false,
-        }),
+        text: JSON.stringify(schema),
       },
       output: { typeName: "BranchAssertion" },
       plugin: jsonSchemaInputPlugin,
       pluginOptions: { validator: "none" },
     });
 
-    assert.equal(result.ok, false);
-    assert.ok(
-      result.diagnostics.some(
-        (diagnostic) => diagnostic.code === "unrepresentable_schema_combination",
-      ),
-    );
+    assert.equal(result.ok, true);
+    const { generatedSchema } = await compileGeneratedSchema(schema);
+    for (const [value, accepted] of [
+      [{}, true],
+      [{ name: "tool" }, false],
+      [{ name: 1 }, false],
+      [null, false],
+    ] as const) {
+      const input = structuredClone(value);
+      const parsed = generatedSchema.safeParse(input);
+      assert.equal(parsed.success, accepted);
+      if (parsed.success) assert.deepEqual(parsed.data, value);
+      assert.deepEqual(input, value);
+    }
   });
 
   void test("constrains only properties left unevaluated by allOf", async () => {
@@ -218,4 +237,87 @@ void describe("JSON Schema schema-valued unevaluatedProperties", () => {
       false,
     );
   });
+});
+
+void test("routes a reachable external unevaluatedProperties schema through the evaluator", async () => {
+  const externalUri = "https://example.com/model.schema.json";
+  const { generatedSchema, source } = await compileGeneratedSchema(
+    { $ref: externalUri },
+    {
+      externalSchema: {
+        $id: externalUri,
+        allOf: [{ properties: { name: { type: "string" } } }],
+        unevaluatedProperties: false,
+      },
+    },
+  );
+
+  assert.match(source, /x2zodEvaluate/u);
+  assert.equal(generatedSchema.safeParse({ name: "accepted" }).success, true);
+  assert.equal(generatedSchema.safeParse({ name: 42 }).success, false);
+  assert.equal(generatedSchema.safeParse({ extra: true, name: "accepted" }).success, false);
+});
+
+void test("terminates a same-instance reference cycle across resources", async () => {
+  const schema = {
+    $defs: {
+      child: { $id: "https://example.test/cycle/child", $ref: "https://example.test/cycle/root" },
+    },
+    $id: "https://example.test/cycle/root",
+    $ref: "https://example.test/cycle/child",
+    unevaluatedProperties: false,
+  } satisfies JsonSchemaValue;
+  const { source } = await compileGeneratedSchema(schema);
+
+  await verifyGeneratedSchemaRuntimeIsolation({
+    acceptedValues: [{}],
+    rejectedValues: [{ extra: true }],
+    source,
+    timeoutMs: 2000,
+  });
+});
+
+void test("routes an external dynamic target with unevaluatedProperties", async () => {
+  const externalUri = "https://example.com/model.schema.json";
+  const { generatedSchema, source } = await compileGeneratedSchema(
+    { $dynamicRef: `${externalUri}#node` },
+    {
+      externalSchema: {
+        $dynamicAnchor: "node",
+        $id: externalUri,
+        properties: { name: { type: "string" } },
+        unevaluatedProperties: false,
+      },
+    },
+  );
+
+  assert.match(source, /x2zodEvaluate/u);
+  assert.equal(generatedSchema.safeParse({ name: "accepted" }).success, true);
+  assert.equal(generatedSchema.safeParse({ extra: true, name: "accepted" }).success, false);
+});
+
+void test("routes an external recursive target with unevaluatedProperties", async () => {
+  const externalUri = "https://example.com/model.schema.json";
+  const { generatedSchema, source } = await compileGeneratedSchema(
+    { $ref: externalUri },
+    {
+      dialect: "draft-2019-09",
+      externalSchema: {
+        $id: externalUri,
+        $recursiveAnchor: true,
+        properties: { child: { $recursiveRef: "#" }, name: { type: "string" } },
+        unevaluatedProperties: false,
+      },
+    },
+  );
+
+  assert.match(source, /x2zodEvaluate/u);
+  assert.equal(
+    generatedSchema.safeParse({ child: { name: "nested" }, name: "accepted" }).success,
+    true,
+  );
+  assert.equal(
+    generatedSchema.safeParse({ child: { extra: true }, name: "accepted" }).success,
+    false,
+  );
 });

@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { pathToFileURL } from "node:url";
 
 import { compileToZodSource } from "@x2zod/core";
 
@@ -23,7 +24,11 @@ const configSchemaText = readFileSync(configSchemaPath, "utf8");
 const modelSchema = jsonSchemaValueSchema.parse(JSON.parse(readFileSync(modelSchemaPath, "utf8")));
 
 const result = await compileToZodSource({
-  document: { source: { kind: "file", path: configSchemaPath }, text: configSchemaText },
+  document: {
+    source: { kind: "file", path: configSchemaPath },
+    text: configSchemaText,
+    retrievalUri: pathToFileURL(configSchemaPath).href,
+  },
   output: { typeName: openCodeConfigTypeName },
   plugin: jsonSchemaInputPlugin,
   pluginOptions: { externalSchemas: { [modelSchemaUri]: modelSchema }, sourceProfile: "opencode" },

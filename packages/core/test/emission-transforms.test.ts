@@ -1,21 +1,11 @@
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
-import { rmSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import nodePath from "node:path";
 import { describe, test } from "node:test";
 
 import { z } from "zod/v4";
 
-import {
-  buildNodeBundle,
-  createTemporaryDirectory,
-  importGeneratedExport,
-  isNativePreviewShutdownStderr,
-  isRecord,
-  nativePreviewExternals,
-  runNode,
-} from "../../../test/native-source-harness";
+import { importGeneratedExport, isRecord } from "../../../test/native-source-harness";
 import {
   buildZodSourceFile,
   compileToZodSource,
@@ -36,17 +26,13 @@ import type {
   ZodEmissionTransformInput,
 } from "../src/index";
 import { variableDeclaration, variableStatements, zodCallName } from "./ast-helpers";
+import {
+  createGeneratedSourceHarness,
+  emitGeneratedDeclarations,
+} from "./generated-source-harness";
 
-const corePackageRootDirectory = nodePath.resolve(import.meta.dirname, "..");
-const coreEntrypoint = "src/index.ts";
 const sourcePrinterEntryPoint = nodePath.join(import.meta.dirname, "source-print-helper.ts");
-const coreTestTempDirectory = nodePath.join(corePackageRootDirectory, "node_modules/.cache");
-const coreTestTempPrefix = "x2zod-emission-transform-test-";
-const bundledCoreFileName = "index.mjs";
-const bundledSourcePrinterFileName = "source-print-helper.mjs";
-const generatedRuntimeFileName = "generated-runtime.ts";
 const generatedTypeProbeFileName = "generated-type-probe.ts";
-const typeScriptBinary = nodePath.resolve(corePackageRootDirectory, "../../node_modules/.bin/tsgo");
 const rootSymbol = zodSymbol("root");
 const defaultOutputOptions = { typeName: "User" } satisfies Parameters<
   typeof buildZodSourceFile
@@ -137,6 +123,24 @@ const generatedTypeProbeSource = [
   "",
 ].join("\n");
 
+const recursiveTypeProbeSource = [
+  'import { z } from "zod/v4";',
+  'import { userSchema } from "./generated-runtime.js";',
+  'import type { User } from "./generated-runtime.js";',
+  "",
+  "type Equal<TLeft, TRight> =",
+  "  (<T>() => T extends TLeft ? 1 : 2) extends",
+  "  (<T>() => T extends TRight ? 1 : 2) ? true : false;",
+  "type Assert<TValue extends true> = TValue;",
+  "type RecursiveInput = { next?: RecursiveInput | undefined; snake_key: string };",
+  "type RecursiveOutput = { next?: RecursiveOutput | undefined; snakeKey: string };",
+  "",
+  "export type InputMatches = Assert<Equal<z.input<typeof userSchema>, RecursiveInput>>;",
+  "export type OutputMatches = Assert<Equal<z.output<typeof userSchema>, RecursiveOutput>>;",
+  "export type UserMatches = Assert<Equal<User, RecursiveOutput>>;",
+  "",
+].join("\n");
+
 const wireValue = {
   extra_wire_key: "unchanged",
   metadata_map: { dynamic_entry: { nested_value: "nested" } },
@@ -150,56 +154,6 @@ const decodedValue = {
   profileData: { addressesList: [{ postalCode: "12345" }], displayName: undefined },
   settingsData: { displayName: "visible" },
   userId: "user-1",
-};
-
-const buildCoreBundle = (bundleFile: string): void => {
-  buildNodeBundle({
-    cwd: corePackageRootDirectory,
-    entryPoint: coreEntrypoint,
-    externals: nativePreviewExternals,
-    outfile: bundleFile,
-  });
-};
-
-const buildSourcePrinterBundle = (bundleFile: string): void => {
-  buildNodeBundle({
-    cwd: corePackageRootDirectory,
-    entryPoint: sourcePrinterEntryPoint,
-    externals: nativePreviewExternals,
-    outfile: bundleFile,
-  });
-};
-
-const printPropertyTransformSource = (printerBundleFile: string, coreBundleFile: string): string =>
-  runNode({
-    allowedStderr: isNativePreviewShutdownStderr,
-    args: [printerBundleFile, coreBundleFile, "property-transform"],
-    cwd: corePackageRootDirectory,
-  });
-
-const emitGeneratedDeclarations = (generatedFile: string, outputDirectory: string): void => {
-  const result = spawnSync(
-    typeScriptBinary,
-    [
-      "--declaration",
-      "--emitDeclarationOnly",
-      "--ignoreConfig",
-      "--module",
-      "nodenext",
-      "--moduleResolution",
-      "nodenext",
-      "--outDir",
-      outputDirectory,
-      "--skipLibCheck",
-      "--strict",
-      "--target",
-      "es2022",
-      generatedFile,
-    ],
-    { cwd: corePackageRootDirectory, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
-  );
-
-  assert.equal(result.status, 0, [result.stdout, result.stderr].join("\n"));
 };
 
 const isRuntimeZodCodec = (value: unknown): value is RuntimeZodCodec =>
@@ -276,6 +230,22 @@ void describe("buildZodSourceFile emission transform diagnostics", () => {
     assert.equal(result.diagnostics[0].code, "unsupported_emission_transform");
   });
 
+  void test("rejects required calls on transformed self-references", () => {
+    const result = buildZodSourceFile(
+      rootOnlyModule(
+        zodPlan.object({
+          next: zodPlan.required(zodPlan.reference(rootSymbol), ["snake_key"]),
+          snake_key: zodPlan.optional(zodPlan.string()),
+        }),
+      ),
+      defaultOutputOptions,
+      camelCasePropertyTransforms,
+    );
+
+    assert.equal(result.ok, false);
+    assert.equal(result.diagnostics[0].code, "unsupported_emission_transform");
+  });
+
   void test("rejects unique-item refinements after transformed array elements", () => {
     const result = buildZodSourceFile(
       rootOnlyModule(
@@ -292,7 +262,7 @@ void describe("buildZodSourceFile emission transform diagnostics", () => {
     assert.equal(result.diagnostics[0].code, "unsupported_emission_transform");
   });
 
-  void test("rejects object-input preservation across property-key transforms", () => {
+  void test("accepts object-input preservation across property-key transforms", () => {
     const result = buildZodSourceFile(
       rootOnlyModule(
         zodPlan.preserveObjectInput(
@@ -306,30 +276,84 @@ void describe("buildZodSourceFile emission transform diagnostics", () => {
       camelCasePropertyTransforms,
     );
 
-    assert.equal(result.ok, false);
-    assert.equal(result.diagnostics[0].code, "unsupported_emission_transform");
+    assert.equal(result.ok, true);
   });
 });
 
 void describe("generated property-key codecs", () => {
-  void test("decode, encode, and emit distinct input and output declarations", async () => {
-    const directory = createTemporaryDirectory({
-      prefix: coreTestTempPrefix,
-      rootDirectory: coreTestTempDirectory,
+  void test("decode and encode transformed property keys through recursive components", async () => {
+    const harness = createGeneratedSourceHarness({
+      prefix: "x2zod-emission-transform-test-",
+      printerEntryPoint: sourcePrinterEntryPoint,
     });
-    const coreBundleFile = nodePath.join(directory, bundledCoreFileName);
-    const printerBundleFile = nodePath.join(directory, bundledSourcePrinterFileName);
-    const generatedFile = nodePath.join(directory, generatedRuntimeFileName);
 
     try {
-      buildCoreBundle(coreBundleFile);
-      buildSourcePrinterBundle(printerBundleFile);
-      const printedSource = printPropertyTransformSource(printerBundleFile, coreBundleFile);
-      const typeProbeFile = nodePath.join(directory, generatedTypeProbeFileName);
-      await writeFile(generatedFile, printedSource);
+      const printedSource = harness.print(["recursive-property-transform"]);
+      const typeProbeFile = nodePath.join(harness.directory, generatedTypeProbeFileName);
+      await writeFile(harness.generatedFile, printedSource);
+      await writeFile(typeProbeFile, recursiveTypeProbeSource);
+      emitGeneratedDeclarations(typeProbeFile, nodePath.join(harness.directory, "declarations"));
+      const userSchema = await importGeneratedUserSchema(harness.generatedFile);
+      const wire = {
+        next: { next: { snake_key: "third" }, snake_key: "second" },
+        snake_key: "first",
+      };
+      const decoded = {
+        next: { next: { snakeKey: "third" }, snakeKey: "second" },
+        snakeKey: "first",
+      };
+
+      assert.deepEqual(userSchema.decode(wire), decoded);
+      assert.deepEqual(userSchema.encode(decoded), wire);
+    } finally {
+      harness.dispose();
+    }
+  });
+});
+
+void describe("generated property-key codec wrappers", () => {
+  void test("preserves own prototype-sensitive input while returning transformed output", async () => {
+    const harness = createGeneratedSourceHarness({
+      prefix: "x2zod-emission-transform-test-",
+      printerEntryPoint: sourcePrinterEntryPoint,
+    });
+
+    try {
+      const printedSource = harness.print(["preserved-property-transform"]);
+      await writeFile(harness.generatedFile, printedSource);
+      emitGeneratedDeclarations(
+        harness.generatedFile,
+        nodePath.join(harness.directory, "declarations"),
+      );
+      const userSchema = await importGeneratedUserSchema(harness.generatedFile);
+      const parsed: unknown = JSON.parse('{"snake_key":"ok","__proto__":"kept"}');
+      if (!isRecord(parsed)) throw new Error("Expected parsed object input.");
+      const decoded = userSchema.decode(parsed);
+
+      assert.equal(Reflect.get(decoded, "snakeKey"), "ok");
+      assert.equal(Reflect.get(decoded, "__proto__"), "kept");
+      assert.equal(Object.hasOwn(decoded, "__proto__"), true);
+      assert.equal(Object.hasOwn(decoded, "snake_key"), false);
+    } finally {
+      harness.dispose();
+    }
+  });
+});
+
+void describe("generated nonrecursive property-key codecs", () => {
+  void test("decode, encode, and emit distinct input and output declarations", async () => {
+    const harness = createGeneratedSourceHarness({
+      prefix: "x2zod-emission-transform-test-",
+      printerEntryPoint: sourcePrinterEntryPoint,
+    });
+
+    try {
+      const printedSource = harness.print(["property-transform"]);
+      const typeProbeFile = nodePath.join(harness.directory, generatedTypeProbeFileName);
+      await writeFile(harness.generatedFile, printedSource);
       await writeFile(typeProbeFile, generatedTypeProbeSource);
-      emitGeneratedDeclarations(typeProbeFile, nodePath.join(directory, "declarations"));
-      const userSchema = await importGeneratedUserSchema(generatedFile);
+      emitGeneratedDeclarations(typeProbeFile, nodePath.join(harness.directory, "declarations"));
+      const userSchema = await importGeneratedUserSchema(harness.generatedFile);
 
       assert.ok(printedSource.includes("z.codec"));
       assert.ok(printedSource.includes("user_id"));
@@ -367,7 +391,7 @@ void describe("generated property-key codecs", () => {
         false,
       );
     } finally {
-      rmSync(directory, { force: true, recursive: true });
+      harness.dispose();
     }
   });
 });

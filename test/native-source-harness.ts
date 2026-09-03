@@ -9,6 +9,9 @@ import { isRecord } from "./structural";
 export { isRecord } from "./structural";
 
 const textDecoder = new TextDecoder();
+const mebibyteInBytes = 1_048_576;
+const nodeSubprocessMaxBufferMebibytes = 16;
+const nodeSubprocessMaxBufferBytes = nodeSubprocessMaxBufferMebibytes * mebibyteInBytes;
 export const nativePreviewShutdownStderr = "context canceled\n";
 const bunExecutable = process.execPath;
 const nodeExecutable = process.env["X2ZOD_NODE_BINARY"] ?? "node";
@@ -80,6 +83,7 @@ export const runNode = ({ allowedStderr, args, cwd, timeoutMs }: RunNodeRequest)
   const result = spawnSync(nodeExecutable, ["--no-warnings", ...args], {
     ...(cwd === undefined ? {} : { cwd }),
     ...(timeoutMs === undefined ? {} : { killSignal: "SIGKILL", timeout: timeoutMs }),
+    maxBuffer: nodeSubprocessMaxBufferBytes,
     stdio: ["ignore", "pipe", "pipe"],
   });
 

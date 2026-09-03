@@ -5,8 +5,10 @@ import { test } from "node:test";
 
 import { z } from "zod/v4";
 
+import { ts } from "@x2zod/core";
 import { jsonSchemaInputPlugin } from "@x2zod/input-json-schema";
 
+import { isRecord } from "../../../test/structural";
 import {
   X2ZodConfigError,
   compileX2ZodTarget,
@@ -28,10 +30,27 @@ type IsAssignable<TFrom, TTo> = [TFrom] extends [TTo] ? true : false;
 const plugins = { "json-schema": jsonSchemaInputPlugin } as const;
 const configPackageRoot = path.join(import.meta.dirname, "..");
 const schemaText = JSON.stringify(
-  { properties: { name: { type: "string" } }, required: ["name"], type: "object" },
+  {
+    $defs: { address: { type: "string" } },
+    properties: { address: { $ref: "#/$defs/address" } },
+    required: ["address"],
+    type: "object",
+  },
   undefined,
   2,
 );
+
+const isNamedVariableStatement = (value: unknown, name: string): boolean => {
+  if (!isRecord(value) || value["kind"] !== ts.SyntaxKind.VariableStatement) return false;
+  const { declarationList } = value;
+  if (!isRecord(declarationList) || !Array.isArray(declarationList["declarations"])) return false;
+  return declarationList["declarations"].some(
+    (declaration) =>
+      isRecord(declaration) &&
+      isRecord(declaration["name"]) &&
+      declaration["name"]["text"] === name,
+  );
+};
 
 const expectConfigError = (run: () => unknown, expectedMessages: readonly string[]): void => {
   assert.throws(run, X2ZodConfigError);
@@ -222,7 +241,6 @@ void test("resolveX2ZodConfig validates and resolves plugin options and output d
   assert.equal(userTarget.kind, "json-schema");
   assert.equal(userTarget.name, "user");
   assert.deepEqual(userTarget.options, {
-    dialect: "draft-2020-12",
     externalSchemas: {},
     sourceProfile: "opencode",
     validator: "ajv",
@@ -257,7 +275,11 @@ void test("compileX2ZodTarget compiles a resolved config target through the libr
         user: {
           input: { id: "inline", text: schemaText },
           kind: "json-schema",
-          output: { path: "generated/user.ts", typeName: "User" },
+          output: {
+            declarationNameOverrides: { "schema:/$defs/address": "ConfiguredSchema" },
+            path: "generated/user.ts",
+            typeName: "User",
+          },
         },
       },
     }),
@@ -269,8 +291,15 @@ void test("compileX2ZodTarget compiles a resolved config target through the libr
     document: { source: { id: "inline", kind: "inline" }, text: schemaText },
     target,
   });
+  if (!result.ok)
+    throw new Error(result.diagnostics.map((diagnostic) => diagnostic.message).join("\n"));
 
-  assert.equal(result.ok, true);
+  assert.equal(
+    result.value.sourceFile.statements.some((statement) =>
+      isNamedVariableStatement(statement, "configuredSchema"),
+    ),
+    true,
+  );
 });
 
 void test("resolveX2ZodConfig reports unknown plugin kinds and invalid plugin options", () => {

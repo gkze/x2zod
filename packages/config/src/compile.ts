@@ -138,6 +138,7 @@ const outputWithOverrides = (
   output: X2ZodResolvedOutputConfig<X2ZodLoadedOutputProcessorRegistry>,
   overrides: X2ZodCompileTargetOverrides,
 ): X2ZodCompilableOutput => ({
+  declarationNameOverrides: output.declarationNameOverrides,
   declarationExportMode: overrides.declarationExportMode ?? output.declarationExportMode,
   path: overrides.outputPath ?? output.path,
   ...(output.processors === undefined ? {} : { processors: output.processors }),
@@ -226,6 +227,9 @@ const resolveConfiguredCompilableTarget = async ({
 export const zodSourceOutputOptionsForConfig = (
   output: X2ZodCompilableOutput,
 ): ZodSourceOutputOptions => ({
+  ...(output.declarationNameOverrides === undefined
+    ? {}
+    : { declarationNameOverrides: output.declarationNameOverrides }),
   ...(output.declarationExportMode === undefined
     ? {}
     : { declarationExportMode: output.declarationExportMode }),

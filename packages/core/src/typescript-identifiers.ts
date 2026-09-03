@@ -1,10 +1,33 @@
 import {
   isIdentifierPart,
   isIdentifierText as isTypeScriptIdentifierText,
+  stringToToken,
+  SyntaxKind,
 } from "@typescript/native-preview/unstable/ast";
 import { z } from "zod/v4";
 
 export type TypeScriptIdentifier = string & z.$brand<"TypeScriptIdentifier">;
+
+export type TypeScriptIdentifierAllocator = Readonly<{
+  allocate: (candidate: string, nextCandidate?: (name: string) => string) => string;
+}>;
+
+export const createTypeScriptIdentifierAllocator = (
+  initiallyReserved: Iterable<string> = [],
+): TypeScriptIdentifierAllocator => {
+  const usedNames = new Set(initiallyReserved);
+  const allocate = (
+    candidate: string,
+    nextCandidate: (name: string) => string = (name) => `${name}X`,
+  ): string => {
+    let name = candidate;
+    while (usedNames.has(name)) name = nextCandidate(name);
+    usedNames.add(name);
+    return name;
+  };
+
+  return { allocate };
+};
 
 const typeScriptIdentifierSchemaValue: z.ZodType<TypeScriptIdentifier, string> = z
   .string()
@@ -14,7 +37,18 @@ const typeScriptIdentifierSchemaValue: z.ZodType<TypeScriptIdentifier, string> =
 export const typeScriptIdentifierSchema: z.ZodType<TypeScriptIdentifier, string> =
   typeScriptIdentifierSchemaValue;
 
-export const isTypeScriptIdentifier = (value: string): boolean => isTypeScriptIdentifierText(value);
+const isTypeScriptDeclarationNameToken = (token: SyntaxKind): boolean =>
+  (token >= SyntaxKind.FirstReservedWord && token <= SyntaxKind.LastReservedWord) ||
+  (token >= SyntaxKind.FirstFutureReservedWord && token <= SyntaxKind.LastFutureReservedWord) ||
+  token === SyntaxKind.AsKeyword ||
+  token === SyntaxKind.AwaitKeyword;
+
+export const isTypeScriptIdentifier = (value: string): boolean => {
+  if (!isTypeScriptIdentifierText(value)) return false;
+
+  const token = stringToToken(value);
+  return token === undefined || !isTypeScriptDeclarationNameToken(token);
+};
 
 export const typeScriptIdentifierSegments = (value: string): readonly string[] | undefined => {
   const segments: string[] = [];
