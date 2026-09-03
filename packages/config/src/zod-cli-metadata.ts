@@ -6,7 +6,7 @@ import { schemaError } from "./zod-cli-errors";
 import { innerSchema, isSupportedWrapperType, schemaType } from "./zod-introspection";
 import type { ZodSchema } from "./zod-introspection";
 
-export type ZodCLIOptionValueMode = "json-file-map" | "string-array";
+export type ZodCLIOptionValueMode = "json-file-map" | "string-array" | "string-map";
 
 export type ZodCLIOptionMetadata = Readonly<{
   description?: string | undefined;
@@ -66,7 +66,12 @@ const parseCLIMetadata = (value: unknown, path: readonly string[]): ZodCLIOption
     throw schemaError(path, "CLI option description must be a string");
   if (long !== undefined && typeof long !== "string")
     throw schemaError(path, "CLI long option must be a string");
-  if (valueMode !== undefined && valueMode !== "string-array" && valueMode !== "json-file-map")
+  if (
+    valueMode !== undefined &&
+    valueMode !== "string-array" &&
+    valueMode !== "string-map" &&
+    valueMode !== "json-file-map"
+  )
     throw schemaError(path, `unsupported CLI option value mode ${formatMetadataValue(valueMode)}`);
   if (valueName !== undefined && typeof valueName !== "string")
     throw schemaError(path, "CLI option value name must be a string");

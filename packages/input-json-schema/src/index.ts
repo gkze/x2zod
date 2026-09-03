@@ -15,6 +15,8 @@ export type {
 export { jsonSchemaValueSchema } from "./document";
 export type {
   JsonSchemaDialect,
+  JsonSchemaInertKeywords,
+  JsonSchemaInertKeywordValueType,
   JsonSchemaInputPluginKind,
   JsonSchemaInputPluginOptions,
   JsonSchemaInputPluginOptionsInput,

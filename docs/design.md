@@ -198,6 +198,14 @@ export const jsonSchemaOptionsSchema = z.strictObject({
     .optional()
     .describe("JSON Schema dialect override; inferred from $schema, otherwise 2020-12."),
   externalSchemas: withCLI(jsonSchemaRegistrySchema.default({}), { valueMode: "json-file-map" }),
+  inertKeywords: withCLI(
+    z
+      .record(z.string(), z.enum(["boolean", "null", "number", "string"]))
+      .default({})
+      .superRefine(rejectReservedOrStandardKeywordNames)
+      .describe("Exact custom keywords to accept as typed, validation-inert metadata."),
+    { long: "--inert-keyword", short: "-K", valueMode: "string-map", valueName: "NAME=TYPE" },
+  ),
   validator: z.enum(["ajv", "none"]).default("ajv").describe("Schema document validator."),
   sourceProfile: z
     .enum(["none", "opencode", "schemastore"])
@@ -207,6 +215,20 @@ export const jsonSchemaOptionsSchema = z.strictObject({
 
 export type JsonSchemaOptions = z.infer<typeof jsonSchemaOptionsSchema>;
 ```
+
+`inertKeywords` is a JSON-serializable map from an exact custom keyword name to its required JSON
+primitive kind: `boolean`, `null`, `number`, or `string`. It defaults to `{}`. Names are literal;
+there are no glob, prefix, path, or regular-expression forms. Option validation rejects empty names,
+every `$`-prefixed name, and every standard keyword known to the plugin's supported JSON Schema
+dialects and vocabularies. A standard keyword cannot be relabeled as inert merely because it is not
+active in the selected dialect.
+
+Every reachable occurrence of a configured keyword must have the declared primitive kind. Objects
+and arrays never match, and a type mismatch fails compilation at that occurrence rather than
+silently ignoring the value. An accepted occurrence remains validation-inert and produces a
+`json-schema/ignored-keyword` warning so the compatibility decision is auditable. The same rules
+apply recursively to the root document and reachable registered external schemas; unused external
+resources remain quarantined from diagnostics and compilation.
 
 Core introspects a supported Zod option-schema subset and maps it to Optique parsers:
 
@@ -219,6 +241,11 @@ Core introspects a supported Zod option-schema subset and maps it to Optique par
 - `.optional()` and `.default(...)` drive optional/default behavior;
 - `.describe(...)` and supported `.meta(...)` fields drive help text;
 - refinements are allowed as final Zod validation, but do not need to become Optique-native checks.
+
+The JSON Schema plugin declares a narrow CLI mapping for `inertKeywords`: repeatable
+`--inert-keyword NAME=TYPE` arguments materialize the same map accepted by the library and config
+APIs. `TYPE` is exactly one of `boolean`, `null`, `number`, or `string`; final Zod validation still
+owns reserved-name and standard-keyword rejection.
 
 The CLI path is:
 
@@ -233,7 +260,8 @@ Unsupported option-schema shapes should fail plugin registration with clear diag
 include nested objects, broad unions, records without an explicit supported CLI value mode, and
 transforms that change the option object shape in ways the CLI adapter cannot model. The JSON Schema
 registry uses the `json-file-map` mode, which maps repeatable `ID=FILE` arguments into its validated
-record rather than asking the generic adapter to infer record semantics.
+record rather than asking the generic adapter to infer record semantics. The `string-map` mode
+requires a Zod record field; applying it to an incompatible field shape fails registration.
 
 Plugins with no options should declare `z.object({})`; the CLI may use an empty parser internally
 for configured-target invocations that do not select a plugin kind.
@@ -534,6 +562,7 @@ The CLI should:
 - expose JSON Schema plugin validation options such as `-v` / `--validator ajv|none`, defaulting to
   `ajv`;
 - expose source compatibility profiles such as `-p` / `--source-profile opencode|schemastore`;
+- expose caller-declared inert metadata through repeatable `--inert-keyword NAME=TYPE` arguments;
 - support a configurable Zod import path through `-z` / `--zod-import-path`, defaulting to `zod/v4`;
 - support `-e` / `--declaration-export-mode root|all`, defaulting to `root`;
 - support explicit external schemas through repeatable `-E` / `--external-schema ID=FILE`;
@@ -603,6 +632,13 @@ validation behavior. The `schemastore` profile applies the same narrow policy to
 `tsType` and `x-intellij-language-injection` annotations. It does not weaken unknown-keyword
 handling or resolve SchemaStore's external references; callers still provide those resources through
 the external schema registry.
+
+The caller-owned `inertKeywords` map composes additively with the selected source profile. An
+explicit configured rule is checked first and its primitive kind is enforced even when the selected
+profile also recognizes that name; a type mismatch cannot fall through to the profile. When no
+configured rule matches, the profile may apply its built-in compatibility rule. Configuration never
+replaces, broadens, or disables a profile rule. The default combination of `sourceProfile: "none"`
+and `inertKeywords: {}` therefore preserves strict unknown-keyword rejection.
 
 A source profile may:
 
@@ -707,9 +743,10 @@ V1 semantic target:
 - `default` is metadata-only by default.
 - required format-assertion vocabulary overrides the default `format` metadata policy.
 - Unknown non-ref keywords are rejected unless the selected source profile marks them as inert
-  compatibility metadata.
-- Profile-allowed unknown keywords are accepted as validation-inert input and reported in
-  diagnostics; emitting them requires the annotation IR.
+  compatibility metadata or an exact caller-supplied `inertKeywords` rule accepts their primitive
+  value.
+- Profile- or configuration-allowed unknown keywords are accepted as validation-inert input and
+  reported in diagnostics; emitting them requires the annotation IR.
 - Unknown required vocabularies fail.
 - `$dynamicAnchor` and `$dynamicRef` are supported for Draft 2020-12.
 - `patternProperties` is supported with runtime checks where needed.
@@ -843,6 +880,8 @@ Mapper / expression-plan tests:
 
 - strict unknown-keyword failures;
 - source-profile handling for the exact inert OpenCode and SchemaStore metadata keywords;
+- configured inert-keyword acceptance, primitive-kind mismatches, reserved and standard-name
+  rejection, profile composition, warnings, and recursive external-resource handling;
 - primitives and boolean schemas;
 - enums and consts;
 - objects, required properties, loose objects, strict objects, and catchalls;
@@ -865,6 +904,11 @@ Emitter tests:
 - helper deduplication and stable helper naming;
 - configurable Zod import path;
 - Oxfmt-compatible output.
+
+Generic `inertKeywords` tests use synthetic custom keyword names. A downstream producer or consumer
+that needs this escape hatch owns fixtures against its real schemas and pins those fixtures in its
+own repository; adding the option is not a reason to encode that consumer's keyword names or schema
+artifacts in `x2zod`.
 
 Emission transform tests:
 

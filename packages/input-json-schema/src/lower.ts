@@ -12,6 +12,7 @@ import {
 import type { JsonSchemaDiagnosticInput } from "./diagnostics";
 import { isJsonArray } from "./document";
 import type { JsonObject, JsonValue } from "./document";
+import { withoutConfiguredInertKeywords } from "./inert-keywords";
 import { lowerJsonLiteral, lowerJsonSchemaEnum } from "./literal";
 import {
   addLoweringDiagnostic as addDiagnostic,
@@ -317,10 +318,11 @@ export const lowerJsonSchema = ({
   if (schema === false) return zodPlan.never();
 
   const policy = policyForLocation(context, location);
+  const semanticSchema = withoutConfiguredInertKeywords(schema, context.options.inertKeywords);
   const effectiveSchema = policy.validation
-    ? schema
+    ? semanticSchema
     : Object.fromEntries(
-        Object.entries(schema).filter(([key]) => !jsonSchemaValidationKeywords.has(key)),
+        Object.entries(semanticSchema).filter(([key]) => !jsonSchemaValidationKeywords.has(key)),
       );
 
   const withSiblingAssertions = (keyword: string, expression: ZodExpression): ZodExpression =>
