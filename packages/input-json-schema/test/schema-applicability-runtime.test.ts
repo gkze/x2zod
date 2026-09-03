@@ -8,6 +8,7 @@ import { compileGeneratedSchema } from "./generated-schema-harness";
 
 const valueAboveMaximum = 4;
 const inexactDecimalNearMultiple = 0.100_000_000_000_000_02;
+const secondInexactDecimalNearMultiple = 0.300_000_000_000_000_04;
 const lengthBeyondSafeInteger = 1e100;
 
 type ApplicabilityParityRequest = Readonly<{
@@ -151,6 +152,62 @@ void describe("JSON Schema scalar constraint semantics", () => {
       assert.equal(result.success, accepted, `unexpected result for ${JSON.stringify(value)}`);
       if (accepted && result.success) assert.deepEqual(result.data, value);
     }
+  });
+
+  for (const fixture of [
+    {
+      label: "a conservative propertyNames projection",
+      schema: { multipleOf: 0.1, propertyNames: { pattern: "^x" }, type: "number" },
+    },
+    {
+      label: "an exact-runtime fallback with a strict object boundary",
+      schema: {
+        additionalProperties: false,
+        multipleOf: 0.1,
+        propertyNames: { pattern: "^x" },
+        type: "number",
+      },
+    },
+    {
+      label: "the unevaluated-keyword evaluator",
+      schema: {
+        multipleOf: 0.1,
+        propertyNames: { pattern: "^x" },
+        type: "number",
+        unevaluatedProperties: false,
+      },
+    },
+  ] as const)
+    void test(`keeps exact decimal multipleOf semantics through ${fixture.label}`, async () => {
+      const { generatedSchema, source } = await compileGeneratedSchema(fixture.schema);
+      const cases = [
+        { accepted: true, value: 0 },
+        { accepted: true, value: 0.3 },
+        { accepted: true, value: -0.3 },
+        { accepted: false, value: inexactDecimalNearMultiple },
+        { accepted: false, value: secondInexactDecimalNearMultiple },
+        { accepted: false, value: -inexactDecimalNearMultiple },
+        { accepted: false, value: 0.31 },
+      ] as const;
+
+      assert.match(source, /x2zodRuntimeProgram/u);
+      for (const { accepted, value } of cases) {
+        const result = generatedSchema.safeParse(value);
+        assert.equal(result.success, accepted, `unexpected result for ${JSON.stringify(value)}`);
+        if (accepted && result.success) assert.equal(result.data, value);
+      }
+    });
+
+  void test("keeps conservative propertyNames runtime semantics for objects", async () => {
+    const { generatedSchema, source } = await compileGeneratedSchema({
+      propertyNames: { pattern: "^x" },
+      type: "object",
+    });
+    const accepted = { x_name: true, x_value: 1 };
+
+    assert.match(source, /x2zodRuntimeProgram/u);
+    assert.deepEqual(generatedSchema.safeParse(accepted), { data: accepted, success: true });
+    assert.equal(generatedSchema.safeParse({ bad: 1 }).success, false);
   });
 
   void test("counts string lengths in Unicode code points", async () => {

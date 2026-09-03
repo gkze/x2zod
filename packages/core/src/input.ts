@@ -19,6 +19,7 @@ export type InputDocument = Readonly<{
   source: InputDocumentSource;
   text: string;
   mediaType?: string;
+  retrievalUri?: string;
 }>;
 export type InputDocumentInput = InputDocument;
 
@@ -46,6 +47,7 @@ const inputDocumentSchemaValue: z.ZodType<InputDocument, InputDocumentInput> = z
     source: inputDocumentSourceSchemaValue,
     text: z.string(),
     mediaType: z.string().min(nonEmptyStringLength).exactOptional(),
+    retrievalUri: z.url().exactOptional(),
   })
   .readonly();
 export const inputDocumentSchema: z.ZodType<InputDocument, InputDocumentInput> =

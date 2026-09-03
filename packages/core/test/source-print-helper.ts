@@ -23,6 +23,7 @@ type CoreModule = Readonly<{
 
 const coreBundlePathArgumentIndex = 2;
 const sourceModeArgumentIndex = 3;
+const typeNameArgumentIndex = 4;
 const maximumCount = 10;
 const coreModuleFunctionKeys = [
   "buildZodSourceFile",
@@ -75,64 +76,84 @@ const coreBundleFile = requiredArgument(coreBundlePathArgumentIndex, "core bundl
 const core = await importCoreModule(coreBundleFile);
 const root = core.zodSymbol("root");
 const sourceMode = process.argv[sourceModeArgumentIndex];
+const typeName = process.argv[typeNameArgumentIndex] ?? "User";
 const propertyTransformMode = sourceMode === "property-transform";
+const preservedPropertyTransformMode = sourceMode === "preserved-property-transform";
+const recursivePropertyTransformMode = sourceMode === "recursive-property-transform";
 const address = core.zodSymbol("address");
-const module = propertyTransformMode
-  ? core.zodModule(root, [
-      core.zodDeclaration(address, core.zodPlan.object({ postal_code: core.zodPlan.string() })),
-      core.zodDeclaration(
-        root,
-        core.zodPlan.passthrough(
-          core.zodPlan.object({
-            metadata_map: core.zodPlan.catchall(
-              core.zodPlan.object({}),
-              core.zodPlan.object({ nested_value: core.zodPlan.string() }),
-            ),
-            profile_data: core.zodPlan.optional(
-              core.zodPlan.object({
-                addresses_list: core.zodPlan.array(core.zodPlan.reference(address)),
-                display_name: core.zodPlan.optional(core.zodPlan.string()),
-              }),
-            ),
-            settings_data: core.zodPlan.required(
-              core.zodPlan.object({ display_name: core.zodPlan.optional(core.zodPlan.string()) }),
-              ["display_name"],
-            ),
-            user_id: core.zodPlan.string(),
-          }),
-        ),
+let module = core.zodModule(root, [
+  core.zodDeclaration(
+    root,
+    core.zodPlan.preserveObjectInput(
+      core.zodPlan.strict(
+        core.zodPlan.object({
+          ["__proto__"]: core.zodPlan.string(),
+          count: core.zodPlan.lte(core.zodPlan.gt(core.zodPlan.integer(), 0), maximumCount),
+          maybe: core.zodPlan.optional(core.zodPlan.string()),
+          pair: core.zodPlan.tuple([core.zodPlan.string(), core.zodPlan.number()]),
+          payload: core.zodPlan.required(core.zodPlan.object({ value: core.zodPlan.unknown() }), [
+            "value",
+          ]),
+          insensitive: core.zodPlan.regex(core.zodPlan.string(), "^abc$", { ignoreCase: true }),
+          slug: core.zodPlan.regex(core.zodPlan.string(), "^[a-z]+$"),
+          status: core.zodPlan.enum(["open", "closed"]),
+          tags: core.zodPlan.max(core.zodPlan.min(core.zodPlan.array(core.zodPlan.string()), 1), 2),
+        }),
       ),
-    ])
-  : core.zodModule(root, [
-      core.zodDeclaration(
-        root,
-        core.zodPlan.preserveObjectInput(
-          core.zodPlan.strict(
+      ["__proto__"],
+    ),
+  ),
+]);
+if (propertyTransformMode)
+  module = core.zodModule(root, [
+    core.zodDeclaration(address, core.zodPlan.object({ postal_code: core.zodPlan.string() })),
+    core.zodDeclaration(
+      root,
+      core.zodPlan.passthrough(
+        core.zodPlan.object({
+          metadata_map: core.zodPlan.catchall(
+            core.zodPlan.object({}),
+            core.zodPlan.object({ nested_value: core.zodPlan.string() }),
+          ),
+          profile_data: core.zodPlan.optional(
             core.zodPlan.object({
-              ["__proto__"]: core.zodPlan.string(),
-              count: core.zodPlan.lte(core.zodPlan.gt(core.zodPlan.integer(), 0), maximumCount),
-              maybe: core.zodPlan.optional(core.zodPlan.string()),
-              pair: core.zodPlan.tuple([core.zodPlan.string(), core.zodPlan.number()]),
-              payload: core.zodPlan.required(
-                core.zodPlan.object({ value: core.zodPlan.unknown() }),
-                ["value"],
-              ),
-              slug: core.zodPlan.regex(core.zodPlan.string(), "^[a-z]+$"),
-              status: core.zodPlan.enum(["open", "closed"]),
-              tags: core.zodPlan.max(
-                core.zodPlan.min(core.zodPlan.array(core.zodPlan.string()), 1),
-                2,
-              ),
+              addresses_list: core.zodPlan.array(core.zodPlan.reference(address)),
+              display_name: core.zodPlan.optional(core.zodPlan.string()),
             }),
           ),
-          ["__proto__"],
-        ),
+          settings_data: core.zodPlan.required(
+            core.zodPlan.object({ display_name: core.zodPlan.optional(core.zodPlan.string()) }),
+            ["display_name"],
+          ),
+          user_id: core.zodPlan.string(),
+        }),
       ),
-    ]);
+    ),
+  ]);
+if (preservedPropertyTransformMode)
+  module = core.zodModule(root, [
+    core.zodDeclaration(
+      root,
+      core.zodPlan.preserveObjectInput(
+        core.zodPlan.passthrough(core.zodPlan.object({ snake_key: core.zodPlan.string() })),
+        [],
+      ),
+    ),
+  ]);
+if (recursivePropertyTransformMode)
+  module = core.zodModule(root, [
+    core.zodDeclaration(
+      root,
+      core.zodPlan.object({
+        next: core.zodPlan.optional(core.zodPlan.reference(root)),
+        snake_key: core.zodPlan.string(),
+      }),
+    ),
+  ]);
 const result = core.buildZodSourceFile(
   module,
-  { typeName: "User" },
-  propertyTransformMode
+  { typeName },
+  propertyTransformMode || preservedPropertyTransformMode || recursivePropertyTransformMode
     ? [{ kind: "map-properties", options: { keys: { decodedCase: "camelCase", kind: "case" } } }]
     : [],
 );

@@ -28,8 +28,11 @@ import { optionNamesForField, readCLIMetadata } from "./zod-cli-metadata";
 import type { ZodCLIOptionFieldMetadata, ZodCLIOptionMetadata } from "./zod-cli-metadata";
 import {
   arrayElementSchema,
+  innerSchema,
+  isSupportedWrapperType,
   objectShape,
   schemaDef,
+  schemaType,
   unwrapRootObjectSchema,
   unwrapSupportedWrappers,
 } from "./zod-introspection";
@@ -127,7 +130,7 @@ const createFieldParser = (
   behavior: ZodObjectToOptiqueBehavior,
 ): Parser => {
   const baseParser = createRequiredFieldParser(schema, context);
-  const absence = absenceBehaviorForSchema(schema);
+  const absence = absenceBehaviorForSchema(schema, context.path);
 
   if (absence.type === "default")
     return behavior.defaults === "apply"
@@ -174,10 +177,21 @@ const createValueOption = (
   metadata: ZodCLIOptionMetadata,
 ): Parser => option(...optionNames, valueParser, optionOptions(metadata));
 
-const absenceBehaviorForSchema = (schema: ZodSchema): AbsenceBehavior => {
+const hasOptionalWrapper = (schema: ZodSchema, path: readonly string[]): boolean => {
+  let currentSchema = schema;
+  for (;;) {
+    const type = schemaType(currentSchema, path);
+    if (type === "optional") return true;
+    if (!isSupportedWrapperType(type)) return false;
+    currentSchema = innerSchema(currentSchema, path);
+  }
+};
+
+const absenceBehaviorForSchema = (schema: ZodSchema, path: readonly string[]): AbsenceBehavior => {
   const missingInput: unknown = undefined;
   const absentParseResult = schema.safeParse(missingInput);
-  if (!absentParseResult.success) return { type: "required" };
+  if (!absentParseResult.success)
+    return hasOptionalWrapper(schema, path) ? { type: "optional" } : { type: "required" };
   return absentParseResult.data === undefined
     ? { type: "optional" }
     : { type: "default", value: () => schema.parse(missingInput) };

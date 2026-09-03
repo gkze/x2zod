@@ -1,14 +1,13 @@
 # JSON Schema Conformance Contract
 
-This document defines the JSON Schema compatibility target for `@x2zod/input-json-schema`. It is a
-target contract, not a statement that the current implementation already conforms. Current support
-is measured across the complete pinned required-suite inventory by a checked-in conformance
-baseline.
+This document defines the JSON Schema compatibility target and evidence for
+`@x2zod/input-json-schema`. Current support is measured across the complete pinned required-suite
+inventory by a checked-in conformance baseline.
 
 <!-- BEGIN OFFICIAL SUITE SUPPORT SUMMARY -->
 
-At suite commit `b01af8c8d50244a2eb4dd3e01073e24823aa8691`, 1,989 of 3,485 required cases currently
-conform. The baseline records 1,473 cases in 491 schema groups that do not compile and 23 case-level
+At suite commit `b01af8c8d50244a2eb4dd3e01073e24823aa8691`, 3,485 of 3,485 required cases currently
+conform. The baseline records 0 cases in 0 schema groups that do not compile and 0 case-level
 runtime gaps. These case counts measure this corpus, not a percentage of JSON Schema semantics: test
 cases and language features are not equally weighted.
 
@@ -49,6 +48,15 @@ are part of conformance rather than preprocessing conveniences.
   keywords still follow the plugin's strict unknown-keyword and source-profile policy.
 - Custom vocabulary behavior is supported only when that vocabulary has an explicit implementation.
   `x2zod` does not infer semantics from an arbitrary vocabulary URI or meta-schema.
+- When a custom meta-schema declares `$vocabulary`, the finite custom-dialect subset requires its
+  dialect-matched Core vocabulary to be present and required. A custom meta-schema without
+  `$vocabulary` uses the dialect's stock vocabulary policy. Applicator and Unevaluated may be
+  omitted from an explicit declaration when no reachable keyword from the omitted vocabulary is
+  used; using one fails compilation at that keyword. When either vocabulary URI is present with a
+  boolean value, `x2zod` applies its implemented semantics whether that vocabulary is required or
+  optional.
+- Metadata and Content keywords remain recognized, validation-inert annotations whether or not a
+  custom meta-schema declares their vocabulary URIs.
 - Draft-specific `$ref` sibling behavior, anchors, recursive references, dynamic references,
   embedded resources, and base-URI changes must follow the selected dialect.
 - External resources come from an explicit registry during conformance tests. The generated schema
@@ -70,21 +78,15 @@ must not change the value during conformance runs. Generated validation code mus
 self-contained apart from Zod, declaration-safe, and free of runtime schema loading or code
 generation.
 
-The first backend proof uses Ajv standalone generation. That proof is not a permanent dependency
-decision until it demonstrates all three dialects, deterministic output, known and bundled runtime
-dependencies, recursive resources, and compatibility with the typed helper/source-emission model.
+The production backend uses Ajv during compilation to emit deterministic standalone predicates for
+semantics that structural Zod cannot preserve. Known Ajv runtime helpers are embedded into the
+generated module, so generated code still imports only Zod and performs no runtime schema loading or
+code generation. Resource graphs, recursive and dynamic reference scopes, evaluated-location
+tracking, and external resources are integrated with core's typed runtime-program boundary.
 
-The checked-in spike demonstrates deterministic bundled validators for recursive Draft 7, Draft
-2019-09, and Draft 2020-12 schemas with deep `uniqueItems` and Unicode-aware length checks. Ajv's
-raw standalone output still references its `equal` and `ucs2length` runtime modules. The spike
-rewrites those known CommonJS edges for bundling, bundles them, and executes the result with plain
-Node from a temporary directory outside the workspace dependency tree.
-
-Production source emission now uses core's typed helper catalog for deep `uniqueItems` comparisons
-on non-tuple arrays. The generated refinement ignores object-key order, distinguishes primitive JSON
-types, and preserves accepted values. Adopting the broader standalone-validator strategy still
-requires a library-grade bundling strategy, structured issue mapping, external-resource coverage,
-and integration with core's inferred-boundary model.
+Structural cases continue to use core's typed Zod plan and helper catalog. Exact runtime guards are
+added only where required, remain declaration-safe, preserve accepted values, and retain useful
+`z.infer` output whenever the structural projection is sound.
 
 ## Annotations And Evaluation Output
 
@@ -158,5 +160,7 @@ references, Unicode regular expressions, and arbitrary-precision numbers.
 
 The official suite is necessary but not sufficient. Release evidence also includes deterministic
 source across repeated runs and registry order, declaration emit, parse-output identity, the pinned
-real-world acceptance corpus, hostile-name and source-injection fixtures, bounded reference-graph
-work, and subprocess deadlines for adversarial regular expressions and recursive resources.
+real-world acceptance corpus, finite integral numbers beyond the safe-integer range, ordinary own
+object keys such as `__proto__`, hostile-name and source-injection fixtures, file-relative and
+bounded reference graphs, and subprocess deadlines for adversarial regular expressions and recursive
+resources. Shared stock semantics are exercised across all three advertised dialects.

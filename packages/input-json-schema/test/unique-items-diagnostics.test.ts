@@ -26,6 +26,21 @@ const assertCompileDiagnostic = async (
   );
 };
 
+const assertCompiles = async (id: string, schema: JsonSchemaValue): Promise<void> => {
+  const result = await compileToZodSource({
+    document: { source: { id, kind: "inline" }, text: JSON.stringify(schema) },
+    output: { typeName: "UniqueItemsTuple" },
+    plugin: jsonSchemaInputPlugin,
+    pluginOptions: { validator: "none" },
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(
+    (result.diagnostics ?? []).some((diagnostic) => diagnostic.code === "unsupported_keyword"),
+    false,
+  );
+};
+
 void describe("JSON Schema uniqueItems diagnostics", () => {
   void test("keeps false ref siblings inert through property-key transforms", async () => {
     const result = await compileToZodSource({
@@ -81,17 +96,13 @@ void describe("JSON Schema uniqueItems diagnostics", () => {
   });
 
   for (const uniqueItems of [false, true])
-    void test(`keeps uniqueItems ${String(uniqueItems)} outside prefix-item tuples`, async () => {
-      await assertCompileDiagnostic(
-        `tuple-unique-items-${String(uniqueItems)}`,
-        {
-          maxItems: 2,
-          minItems: 2,
-          prefixItems: [{ type: "number" }, { type: "number" }],
-          type: "array",
-          uniqueItems,
-        },
-        "unsupported_keyword",
-      );
+    void test(`supports uniqueItems ${String(uniqueItems)} beside fixed prefix-item tuples`, async () => {
+      await assertCompiles(`tuple-unique-items-${String(uniqueItems)}`, {
+        maxItems: 2,
+        minItems: 2,
+        prefixItems: [{ type: "number" }, { type: "number" }],
+        type: "array",
+        uniqueItems,
+      });
     });
 });

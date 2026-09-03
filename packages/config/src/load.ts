@@ -6,7 +6,9 @@ import { z as zod } from "zod/v4";
 import {
   declarationExportModeSchema,
   resolveZodSourceOutputOptions,
+  typeScriptIdentifierSchema,
   zodEmissionTransformsSchema,
+  zodSymbolSchema,
 } from "@x2zod/core";
 
 import { X2ZodConfigError } from "./errors";
@@ -74,6 +76,10 @@ const outputConfigSchema: z.ZodType<
   X2ZodOutputConfig<X2ZodLoadedOutputProcessorRegistry>
 > = zod
   .strictObject({
+    declarationNameOverrides: zod
+      .record(zodSymbolSchema, typeScriptIdentifierSchema)
+      .readonly()
+      .optional(),
     declarationExportMode: declarationExportModeSchema.optional(),
     path: nonEmptyStringSchema,
     processors: outputProcessorPipelineConfigSchema.optional(),

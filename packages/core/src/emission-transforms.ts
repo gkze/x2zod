@@ -1,21 +1,23 @@
 import { createDiagnostic } from "./diagnostics";
+import {
+  appendProjectedCalls,
+  projectZodRuntimeGuardExpression,
+} from "./emission-runtime-transforms";
+import type { CallsProjection, ExpressionProjection } from "./emission-runtime-transforms";
+import { collectTransformedSymbols } from "./emission-transform-analysis";
 import type { ZodEmissionTransform, ZodPropertyKeyCase } from "./emission-transform-config";
 import { projectZodWrapperExpression } from "./emission-wrapper-transforms";
 import { err, ok } from "./result";
 import type { Result } from "./result";
 import type {
   SourceArgument,
-  SourceCodecExpression,
-  SourceCodecOperation,
   SourceDeclaration,
   SourceEmissionModule,
-  SourceExpression,
-  SourceFactoryExpression,
   SourceMethodCall,
   SourceObjectProperty,
   SourcePropertyKeyMapping,
-  SourceReferenceExpression,
 } from "./source-model";
+import { sourceCodec, sourceFactory, sourceReference } from "./source-projection-builders";
 import { zodHelperReceiver } from "./zod-helpers";
 import type {
   ZodArgument,
@@ -26,26 +28,17 @@ import type {
   ZodMethodCall,
   ZodSymbol,
 } from "./zod-plan";
+import { collectCyclicZodDeclarationPeers } from "./zod-plan-analysis";
 import { zodMethodMetadataFor } from "./zod-plan-metadata";
-import type { ZodFactoryName } from "./zod-plan-metadata";
 
-type ExpressionProjection = Readonly<{
-  changed: boolean;
-  decodedSchema: SourceExpression;
-  schema: SourceExpression;
-}>;
 type ArgumentProjection = Readonly<{
   changed: boolean;
   decodedArgument: SourceArgument;
   schemaArgument: SourceArgument;
 }>;
-type CallsProjection = Readonly<{
-  changed: boolean;
-  decodedCalls: readonly SourceMethodCall[];
-  schemaCalls: readonly SourceMethodCall[];
-}>;
 type DeclarationProjection = ExpressionProjection;
 type ProjectionContext = Readonly<{
+  cyclicPeers: ReadonlyMap<ZodSymbol, ReadonlySet<ZodSymbol>>;
   declarations: ReadonlyMap<ZodSymbol, ZodDeclaration>;
   declarationProjections: Map<ZodSymbol, DeclarationProjection>;
   decodedKey: (key: string) => string;
@@ -53,13 +46,7 @@ type ProjectionContext = Readonly<{
     expression: ZodExpression,
     context: ProjectionContext,
   ) => Result<ExpressionProjection>;
-}>;
-
-type SourceCodecInput = Readonly<{
-  calls?: readonly SourceMethodCall[] | undefined;
-  input: SourceExpression;
-  operation: SourceCodecOperation;
-  output: SourceExpression;
+  transformedSymbols: ReadonlySet<ZodSymbol>;
 }>;
 
 const notFoundIndex = -1;
@@ -93,30 +80,6 @@ const sourceLiteralArgument = (value: ZodLiteralValue): SourceArgument => ({
   kind: "literal",
   value,
 });
-
-const sourceFactory = (
-  factory: ZodFactoryName,
-  args: readonly SourceArgument[],
-  calls: readonly SourceMethodCall[],
-): SourceFactoryExpression => ({ args, calls, factory, kind: "factory" });
-
-const sourceReference = (
-  symbol: ZodSymbol,
-  outputView: boolean,
-  calls: readonly SourceMethodCall[],
-): SourceReferenceExpression => ({ calls, kind: "reference", outputView, symbol });
-
-const sourceCodec = ({
-  calls = [],
-  input,
-  operation,
-  output,
-}: SourceCodecInput): SourceCodecExpression => ({ calls, input, kind: "codec", operation, output });
-
-const appendCalls = (
-  expression: SourceExpression,
-  calls: readonly SourceMethodCall[],
-): SourceExpression => ({ ...expression, calls: [...expression.calls, ...calls] });
 
 const unsupportedTransformComposition = (factory: string): Result<never> =>
   err(
@@ -322,7 +285,10 @@ const projectObjectExpression = (
     [{ kind: "object", properties: decodedProperties }],
     projectedObjectCalls.value.decodedCalls,
   );
-  const decodedSchema = appendCalls(decodedObject, projectedWrappingCalls.value.decodedCalls);
+  const decodedSchema = appendProjectedCalls(
+    decodedObject,
+    projectedWrappingCalls.value.decodedCalls,
+  );
   const ownKeysChanged = mappings.value.length > 0;
   const changed =
     ownKeysChanged ||
@@ -344,7 +310,7 @@ const projectObjectExpression = (
     : ok({
         changed,
         decodedSchema,
-        schema: appendCalls(schemaObject, projectedWrappingCalls.value.schemaCalls),
+        schema: appendProjectedCalls(schemaObject, projectedWrappingCalls.value.schemaCalls),
       });
 };
 
@@ -422,11 +388,28 @@ const projectReferenceExpression = (
   expression: Extract<ZodExpression, { kind: "reference" }>,
   context: ProjectionContext,
 ): Result<ExpressionProjection> => {
+  const targetChanged = context.transformedSymbols.has(expression.symbol);
+  const unsupportedCall = expression.calls.find(transformedReferenceCall);
+  if (targetChanged && unsupportedCall !== undefined)
+    return unsupportedTransformComposition(`reference method ${unsupportedCall.method}`);
+
+  const cyclicPeers = context.cyclicPeers.get(expression.symbol);
+  if (cyclicPeers !== undefined) {
+    const calls = projectCalls(expression.calls, context);
+    return calls.ok
+      ? ok({
+          changed: targetChanged || calls.value.changed,
+          decodedSchema: sourceReference(
+            expression.symbol,
+            targetChanged ? "output" : "schema",
+            calls.value.decodedCalls,
+          ),
+          schema: sourceReference(expression.symbol, "schema", calls.value.schemaCalls),
+        })
+      : calls;
+  }
   const declaration = projectDeclaration(expression.symbol, context);
   if (!declaration.ok) return declaration;
-  const unsupportedCall = expression.calls.find(transformedReferenceCall);
-  if (declaration.value.changed && unsupportedCall !== undefined)
-    return unsupportedTransformComposition(`reference method ${unsupportedCall.method}`);
 
   const calls = projectCalls(expression.calls, context);
   if (!calls.ok) return calls;
@@ -434,10 +417,10 @@ const projectReferenceExpression = (
     changed: declaration.value.changed || calls.value.changed,
     decodedSchema: sourceReference(
       expression.symbol,
-      declaration.value.changed,
+      declaration.value.changed ? "output" : "schema",
       calls.value.decodedCalls,
     ),
-    schema: sourceReference(expression.symbol, false, calls.value.schemaCalls),
+    schema: sourceReference(expression.symbol, "schema", calls.value.schemaCalls),
   });
 };
 
@@ -448,7 +431,12 @@ const projectWrapperExpression = (
   const wrapped = context.projectExpression(expression.expression, context);
   if (!wrapped.ok) return wrapped;
   const calls = projectCalls(expression.calls, context);
-  return calls.ok ? projectZodWrapperExpression(expression, wrapped.value, calls.value) : calls;
+  return calls.ok
+    ? projectZodWrapperExpression(expression, wrapped.value, {
+        calls: calls.value,
+        decodedRequiredOwnKeys: expression.requiredOwnKeys.map(context.decodedKey),
+      })
+    : calls;
 };
 
 const projectExpression = (
@@ -461,6 +449,12 @@ const projectExpression = (
     }
     case "reference": {
       return projectReferenceExpression(expression, context);
+    }
+    case "runtime-guard": {
+      return projectZodRuntimeGuardExpression(expression, {
+        projectCalls: (calls) => projectCalls(calls, context),
+        projectExpression: (nested) => context.projectExpression(nested, context),
+      });
     }
     case "wrapper": {
       return projectWrapperExpression(expression, context);
@@ -478,11 +472,14 @@ export const applyZodEmissionTransforms = (
   const declarations = new Map(
     module.declarations.map((declaration) => [declaration.symbol, declaration]),
   );
+  const decodedKey = decodedKeyFunction(transforms);
   const context: ProjectionContext = {
+    cyclicPeers: collectCyclicZodDeclarationPeers(module),
     declarations,
     declarationProjections: new Map(),
-    decodedKey: decodedKeyFunction(transforms),
+    decodedKey,
     projectExpression,
+    transformedSymbols: collectTransformedSymbols(module, decodedKey),
   };
   const projectedDeclarations: SourceDeclaration[] = [];
 

@@ -38,6 +38,7 @@ export type ZodArgumentMetadata =
   | Readonly<{ kind: "none"; expected: string }>
   | Readonly<{ argumentKind: ZodArgumentKind; expected: string; kind: "single" }>
   | Readonly<{ expected: string; kind: "literal"; valueType: ZodLiteralArgumentValueType }>
+  | Readonly<{ expected: string; kind: "regex" }>
   | Readonly<{ argumentKinds: readonly ZodArgumentKind[]; expected: string; kind: "sequence" }>
   | Readonly<{
       elementKind: ZodArrayElementKind;
@@ -76,10 +77,9 @@ const numberLiteralArgument = {
   kind: "literal",
   valueType: "number",
 } satisfies ZodArgumentMetadata;
-const stringLiteralArgument = {
-  expected: "one string literal argument",
-  kind: "literal",
-  valueType: "string",
+const regexArguments = {
+  expected: "a pattern string and optional valid ECMAScript flag string",
+  kind: "regex",
 } satisfies ZodArgumentMetadata;
 const twoExpressionArguments = {
   argumentKinds: ["expression", "expression"],
@@ -152,8 +152,6 @@ export const zodNoArgumentMethodNames: readonly [
 ] = ["int", "nullable", "optional", "passthrough", "strict"] as const;
 
 export type ZodNoArgumentMethodName = (typeof zodNoArgumentMethodNames)[number];
-export type ZodArgumentMethodName = Exclude<ZodKnownMethodName, ZodNoArgumentMethodName>;
-
 export type ZodReceiverRequirement =
   | "any"
   | "array"
@@ -196,7 +194,7 @@ export const zodMethodSpecs: Record<ZodKnownMethodName, ZodMethodSpec> = {
   optional: wrappingMethodSpec(noArguments),
   passthrough: methodSpec(noArguments, "object"),
   refine: methodSpec(helperArgument, "any"),
-  regex: methodSpec(stringLiteralArgument, "string", "regex"),
+  regex: methodSpec(regexArguments, "string", "regex"),
   required: methodSpec(uniqueStringLiteralArrayArgument, "object", "requiredKeys"),
   strict: methodSpec(noArguments, "object"),
 };

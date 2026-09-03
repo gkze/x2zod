@@ -24,6 +24,7 @@ const tempRootDirectory = nodePath.join(packageRootDirectory, "node_modules/.cac
 const printerHelperEntryPoint = nodePath.join(import.meta.dirname, "print-helper.ts");
 const officialSuiteNativePreviewExternals = [...nativePreviewExternals, "jsonc-parser"] as const;
 const printTimeoutMs = 1000;
+const oversizedNodeOutputBytes = 2_097_152;
 
 void test("compiler failure results require at least one valid diagnostic", () => {
   assert.throws(() =>
@@ -82,7 +83,7 @@ void test("official suite compiler records the active compile request", async ()
       writeFile(
         batchFile,
         JSON.stringify({
-          requests: [{ dialect: "draft-7", id: "unsupported.json", schema: { contains: true } }],
+          requests: [{ dialect: "draft-7", id: "unsupported.json", schema: { notAKeyword: true } }],
         }),
       ),
       writeFile(externalSchemasFile, "{}"),
@@ -133,7 +134,7 @@ void test("official suite compiler returns an ordered result for every batch req
         JSON.stringify({
           requests: [
             { dialect: "draft-7", id: "supported.json", schema: { type: "string" } },
-            { dialect: "draft-7", id: "unsupported.json", schema: { contains: true } },
+            { dialect: "draft-7", id: "unsupported.json", schema: { notAKeyword: true } },
           ],
         }),
       ),
@@ -169,7 +170,7 @@ void test("official suite compiler returns an ordered result for every batch req
     assert.equal(unsupported.ok, false);
     assert.deepEqual(
       unsupported.diagnostics.map(({ code }) => code),
-      ["unsupported_keyword"],
+      ["unknown_keyword"],
     );
     assert.deepEqual(
       officialSuitePrintProgressSchema.parse(
@@ -177,6 +178,65 @@ void test("official suite compiler returns an ordered result for every batch req
       ),
       { id: "supported.json", phase: "source_emit" },
     );
+  } finally {
+    rmSync(directory, { force: true, recursive: true });
+  }
+});
+
+void test("compiler batches retain distinct generated runtime programs", async () => {
+  const directory = createTemporaryDirectory({
+    prefix: "x2zod-official-suite-runtime-programs-",
+    rootDirectory: tempRootDirectory,
+  });
+  const batchFile = nodePath.join(directory, "batch.json");
+  const bundleFile = nodePath.join(directory, "official-suite-print-helper.mjs");
+  const externalSchemasFile = nodePath.join(directory, "external-schemas.json");
+  const progressFile = nodePath.join(directory, "print-progress.json");
+
+  try {
+    await Promise.all([
+      writeFile(
+        batchFile,
+        JSON.stringify({
+          requests: [
+            {
+              dialect: "draft-7",
+              id: "first.json",
+              schema: { contains: { const: "first" }, type: "array" },
+            },
+            {
+              dialect: "draft-7",
+              id: "second.json",
+              schema: { contains: { const: "second" }, type: "array" },
+            },
+          ],
+        }),
+      ),
+      writeFile(externalSchemasFile, "{}"),
+    ]);
+    buildNodeBundle({
+      cwd: packageRootDirectory,
+      entryPoint: printerHelperEntryPoint,
+      externals: officialSuiteNativePreviewExternals,
+      outfile: bundleFile,
+    });
+
+    const output = officialSuitePrintBatchResultSchema.parse(
+      JSON.parse(
+        runNode({
+          allowedStderr: isNativePreviewShutdownStderr,
+          args: [bundleFile, batchFile, externalSchemasFile, progressFile],
+          cwd: packageRootDirectory,
+        }),
+      ),
+    );
+    const [first, second] = output.results;
+    assert.ok(first?.ok === true);
+    assert.ok(second?.ok === true);
+    assert.match(first.source, /"first"/u);
+    assert.doesNotMatch(first.source, /"second"/u);
+    assert.match(second.source, /"second"/u);
+    assert.doesNotMatch(second.source, /"first"/u);
   } finally {
     rmSync(directory, { force: true, recursive: true });
   }
@@ -255,4 +315,12 @@ void test("node subprocesses fail clearly when their timeout elapses", () => {
   assert.throws(() => runNode({ args: ["--eval", "setTimeout(() => {}, 1_000)"], timeoutMs: 25 }), {
     message: "Node subprocess exceeded its 25ms timeout.",
   });
+});
+
+void test("node subprocesses can return generated source larger than the platform default", () => {
+  const output = runNode({
+    args: ["--eval", `process.stdout.write("x".repeat(${oversizedNodeOutputBytes.toString()}))`],
+  });
+
+  assert.equal(Buffer.byteLength(output), oversizedNodeOutputBytes);
 });

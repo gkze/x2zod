@@ -3,7 +3,18 @@ import { z } from "zod/v4";
 import { createDiagnostic, formatZodError } from "./diagnostics";
 import { err } from "./result";
 import type { Result } from "./result";
+import { zodRuntimeProgramIdSchema, zodRuntimeProgramSchema } from "./runtime-program";
+import type { ZodRuntimeProgramId } from "./runtime-program";
 import { isTypeScriptIdentifier } from "./typescript-identifiers";
+import type {
+  ZodDeclaration,
+  ZodDeclarationInput,
+  ZodDeclarationNameHint,
+  ZodDeclarationNameHintInput,
+  ZodDeclarationNameHintProvenance,
+  ZodEmissionModule,
+  ZodEmissionModuleInput,
+} from "./zod-declarations";
 import { zodHelperRequestSchema, zodWrapperNames } from "./zod-helpers";
 import type { ZodHelperRequest, ZodHelperRequestInput, ZodWrapperName } from "./zod-helpers";
 import { zodFactoryNames } from "./zod-plan-metadata";
@@ -13,7 +24,14 @@ import type {
   ZodNoArgumentFactoryName,
   ZodNoArgumentMethodName,
 } from "./zod-plan-metadata";
+import type { ZodFactoryArgumentsByName, ZodMethodArgumentsByName } from "./zod-plan-signatures";
 import { validateZodEmissionModule } from "./zod-plan-validation";
+import { zodRuntimeGuard } from "./zod-runtime-guard";
+import type {
+  ZodRuntimeGuardExpression,
+  ZodRuntimeGuardExpressionInput,
+  ZodRuntimeGuardPlacement,
+} from "./zod-runtime-guard";
 
 const nonEmptyStringLength = 1;
 
@@ -26,17 +44,36 @@ export {
   zodMethodMetadataFor,
 } from "./zod-plan-metadata";
 export type { ZodFactoryName, ZodKnownMethodName } from "./zod-plan-metadata";
+export { zodDeclaration, zodDeclarationNameHint, zodModule } from "./zod-declarations";
+export type {
+  ZodDeclaration,
+  ZodDeclarationInput,
+  ZodDeclarationNameHint,
+  ZodDeclarationNameHintInput,
+  ZodDeclarationNameHintProvenance,
+  ZodEmissionModule,
+  ZodEmissionModuleInput,
+} from "./zod-declarations";
+export type { ZodFactoryArgumentsByName, ZodMethodArgumentsByName } from "./zod-plan-signatures";
+export { zodRuntimeGuard } from "./zod-runtime-guard";
+export type {
+  ZodRuntimeGuardExpression,
+  ZodRuntimeGuardExpressionInput,
+  ZodRuntimeGuardPlacement,
+} from "./zod-runtime-guard";
 export type ZodLiteralValue = boolean | null | number | string;
+export type ZodRegexFlags = Readonly<{
+  dotAll?: boolean | undefined;
+  global?: boolean | undefined;
+  hasIndices?: boolean | undefined;
+  ignoreCase?: boolean | undefined;
+  multiline?: boolean | undefined;
+  sticky?: boolean | undefined;
+  unicode?: boolean | undefined;
+  unicodeSets?: boolean | undefined;
+}>;
 export type ZodSymbol = string & z.$brand<"ZodSymbol">;
 export type ZodMethodName = ZodKnownMethodName | (string & z.$brand<"ZodMethodName">);
-export type ZodDeclarationNameHintProvenance =
-  | "anchor"
-  | "definitionKey"
-  | "explicit"
-  | "pointer"
-  | "title"
-  | "uriSegment";
-
 export type ZodMethodCall = Readonly<{ method: ZodMethodName; args: readonly ZodArgument[] }>;
 export type ZodMethodCallInput = Readonly<{
   method: string;
@@ -115,74 +152,16 @@ export type ZodWrapperExpressionInput = Readonly<{
   requiredOwnKeys: readonly string[];
   wrapper: ZodWrapperName;
 }>;
-export type ZodExpression = ZodFactoryExpression | ZodReferenceExpression | ZodWrapperExpression;
+export type ZodExpression =
+  | ZodFactoryExpression
+  | ZodReferenceExpression
+  | ZodRuntimeGuardExpression
+  | ZodWrapperExpression;
 export type ZodExpressionInput =
   | ZodFactoryExpressionInput
   | ZodReferenceExpressionInput
+  | ZodRuntimeGuardExpressionInput
   | ZodWrapperExpressionInput;
-
-export type ZodFactoryArgumentsByName = Readonly<{
-  array: readonly [ZodExpressionArgument];
-  boolean: readonly [];
-  enum: readonly [ZodArrayArgument<ZodLiteralArgument<string>>];
-  literal: readonly [ZodLiteralArgument];
-  never: readonly [];
-  null: readonly [];
-  number: readonly [];
-  object: readonly [ZodObjectShapeArgument];
-  intersection: readonly [ZodExpressionArgument, ZodExpressionArgument];
-  record: readonly [ZodExpressionArgument, ZodExpressionArgument];
-  string: readonly [];
-  tuple: readonly [ZodArrayArgument<ZodExpressionArgument>];
-  union: readonly [ZodArrayArgument<ZodExpressionArgument>];
-  unknown: readonly [];
-  xor: readonly [ZodArrayArgument<ZodExpressionArgument>];
-}>;
-
-export type ZodMethodArgumentsByName = Readonly<{
-  catchall: readonly [ZodExpressionArgument];
-  gt: readonly [ZodLiteralArgument<number>];
-  gte: readonly [ZodLiteralArgument<number>];
-  int: readonly [];
-  lt: readonly [ZodLiteralArgument<number>];
-  lte: readonly [ZodLiteralArgument<number>];
-  max: readonly [ZodLiteralArgument<number>];
-  min: readonly [ZodLiteralArgument<number>];
-  nullable: readonly [];
-  optional: readonly [];
-  passthrough: readonly [];
-  refine: readonly [ZodHelperArgument];
-  regex: readonly [ZodLiteralArgument<string>];
-  required: readonly [ZodArrayArgument<ZodLiteralArgument<string>>];
-  strict: readonly [];
-}>;
-
-export type ZodDeclarationNameHint = Readonly<{
-  value: string;
-  provenance: ZodDeclarationNameHintProvenance;
-}>;
-export type ZodDeclarationNameHintInput = Readonly<{
-  value: string;
-  provenance?: ZodDeclarationNameHintProvenance | undefined;
-}>;
-export type ZodDeclaration = Readonly<{
-  symbol: ZodSymbol;
-  expression: ZodExpression;
-  nameHints: readonly ZodDeclarationNameHint[];
-}>;
-export type ZodDeclarationInput = Readonly<{
-  symbol: string;
-  expression: ZodExpressionInput;
-  nameHints?: readonly ZodDeclarationNameHintInput[] | undefined;
-}>;
-export type ZodEmissionModule = Readonly<{
-  root: ZodSymbol;
-  declarations: readonly ZodDeclaration[];
-}>;
-export type ZodEmissionModuleInput = Readonly<{
-  root: string;
-  declarations: readonly ZodDeclarationInput[];
-}>;
 
 const zodSymbolSchemaValue: z.ZodType<ZodSymbol, string> = z
   .string()
@@ -278,6 +257,15 @@ const zodExpressionSchemaValue: z.ZodType<ZodExpression, ZodExpressionInput> = z
       .strictObject({
         calls: z.array(zodMethodCallSchemaValue).readonly().default([]),
         expression: zodExpressionSchemaValue,
+        kind: z.literal("runtime-guard"),
+        placement: z.literal("encoded-input"),
+        program: zodRuntimeProgramIdSchema,
+      })
+      .readonly(),
+    z
+      .strictObject({
+        calls: z.array(zodMethodCallSchemaValue).readonly().default([]),
+        expression: zodExpressionSchemaValue,
         kind: z.literal("wrapper"),
         requiredOwnKeys: z.array(z.string()).readonly(),
         wrapper: zodWrapperNameSchemaValue,
@@ -291,7 +279,7 @@ export const zodExpressionSchema: z.ZodType<ZodExpression, ZodExpressionInput> =
 const zodDeclarationNameHintProvenanceSchemaValue: z.ZodType<
   ZodDeclarationNameHintProvenance,
   ZodDeclarationNameHintProvenance
-> = z.enum(["anchor", "definitionKey", "explicit", "pointer", "title", "uriSegment"]);
+> = z.string().min(nonEmptyStringLength);
 export const zodDeclarationNameHintProvenanceSchema: z.ZodType<
   ZodDeclarationNameHintProvenance,
   ZodDeclarationNameHintProvenance
@@ -325,6 +313,7 @@ const zodEmissionModuleSchemaValue: z.ZodType<ZodEmissionModule, ZodEmissionModu
   .strictObject({
     root: zodSymbolSchemaValue,
     declarations: z.array(zodDeclarationSchemaValue).readonly(),
+    runtimePrograms: z.array(zodRuntimeProgramSchema).readonly().default([]),
   })
   .readonly();
 export const zodEmissionModuleSchema: z.ZodType<ZodEmissionModule, ZodEmissionModuleInput> =
@@ -356,6 +345,18 @@ export const zodObjectShapeArgument = (
   kind: "object",
   properties: Object.entries(properties).map(([key, expression]) => ({ expression, key })),
 });
+
+const zodRegexFlagsText = (flags: ZodRegexFlags): string =>
+  [
+    flags.hasIndices === true ? "d" : "",
+    flags.global === true ? "g" : "",
+    flags.ignoreCase === true ? "i" : "",
+    flags.multiline === true ? "m" : "",
+    flags.dotAll === true ? "s" : "",
+    flags.unicode === true ? "u" : "",
+    flags.unicodeSets === true ? "v" : "",
+    flags.sticky === true ? "y" : "",
+  ].join("");
 
 type ZodMethodBuilderArguments<TMethod extends ZodKnownMethodName> =
   TMethod extends ZodNoArgumentMethodName ? [] : [args: ZodMethodArgumentsByName[TMethod]];
@@ -403,22 +404,6 @@ export const zodWrapper = (
   requiredOwnKeys: readonly string[],
 ): ZodExpression => ({ calls: [], expression, kind: "wrapper", requiredOwnKeys, wrapper });
 
-export const zodDeclarationNameHint = (
-  value: string,
-  provenance: ZodDeclarationNameHintProvenance = "explicit",
-): ZodDeclarationNameHint => ({ provenance, value });
-
-export const zodDeclaration = (
-  symbol: ZodSymbol,
-  expression: ZodExpression,
-  nameHints: readonly ZodDeclarationNameHint[] = [],
-): ZodDeclaration => ({ expression, nameHints, symbol });
-
-export const zodModule = (
-  root: ZodSymbol,
-  declarations: readonly ZodDeclaration[],
-): ZodEmissionModule => ({ declarations, root });
-
 export const zodPlan = {
   array: (element: ZodExpression): ZodExpression =>
     zodFactory("array", [zodExpressionArgument(element)]),
@@ -459,10 +444,18 @@ export const zodPlan = {
   refine: (expression: ZodExpression, request: ZodHelperRequest): ZodExpression =>
     zodCall(expression, "refine", [zodHelperArgument(request)]),
   reference: (symbol: ZodSymbol): ZodExpression => zodReference(symbol),
-  regex: (expression: ZodExpression, pattern: string): ZodExpression =>
-    zodCall(expression, "regex", [zodLiteralArgument(pattern)]),
+  regex: (expression: ZodExpression, pattern: string, flags: ZodRegexFlags = {}): ZodExpression =>
+    zodCall(expression, "regex", [
+      zodLiteralArgument(pattern),
+      zodLiteralArgument(zodRegexFlagsText(flags)),
+    ]),
   required: (object: ZodExpression, keys: readonly [string, ...string[]]): ZodExpression =>
     zodCall(object, "required", [zodArrayArgument(keys.map((key) => zodLiteralArgument(key)))]),
+  runtimeGuard: (
+    expression: ZodExpression,
+    program: ZodRuntimeProgramId,
+    placement: ZodRuntimeGuardPlacement,
+  ): ZodExpression => zodRuntimeGuard(expression, program, placement),
   strict: (object: ZodExpression): ZodExpression => zodCall(object, "strict"),
   string: (): ZodExpression => zodFactory("string"),
   tuple: (items: readonly ZodExpression[]): ZodExpression =>

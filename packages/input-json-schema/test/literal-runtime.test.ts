@@ -99,6 +99,59 @@ void describe("JSON Schema composite literals", () => {
   });
 });
 
+void describe("JSON Schema literal traversal boundaries", () => {
+  void test("does not normalize Draft 7 keywords inside a contains literal", async () => {
+    const literal = { dependencies: { requiredName: { type: "string" } } };
+    const { generatedSchema, source } = await compileGeneratedSchema(
+      { contains: { const: literal }, type: "array" },
+      { dialect: "draft-7" },
+    );
+
+    const accepted = [literal];
+    assert.deepEqual(generatedSchema.safeParse(accepted), { data: accepted, success: true });
+    assert.equal(
+      generatedSchema.safeParse([{ dependentSchemas: literal.dependencies }]).success,
+      false,
+    );
+    assert.match(source, /dependencies/u);
+  });
+
+  void test("does not treat unevaluated keywords in a literal as schema keywords", async () => {
+    const literal = { unevaluatedItems: false, unevaluatedProperties: false };
+    const { generatedSchema, source } = await compileGeneratedSchema({ const: literal });
+
+    assert.deepEqual(generatedSchema.safeParse(literal), { data: literal, success: true });
+    assert.equal(generatedSchema.safeParse({}).success, false);
+    assert.doesNotMatch(source, /x2zodRuntimeProgram/u);
+  });
+
+  void test("does not treat dynamic-reference keywords in a literal as schema keywords", async () => {
+    const literal = {
+      $dynamicAnchor: "node",
+      $dynamicRef: "#node",
+      $recursiveAnchor: true,
+      $recursiveRef: "#",
+    };
+    const { generatedSchema, source } = await compileGeneratedSchema({ const: literal });
+
+    assert.deepEqual(generatedSchema.safeParse(literal), { data: literal, success: true });
+    assert.equal(generatedSchema.safeParse({ $dynamicAnchor: "node" }).success, false);
+    assert.doesNotMatch(source, /x2zodRuntimeProgram/u);
+  });
+
+  void test("does not apply Draft 7 ref sibling rules inside a literal", async () => {
+    const literal = { $ref: "#/definitions/literal", type: "sentinel" };
+    const { generatedSchema, source } = await compileGeneratedSchema(
+      { const: literal, propertyNames: {} },
+      { dialect: "draft-7" },
+    );
+
+    assert.deepEqual(generatedSchema.safeParse(literal), { data: literal, success: true });
+    assert.equal(generatedSchema.safeParse({ $ref: "#/definitions/literal" }).success, false);
+    assert.match(source, /x2zodRuntimeProgram/u);
+  });
+});
+
 void describe("jsonSchemaValueSchema", () => {
   void test("preserves own __proto__ keys", () => {
     const input: unknown = JSON.parse('{"const":{"nested":[{"__proto__":null}]}}');

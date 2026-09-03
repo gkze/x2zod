@@ -1,49 +1,78 @@
-import { createDiagnostic } from "./diagnostics";
-import { err, ok } from "./result";
+import type { CallsProjection, ExpressionProjection } from "./emission-runtime-transforms";
+import { ok } from "./result";
 import type { Result } from "./result";
 import { sourceWrapperExpression } from "./source-model";
 import type { SourceExpression, SourceMethodCall } from "./source-model";
+import { sourceCodec } from "./source-projection-builders";
 import type { ZodExpression } from "./zod-plan";
 
-type ExpressionProjection = Readonly<{
-  changed: boolean;
-  decodedSchema: SourceExpression;
-  schema: SourceExpression;
-}>;
-type CallsProjection = Readonly<{
-  changed: boolean;
-  decodedCalls: readonly SourceMethodCall[];
-  schemaCalls: readonly SourceMethodCall[];
-}>;
-
-const unsupportedWrapperTransform = (wrapper: string): Result<never> =>
-  err(
-    createDiagnostic({
-      code: "unsupported_emission_transform",
-      message: `Property-key transforms cannot yet preserve bidirectional wrapper ${wrapper} composition.`,
-    }),
-  );
+const wrappedSourceExpression = (input: {
+  readonly calls?: readonly SourceMethodCall[] | undefined;
+  readonly expression: Extract<ZodExpression, { kind: "wrapper" }>;
+  readonly requiredOwnKeys: readonly string[];
+  readonly source: SourceExpression;
+}): SourceExpression =>
+  sourceWrapperExpression({
+    calls: input.calls ?? [],
+    expression: input.source,
+    requiredOwnKeys: input.requiredOwnKeys,
+    wrapper: input.expression.wrapper,
+  });
 
 export const projectZodWrapperExpression = (
   expression: Extract<ZodExpression, { kind: "wrapper" }>,
   wrapped: ExpressionProjection,
-  calls: CallsProjection,
+  projection: Readonly<{ calls: CallsProjection; decodedRequiredOwnKeys: readonly string[] }>,
 ): Result<ExpressionProjection> => {
-  if (wrapped.changed || calls.changed) return unsupportedWrapperTransform(expression.wrapper);
-
-  return ok({
-    changed: false,
-    decodedSchema: sourceWrapperExpression({
-      calls: calls.decodedCalls,
-      expression: wrapped.decodedSchema,
-      requiredOwnKeys: expression.requiredOwnKeys,
-      wrapper: expression.wrapper,
-    }),
-    schema: sourceWrapperExpression({
-      calls: calls.schemaCalls,
-      expression: wrapped.schema,
-      requiredOwnKeys: expression.requiredOwnKeys,
-      wrapper: expression.wrapper,
-    }),
+  const { calls, decodedRequiredOwnKeys } = projection;
+  const decodedSchema = wrappedSourceExpression({
+    calls: calls.decodedCalls,
+    expression,
+    requiredOwnKeys: decodedRequiredOwnKeys,
+    source: wrapped.decodedSchema,
   });
+  if (!wrapped.changed && !calls.changed)
+    return ok({
+      changed: false,
+      decodedSchema,
+      schema: wrappedSourceExpression({
+        expression,
+        source: wrapped.schema,
+        requiredOwnKeys: expression.requiredOwnKeys,
+        calls: calls.schemaCalls,
+      }),
+    });
+
+  const schema =
+    wrapped.schema.kind === "codec"
+      ? sourceCodec({
+          calls: [...wrapped.schema.calls, ...calls.schemaCalls],
+          input: wrappedSourceExpression({
+            expression,
+            source: wrapped.schema.input,
+            requiredOwnKeys: expression.requiredOwnKeys,
+          }),
+          operation: wrapped.schema.operation,
+          output: wrappedSourceExpression({
+            expression,
+            source: wrapped.schema.output,
+            requiredOwnKeys: decodedRequiredOwnKeys,
+          }),
+        })
+      : sourceCodec({
+          calls: calls.schemaCalls,
+          input: wrappedSourceExpression({
+            expression,
+            source: wrapped.schema,
+            requiredOwnKeys: expression.requiredOwnKeys,
+          }),
+          operation: { kind: "identity" },
+          output: wrappedSourceExpression({
+            expression,
+            source: wrapped.decodedSchema,
+            requiredOwnKeys: decodedRequiredOwnKeys,
+          }),
+        });
+
+  return ok({ changed: true, decodedSchema, schema });
 };

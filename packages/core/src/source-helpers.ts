@@ -1,12 +1,8 @@
 import { NodeFlags, SyntaxKind } from "@typescript/native-preview/unstable/ast";
 import type {
-  BinaryOperator,
   BindingElement,
-  BindingName,
   Expression,
-  ParameterDeclaration,
   Statement,
-  TypeNode,
   VariableStatement,
 } from "@typescript/native-preview/unstable/ast";
 import {
@@ -15,7 +11,6 @@ import {
   createArrayTypeNode,
   createArrowFunction,
   createBigIntLiteral,
-  createBinaryExpression,
   createBindingElement,
   createBlock,
   createCallExpression,
@@ -25,9 +20,7 @@ import {
   createKeywordTypeNode,
   createLiteralTypeNode,
   createNumericLiteral,
-  createParameterDeclaration,
   createPrefixUnaryExpression,
-  createPropertyAccessExpression,
   createQualifiedName,
   createReturnStatement,
   createStringLiteral,
@@ -38,12 +31,20 @@ import {
   createTypeParameterDeclaration,
   createTypeReferenceNode,
   createUnionTypeNode,
-  createVariableDeclaration,
-  createVariableDeclarationList,
-  createVariableStatement,
 } from "@typescript/native-preview/unstable/ast/factory";
 
-import { createUniqueItemsHelperStatements, uniqueItemsHelperName } from "./source-unique-items";
+import {
+  createSourceArrowParameter as createArrowParameter,
+  createSourceBinary as createBinary,
+  createSourceConstStatement as createConstStatement,
+  createSourceFunctionCall as createFunctionCall,
+  createSourcePropertyAccess as createPropertyAccess,
+} from "./source-ast";
+import {
+  createUniqueItemsHelperStatements,
+  jsonEqualHelperName,
+  uniqueItemsHelperName,
+} from "./source-unique-items";
 import type { ZodHelperName, ZodHelperRequest, ZodWrapperName } from "./zod-helpers";
 
 const noTokenFlags = 0;
@@ -54,31 +55,16 @@ const preserveObjectInputHelperName = "x2zodPreserveObjectInput";
 const wrapperHelperNames: Readonly<Record<ZodWrapperName, string>> = {
   preserveObjectInput: preserveObjectInputHelperName,
 };
+const helperIdentifierNames: Readonly<Record<ZodHelperName, readonly string[]>> = {
+  codePointLength: [codePointLengthHelperName],
+  exactMultipleOf: [decimalPartsHelperName, exactMultipleOfHelperName],
+  preserveObjectInput: [preserveObjectInputHelperName],
+  uniqueItems: [jsonEqualHelperName, uniqueItemsHelperName],
+};
 
 const assertNever = (value: never): never => {
   throw new Error(`Unexpected Zod helper request: ${JSON.stringify(value)}`);
 };
-
-const createArrowParameter = (name: string, type?: TypeNode): ParameterDeclaration =>
-  createParameterDeclaration(undefined, undefined, createIdentifier(name), undefined, type);
-
-const createPropertyAccess = (expression: Expression, name: string): Expression =>
-  createPropertyAccessExpression(expression, undefined, createIdentifier(name), NodeFlags.None);
-
-const createFunctionCall = (expression: Expression, args: readonly Expression[]): Expression =>
-  createCallExpression(expression, undefined, undefined, args, NodeFlags.None);
-
-const createBinary = (left: Expression, operator: BinaryOperator, right: Expression): Expression =>
-  createBinaryExpression(undefined, left, undefined, createToken(operator), right);
-
-const createConstStatement = (name: BindingName, initializer: Expression): VariableStatement =>
-  createVariableStatement(
-    undefined,
-    createVariableDeclarationList(
-      [createVariableDeclaration(name, undefined, undefined, initializer)],
-      NodeFlags.Const,
-    ),
-  );
 
 const createStringMethodCall = (
   expression: Expression,
@@ -316,25 +302,38 @@ const createPreserveObjectInputHelper = (): VariableStatement => {
   const keys = createIdentifier("requiredOwnKeys");
   const value = createIdentifier("value");
   const key = createIdentifier("key");
+  const ownValue = createFunctionCall(createPropertyAccess(createIdentifier("Object"), "assign"), [
+    createFunctionCall(createPropertyAccess(createIdentifier("Object"), "create"), [
+      createKeywordExpression(SyntaxKind.NullKeyword),
+    ]),
+    value,
+  ]);
   const schemaInputType = createTypeReferenceNode(
     createQualifiedName(createIdentifier("z"), createIdentifier("input")),
     [createTypeReferenceNode(schemaType)],
   );
   const parsesWithSchema = createPropertyAccess(
-    createFunctionCall(createPropertyAccess(schema, "safeParse"), [value]),
+    createFunctionCall(createPropertyAccess(schema, "safeParse"), [ownValue]),
     "success",
   );
   const valueCanHaveOwnKeys = createBinary(
     createBinary(
-      createTypeOfExpression(value),
-      SyntaxKind.EqualsEqualsEqualsToken,
-      createStringLiteral("object", noTokenFlags),
+      createBinary(
+        createTypeOfExpression(value),
+        SyntaxKind.EqualsEqualsEqualsToken,
+        createStringLiteral("object", noTokenFlags),
+      ),
+      SyntaxKind.AmpersandAmpersandToken,
+      createBinary(
+        value,
+        SyntaxKind.ExclamationEqualsEqualsToken,
+        createKeywordExpression(SyntaxKind.NullKeyword),
+      ),
     ),
     SyntaxKind.AmpersandAmpersandToken,
-    createBinary(
-      value,
-      SyntaxKind.ExclamationEqualsEqualsToken,
-      createKeywordExpression(SyntaxKind.NullKeyword),
+    createPrefixUnaryExpression(
+      SyntaxKind.ExclamationToken,
+      createFunctionCall(createPropertyAccess(createIdentifier("Array"), "isArray"), [value]),
     ),
   );
   const hasEveryRequiredOwnKey = createFunctionCall(createPropertyAccess(keys, "every"), [
@@ -445,3 +444,7 @@ export const createZodHelperStatements = (
   if (helperNames.has("preserveObjectInput")) statements.push(createPreserveObjectInputHelper());
   return statements;
 };
+
+export const zodHelperIdentifierNames = (
+  helperNames: ReadonlySet<ZodHelperName>,
+): readonly string[] => [...helperNames].flatMap((helperName) => helperIdentifierNames[helperName]);

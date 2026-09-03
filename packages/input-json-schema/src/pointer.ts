@@ -1,4 +1,3 @@
-import { jsonPointerSchema } from "@x2zod/core";
 import type { JsonPointer } from "@x2zod/core";
 
 import { isJsonArray, isJsonObject, jsonPointerFromPath } from "./document";
@@ -44,10 +43,12 @@ export const jsonSchemaAtPointer = (
   return typeof current === "boolean" || isJsonObject(current) ? current : undefined;
 };
 
-export const jsonSchemaLocalRefToPointer = (ref: string): JsonPointer | undefined => {
-  if (ref === "#") return jsonPointerFromPath([]);
-  if (!ref.startsWith("#/")) return undefined;
-
-  const parsed = jsonPointerSchema.safeParse(decodeURIComponent(ref.slice(1)));
-  return parsed.success ? parsed.data : undefined;
+export const jsonValueAtPointer = (
+  root: JsonValue,
+  pointer: JsonPointer,
+): JsonValue | undefined => {
+  let current: JsonValue | undefined = root;
+  for (const segment of jsonSchemaPointerSegments(pointer))
+    current = valueAtPointerSegment(current, segment);
+  return current;
 };

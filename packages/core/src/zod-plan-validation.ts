@@ -1,6 +1,9 @@
 import { createDiagnostic, formatZodError } from "./diagnostics";
 import { err, ok } from "./result";
 import type { Result } from "./result";
+import type { ZodRuntimeProgram } from "./runtime-program";
+import { analyzeRuntimeProgramExpression } from "./runtime-program-closure";
+import { compareCodeUnits } from "./string-order";
 import { zodHelperRequestSchema } from "./zod-helpers";
 import type {
   ZodArgument,
@@ -11,7 +14,11 @@ import type {
   ZodMethodCall,
   ZodSymbol,
 } from "./zod-plan";
-import { collectZodExpressionReferences } from "./zod-plan-analysis";
+import {
+  collectZodExpressionReferences,
+  collectZodRuntimeProgramReferences,
+  collectSameValueCyclicZodDeclarationPeers,
+} from "./zod-plan-analysis";
 import { zodFactoryMetadata, zodMethodMetadataFor } from "./zod-plan-metadata";
 import type {
   ZodArgumentMetadata,
@@ -21,16 +28,6 @@ import type {
 } from "./zod-plan-metadata";
 import { validateZodCallReceivers } from "./zod-plan-receiver-validation";
 import type { ZodPlanValidationContext as ValidationContext } from "./zod-plan-receiver-validation";
-
-const asciiSpace = 32;
-const asciiHyphen = 45;
-const asciiGreaterThan = 62;
-const referenceCycleSeparator = String.fromCodePoint(
-  asciiSpace,
-  asciiHyphen,
-  asciiGreaterThan,
-  asciiSpace,
-);
 
 type StringLiteralArgument = Readonly<{ kind: "literal"; value: string }>;
 
@@ -54,6 +51,62 @@ const findDuplicateSymbols = (
   declarations: ZodEmissionModule["declarations"],
 ): readonly ZodSymbol[] =>
   findDuplicateStrings(declarations.map((declaration) => declaration.symbol));
+
+const runtimeProgramAnalysis = (
+  program: ZodRuntimeProgram,
+): Result<ReturnType<typeof analyzeRuntimeProgramExpression>> => {
+  try {
+    return ok(analyzeRuntimeProgramExpression(program.expression));
+  } catch (error) {
+    return err(
+      createDiagnostic({
+        code: "invalid_zod_emission_module",
+        message: `Runtime program ${program.id} could not be analyzed as a TypeScript expression AST: ${
+          error instanceof Error ? error.message : "Unknown AST failure."
+        }`,
+      }),
+    );
+  }
+};
+
+const validateRuntimeProgram = (program: ZodRuntimeProgram): Result<ZodRuntimeProgram> => {
+  const analysisResult = runtimeProgramAnalysis(program);
+  if (!analysisResult.ok) return analysisResult;
+  const analysis = analysisResult.value;
+  if (!analysis.callable)
+    return err(
+      createDiagnostic({
+        code: "invalid_zod_emission_module",
+        message: `Runtime program ${program.id} must be a synchronous predicate function or a zero-argument initializer with one final direct predicate return.`,
+      }),
+    );
+  if (!analysis.abiCompatible)
+    return err(
+      createDiagnostic({
+        code: "invalid_zod_emission_module",
+        message: `Runtime program ${program.id} must implement the (unknown) => boolean predicate ABI.`,
+      }),
+    );
+  if (analysis.forbiddenSyntax.length > 0)
+    return err(
+      createDiagnostic({
+        code: "invalid_zod_emission_module",
+        message: `Runtime program ${program.id} uses forbidden ambient syntax: ${analysis.forbiddenSyntax.join(
+          ", ",
+        )}.`,
+      }),
+    );
+  if (analysis.freeIdentifiers.length > 0)
+    return err(
+      createDiagnostic({
+        code: "invalid_zod_emission_module",
+        message: `Runtime program ${program.id} references undeclared identifiers: ${analysis.freeIdentifiers.join(
+          ", ",
+        )}.`,
+      }),
+    );
+  return ok(program);
+};
 
 const invalidFactoryArgs = (factory: ZodFactoryName, expected: string): Result<never> =>
   err(
@@ -138,6 +191,11 @@ const literalArgumentMatchesType = (
   valueType: ZodLiteralArgumentValueType,
 ): boolean => argument?.kind === "literal" && typeof argument.value === valueType;
 
+const validRegExpFlags = (value: string): boolean =>
+  /^[dgimsuvy]*$/u.test(value) &&
+  new Set(value).size === value.length &&
+  !(value.includes("u") && value.includes("v"));
+
 const isSingleArgument = (args: readonly ZodArgument[], kind: ZodArgument["kind"]): boolean =>
   args.length === 1 && args[0]?.kind === kind;
 
@@ -170,6 +228,15 @@ const argumentsMatchMetadata = (
     }
     case "none": {
       return args.length === 0;
+    }
+    case "regex": {
+      const [pattern, flags] = args;
+      return (
+        (args.length === 1 || args.length === 2) &&
+        pattern !== undefined &&
+        isStringLiteralArgument(pattern) &&
+        (flags === undefined || (isStringLiteralArgument(flags) && validRegExpFlags(flags.value)))
+      );
     }
     case "single": {
       return isSingleArgument(args, metadata.argumentKind);
@@ -273,6 +340,10 @@ const validateExpressionShape = (
   const validCalls = validateCallShapes(expression.calls, context);
   if (!validCalls.ok) return validCalls;
   if (expression.kind === "reference") return validateZodCallReceivers(expression, context);
+  if (expression.kind === "runtime-guard") {
+    const validExpression = validateExpressionShape(expression.expression, context);
+    return validExpression.ok ? validateZodCallReceivers(expression, context) : validExpression;
+  }
   if (expression.kind === "wrapper") {
     const validExpression = validateExpressionShape(expression.expression, context);
     if (!validExpression.ok) return validExpression;
@@ -309,43 +380,6 @@ const validateExpressionShape = (
   return validateZodCallReceivers(expression, context);
 };
 
-const findReferenceCycle = (module: ZodEmissionModule): readonly ZodSymbol[] | undefined => {
-  const declarationsBySymbol = new Map(
-    module.declarations.map((declaration) => [declaration.symbol, declaration]),
-  );
-  const visited = new Set<ZodSymbol>();
-  const visiting = new Set<ZodSymbol>();
-  const stack: ZodSymbol[] = [];
-
-  const visit = (symbol: ZodSymbol): readonly ZodSymbol[] | undefined => {
-    if (visiting.has(symbol)) return [...stack.slice(stack.indexOf(symbol)), symbol];
-    if (visited.has(symbol)) return undefined;
-
-    const declaration = declarationsBySymbol.get(symbol);
-    if (declaration === undefined) return undefined;
-
-    visiting.add(symbol);
-    stack.push(symbol);
-
-    for (const reference of collectZodExpressionReferences(declaration.expression)) {
-      const cycle = visit(reference);
-      if (cycle !== undefined) return cycle;
-    }
-
-    stack.pop();
-    visiting.delete(symbol);
-    visited.add(symbol);
-    return undefined;
-  };
-
-  for (const symbol of declarationsBySymbol.keys()) {
-    const cycle = visit(symbol);
-    if (cycle !== undefined) return cycle;
-  }
-
-  return undefined;
-};
-
 export const validateZodEmissionModule = (module: ZodEmissionModule): Result<ZodEmissionModule> => {
   const duplicateSymbols = findDuplicateSymbols(module.declarations);
   if (duplicateSymbols.length > 0)
@@ -357,6 +391,25 @@ export const validateZodEmissionModule = (module: ZodEmissionModule): Result<Zod
         )}`,
       }),
     );
+
+  const duplicateRuntimeProgramIds = findDuplicateStrings(
+    module.runtimePrograms.map((program) => program.id),
+  );
+  if (duplicateRuntimeProgramIds.length > 0)
+    return err(
+      createDiagnostic({
+        code: "invalid_zod_emission_module",
+        message: `Zod emission module contains duplicate runtime program IDs: ${duplicateRuntimeProgramIds.join(
+          ", ",
+        )}`,
+      }),
+    );
+
+  const invalidRuntimeProgram = module.runtimePrograms
+    .toSorted((left, right) => compareCodeUnits(left.id, right.id))
+    .map((program) => validateRuntimeProgram(program))
+    .find((result) => !result.ok);
+  if (invalidRuntimeProgram !== undefined) return invalidRuntimeProgram;
 
   const declaredSymbols = new Set(module.declarations.map((declaration) => declaration.symbol));
   if (!declaredSymbols.has(module.root))
@@ -380,15 +433,17 @@ export const validateZodEmissionModule = (module: ZodEmissionModule): Result<Zod
       }),
     );
 
-  const referenceCycle = findReferenceCycle(module);
-  if (referenceCycle !== undefined)
+  const runtimeProgramIds = new Set(module.runtimePrograms.map((program) => program.id));
+  const unresolvedRuntimePrograms = module.declarations
+    .flatMap((declaration) => collectZodRuntimeProgramReferences(declaration.expression))
+    .filter((program) => !runtimeProgramIds.has(program));
+  if (unresolvedRuntimePrograms.length > 0)
     return err(
       createDiagnostic({
-        code: "cyclic_reference",
-        message: [
-          "Zod emission module contains a cyclic reference:",
-          referenceCycle.join(referenceCycleSeparator),
-        ].join(" "),
+        code: "invalid_zod_emission_module",
+        message: `Zod emission module references undeclared runtime programs: ${[
+          ...new Set(unresolvedRuntimePrograms),
+        ].join(", ")}`,
       }),
     );
 
@@ -400,5 +455,17 @@ export const validateZodEmissionModule = (module: ZodEmissionModule): Result<Zod
   const invalidDeclaration = module.declarations
     .map((declaration) => validateExpressionShape(declaration.expression, context))
     .find((result) => !result.ok);
-  return invalidDeclaration ?? ok(module);
+  if (invalidDeclaration !== undefined) return invalidDeclaration;
+
+  const cyclicSymbols = [...collectSameValueCyclicZodDeclarationPeers(module).keys()];
+  return cyclicSymbols.length === 0
+    ? ok(module)
+    : err(
+        createDiagnostic({
+          code: "cyclic_reference",
+          message: `Zod emission module contains non-terminating same-value declaration references: ${cyclicSymbols.join(
+            ", ",
+          )}`,
+        }),
+      );
 };

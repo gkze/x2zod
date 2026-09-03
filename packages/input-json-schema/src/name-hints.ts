@@ -21,7 +21,7 @@ export const jsonSchemaDeclarationNameHints = (
   const anchor = isJsonObject(schema) ? schema[jsonSchemaKeywords.anchor] : undefined;
   if (typeof title === "string") hints.push(zodDeclarationNameHint(title, "title"));
   if (typeof anchor === "string") hints.push(zodDeclarationNameHint(anchor, "anchor"));
-  if (lastSegment !== undefined)
+  if (lastSegment !== undefined && lastSegment.length > 0)
     hints.push(
       zodDeclarationNameHint(
         lastSegment,

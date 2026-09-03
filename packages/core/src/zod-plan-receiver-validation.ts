@@ -81,7 +81,7 @@ const baseObjectShapeKeys = (
       ? new Set(shape.properties.map((property) => property.key))
       : undefined;
   }
-  if (expression.kind === "wrapper") return undefined;
+  if (expression.kind === "runtime-guard" || expression.kind === "wrapper") return undefined;
   if (visiting.has(expression.symbol)) return undefined;
 
   const declaration = context.declarations.get(expression.symbol);
@@ -128,7 +128,7 @@ const baseReceiverKind = (
   visiting: ReadonlySet<ZodSymbol> = new Set<ZodSymbol>(),
 ): ReceiverKind | undefined => {
   if (expression.kind === "factory") return expression.factory;
-  if (expression.kind === "wrapper") return "wrapped";
+  if (expression.kind === "runtime-guard" || expression.kind === "wrapper") return "wrapped";
   if (visiting.has(expression.symbol)) return undefined;
 
   const declaration = context.declarations.get(expression.symbol);

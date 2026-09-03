@@ -5,6 +5,7 @@ export type TextFileSystem = Readonly<{ readTextFile: (filePath: string) => Prom
 export type FilePathResolveRequest = Readonly<{ path: string; rootDirectory: string }>;
 
 export type FilePathResolver = Readonly<{
+  fileRetrievalUri: (absolutePath: string) => string;
   resolveFilePath: (request: FilePathResolveRequest) => string;
 }>;
 
@@ -42,6 +43,7 @@ export const createFileSystemResourceLoader = ({
     return {
       source: { kind: "file", path: absolutePath },
       text: await fileSystem.readTextFile(absolutePath),
+      retrievalUri: pathResolver.fileRetrievalUri(absolutePath),
       ...withMediaType(resolvedMediaType),
     };
   },

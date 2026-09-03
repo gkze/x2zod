@@ -1,17 +1,16 @@
 import { createDiagnostic } from "./diagnostics";
 import { err, ok } from "./result";
 import type { Result } from "./result";
-import type { DeclarationExportMode, TypeScriptIdentifier } from "./source";
+import type { DeclarationExportMode } from "./source-options";
+import { compareCodeUnits } from "./string-order";
 import { isTypeScriptIdentifier, typeScriptIdentifierSegments } from "./typescript-identifiers";
+import type { TypeScriptIdentifier, TypeScriptIdentifierAllocator } from "./typescript-identifiers";
 import type { ZodDeclaration, ZodEmissionModule, ZodSymbol } from "./zod-plan";
 import { collectZodExpressionReferences } from "./zod-plan-analysis";
 
 const radixAlphanumeric = 36;
 const schemaSuffix = "Schema";
 const maximumBasicMultilingualPlaneCodePoint = 65_535;
-const sortBefore = -1;
-const sortEqual = 0;
-const sortAfter = 1;
 
 export type NamedZodDeclaration = Readonly<{
   declaration: ZodDeclaration;
@@ -19,32 +18,28 @@ export type NamedZodDeclaration = Readonly<{
   schemaConstName: string;
 }>;
 
-export type DeclarationNameResolution = Readonly<{
+type DeclarationNameResolution = Readonly<{
   declarations: readonly NamedZodDeclaration[];
   rootSchemaConstName: string;
   schemaConstNames: ReadonlyMap<ZodSymbol, string>;
 }>;
 
 type SourceDeclarationOptions = Readonly<{
+  declarationNameOverrides?: Readonly<Record<string, TypeScriptIdentifier>>;
   declarationExportMode: DeclarationExportMode;
+  identifierAllocator: TypeScriptIdentifierAllocator;
   typeName: TypeScriptIdentifier;
 }>;
 type ReserveSchemaNameRequest = Readonly<{
   candidate: string;
   forceSymbolSuffix: boolean;
   symbol: ZodSymbol;
-  usedNames: Set<string>;
+  identifierAllocator: TypeScriptIdentifierAllocator;
 }>;
 
 const lowerFirst = (value: string): string => `${value.slice(0, 1).toLowerCase()}${value.slice(1)}`;
 
 const upperFirst = (value: string): string => `${value.slice(0, 1).toUpperCase()}${value.slice(1)}`;
-
-const compareStrings = (left: string, right: string): number => {
-  if (left < right) return sortBefore;
-  if (left > right) return sortAfter;
-  return sortEqual;
-};
 
 const schemaConstNameForType = (typeName: TypeScriptIdentifier): string =>
   `${lowerFirst(typeName)}${schemaSuffix}`;
@@ -59,8 +54,12 @@ const normalizedIdentifierBase = (value: string): string | undefined => {
   return isTypeScriptIdentifier(base) ? base : `schema${upperFirst(base)}`;
 };
 
-const schemaNameCandidate = (declaration: ZodDeclaration): string => {
-  const hintBase = declaration.nameHints
+const schemaNameCandidate = (
+  declaration: ZodDeclaration,
+  declarationNameOverrides: Readonly<Record<string, TypeScriptIdentifier>> = {},
+): string => {
+  const override = declarationNameOverrides[declaration.symbol];
+  const hintBase = (override === undefined ? declaration.nameHints : [{ value: override }])
     .map((hint) => normalizedIdentifierBase(hint.value))
     .find((base) => base !== undefined);
   const symbolBase = normalizedIdentifierBase(declaration.symbol);
@@ -89,15 +88,11 @@ const reserveSchemaName = ({
   candidate,
   forceSymbolSuffix,
   symbol,
-  usedNames,
+  identifierAllocator,
 }: ReserveSchemaNameRequest): string => {
   const encodedSuffix = encodedSymbolSuffix(symbol);
-  let name = forceSymbolSuffix ? collisionSchemaName(candidate, symbol) : candidate;
-
-  while (usedNames.has(name)) name = `${name}X${encodedSuffix}`;
-
-  usedNames.add(name);
-  return name;
+  const preferredName = forceSymbolSuffix ? collisionSchemaName(candidate, symbol) : candidate;
+  return identifierAllocator.allocate(preferredName, (name) => `${name}X${encodedSuffix}`);
 };
 
 const candidateCounts = (candidates: readonly string[]): ReadonlyMap<string, number> => {
@@ -124,14 +119,14 @@ const orderedDeclarations = (module: ZodEmissionModule): readonly ZodDeclaration
 
     const references = collectZodExpressionReferences(declaration.expression)
       .filter((dependency) => declarationsBySymbol.has(dependency))
-      .toSorted(compareStrings);
+      .toSorted(compareCodeUnits);
     for (const reference of references) visit(reference);
 
     ordered.push(declaration);
   };
 
   const symbols = [...declarationsBySymbol.keys()].filter((symbol) => symbol !== module.root);
-  for (const symbol of [...symbols.toSorted(compareStrings), module.root]) visit(symbol);
+  for (const symbol of [...symbols.toSorted(compareCodeUnits), module.root]) visit(symbol);
 
   return ordered;
 };
@@ -155,26 +150,33 @@ export const resolveZodDeclarationNames = (
       }),
     );
 
-  const usedNames = new Set<string>();
+  const { identifierAllocator } = options;
   const schemaConstNames = new Map<ZodSymbol, string>();
-  const rootSchemaConstName = schemaConstNameForType(options.typeName);
-  usedNames.add(rootSchemaConstName);
+  const rootSchemaConstName = reserveSchemaName({
+    candidate: schemaConstNameForType(options.typeName),
+    forceSymbolSuffix: false,
+    identifierAllocator,
+    symbol: module.root,
+  });
   schemaConstNames.set(rootDeclaration.symbol, rootSchemaConstName);
 
   const candidateEntries = module.declarations
     .filter((declaration) => declaration.symbol !== module.root)
-    .map((declaration) => ({ candidate: schemaNameCandidate(declaration), declaration }));
+    .map((declaration) => ({
+      candidate: schemaNameCandidate(declaration, options.declarationNameOverrides),
+      declaration,
+    }));
   const counts = candidateCounts(candidateEntries.map((entry) => entry.candidate));
   const namedDeclarationsBySymbol = new Map<ZodSymbol, NamedZodDeclaration>();
 
   for (const { candidate, declaration } of candidateEntries.toSorted((left, right) =>
-    compareStrings(left.declaration.symbol, right.declaration.symbol),
+    compareCodeUnits(left.declaration.symbol, right.declaration.symbol),
   )) {
     const schemaConstName = reserveSchemaName({
       candidate,
       forceSymbolSuffix: candidate === rootSchemaConstName || counts.get(candidate) !== 1,
       symbol: declaration.symbol,
-      usedNames,
+      identifierAllocator,
     });
     namedDeclarationsBySymbol.set(declaration.symbol, {
       declaration,

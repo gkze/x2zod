@@ -27,7 +27,11 @@ import {
   jsonSchemaInputPluginOptionsSchema,
   jsonSchemaValueSchema,
 } from "../src";
-import type { JsonSchemaInputPluginOptions, JsonSchemaInputPluginOptionsInput } from "../src";
+import type {
+  JsonSchemaDialect,
+  JsonSchemaInputPluginOptions,
+  JsonSchemaInputPluginOptionsInput,
+} from "../src";
 import { targetMatrix } from "./target-matrix";
 import type {
   BlockedTarget,
@@ -213,14 +217,21 @@ const resultBuildInputs = async (): Promise<readonly BuildInputProvenance[]> => 
     .toSorted(compareBuildInputProvenance);
 };
 
+const ajvForDialect = (dialect: JsonSchemaDialect): AjvDraft7 => {
+  if (dialect === "draft-7") return new AjvDraft7(ajvOptions);
+  if (dialect === "draft-2019-09") return new AjvDraft2019(ajvOptions);
+  return new AjvDraft2020(ajvOptions);
+};
+
 const targetAjvValidator = (target: GeneratedZodTarget): ValidateFunction => {
   const schema = jsonSchemaValueSchema.parse(
     JSON.parse(readFileSync(targetSchemaFile(target), "utf8")),
   );
   const dialect = target.pluginOptions.dialect ?? "draft-2020-12";
-  if (dialect === "draft-7") return new AjvDraft7(ajvOptions).compile(schema);
-  if (dialect === "draft-2019-09") return new AjvDraft2019(ajvOptions).compile(schema);
-  return new AjvDraft2020(ajvOptions).compile(schema);
+  const ajv = ajvForDialect(dialect);
+  for (const [uri, externalSchema] of Object.entries(target.pluginOptions.externalSchemas ?? {}))
+    ajv.addSchema(externalSchema, uri);
+  return ajv.compile(schema);
 };
 
 const assertRuntimeSampleParity = ({
@@ -272,15 +283,15 @@ const assertGeneratedTarget = async (target: GeneratedZodTarget): Promise<void> 
   try {
     await writeFile(optionsFile, JSON.stringify(target.pluginOptions));
     buildPrinterBundle(bundleFile);
-    await writeFile(
-      generatedFile,
-      printTargetSource({
-        bundleFile,
-        optionsFile,
-        schemaFile: targetSchemaFile(target),
-        typeName: target.typeName,
-      }),
-    );
+    const generatedSource = printTargetSource({
+      bundleFile,
+      optionsFile,
+      schemaFile: targetSchemaFile(target),
+      typeName: target.typeName,
+    });
+    await writeFile(generatedFile, generatedSource);
+    assert.equal(generatedSource.includes("Function("), false);
+    assert.equal(/\beval\s*\(/u.test(generatedSource), false);
     emitGeneratedDeclarations(generatedFile, declarationDirectory);
 
     const zodSchema = await importGeneratedExport(
@@ -371,6 +382,7 @@ void describe("JSON Schema public target E2E matrix", () => {
         { name: "Claude Code settings", roundTripLevel: "generated-zod" },
         { name: "Mise config", roundTripLevel: "generated-zod" },
         { name: "Cursor environment", roundTripLevel: "generated-zod" },
+        { name: "SchemaStore package.json", roundTripLevel: "generated-zod" },
         { name: "Visual Studio Code settings", roundTripLevel: "schema-unavailable" },
         { name: "Zed settings", roundTripLevel: "schema-unavailable" },
       ],

@@ -122,6 +122,18 @@ void test("zodObjectToOptique preserves absent optional arrays", () => {
   );
 });
 
+void test("zodObjectToOptique preserves absent exact-optional fields", () => {
+  const schema = z.strictObject({
+    dialect: withCLI(z.enum(["draft-7", "draft-2020-12"]).exactOptional().readonly(), {
+      short: "-d",
+    }),
+  });
+
+  assert.deepEqual(run(schema, []), {});
+  assert.deepEqual(run(schema, ["--dialect", "draft-7"]), { dialect: "draft-7" });
+  assert.deepEqual(runOverrides(schema, []), {});
+});
+
 void test("zodObjectToOptiqueOverrides suppresses defaults and parses string-array metadata", () => {
   const schema = z.strictObject({
     dialect: withCLI(z.enum(["draft-7", "draft-2020-12"]).default("draft-2020-12"), {

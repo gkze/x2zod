@@ -19,6 +19,8 @@
     "scripts/check-runtime-versions.test.ts",
     "scripts/check-native-tools.ts",
     "scripts/check-native-tools.test.ts",
+    "scripts/agent-progress.ts",
+    "scripts/agent-progress.test.ts",
     "scripts/publish-materialize.ts",
     "scripts/publish-registries.ts",
     "scripts/publish-runtime.ts",

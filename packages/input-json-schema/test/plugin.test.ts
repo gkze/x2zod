@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 
-import { jsonPointerSchema, parseZodEmissionModule } from "@x2zod/core";
+import { compileToZodSource, jsonPointerSchema, parseZodEmissionModule } from "@x2zod/core";
 import type {
   InputDocument,
   ZodEmissionModule,
@@ -10,9 +10,15 @@ import type {
 } from "@x2zod/core";
 
 import { jsonSchemaInputPlugin, jsonSchemaInputPluginOptionsSchema } from "../src";
-import type { JsonSchemaInputPluginOptions, JsonSchemaInputPluginOptionsInput } from "../src";
+import type {
+  JsonSchemaInputPluginOptions,
+  JsonSchemaInputPluginOptionsInput,
+  JsonSchemaValue,
+} from "../src";
+import { compileGeneratedSchema } from "./generated-schema-harness";
 
 const finalCallOffset = 1;
+const rejectedNumber = 42;
 const externalSchemaUri = "https://opencode.ai/model-schema.json";
 
 const fileDocument = (text: string): InputDocument => ({
@@ -58,10 +64,17 @@ const rootExpression = (module: ZodEmissionModule): ZodExpression => {
   return root.expression;
 };
 
-const objectPropertyExpression = (expression: ZodExpression, key: string): ZodExpression => {
-  if (expression.kind !== "factory") throw new Error("Expected factory expression.");
+const unwrapPreservedObjectInput = (expression: ZodExpression): ZodExpression => {
+  if (expression.kind !== "wrapper") return expression;
+  assert.equal(expression.wrapper, "preserveObjectInput");
+  return expression.expression;
+};
 
-  const [shape] = expression.args;
+const objectPropertyExpression = (expression: ZodExpression, key: string): ZodExpression => {
+  const objectExpression = unwrapPreservedObjectInput(expression);
+  if (objectExpression.kind !== "factory") throw new Error("Expected factory expression.");
+
+  const [shape] = objectExpression.args;
   if (shape?.kind !== "object") throw new Error("Expected object expression.");
 
   const property = shape.properties.find((item) => item.key === key);
@@ -117,15 +130,6 @@ void describe("jsonSchemaInputPlugin prepare", () => {
     expectErrCode(result, "invalid_schema_document");
     assert.equal(String(result.diagnostics?.at(0)?.location?.pointer), "/type");
   });
-
-  void test("fails when declared and requested dialects conflict", async () => {
-    const result = await jsonSchemaInputPlugin.prepare(
-      fileDocument('{ "$schema": "http://json-schema.org/draft-07/schema#", "type": "string" }'),
-      options({ dialect: "draft-2020-12", validator: "none" }),
-    );
-
-    expectErrCode(result, "dialect_conflict");
-  });
 });
 
 void describe("jsonSchemaInputPlugin lower", () => {
@@ -153,7 +157,7 @@ void describe("jsonSchemaInputPlugin lower", () => {
     const lowered = expectOk(
       await jsonSchemaInputPlugin.lower(prepared, options({ validator: "none" })),
     );
-    const root = rootExpression(parseEmissionModule(lowered));
+    const root = unwrapPreservedObjectInput(rootExpression(parseEmissionModule(lowered)));
 
     assert.ok(
       lowered.declarations
@@ -164,17 +168,17 @@ void describe("jsonSchemaInputPlugin lower", () => {
     assert.equal(root.calls.at(-finalCallOffset)?.method, "strict");
   });
 
-  void test("fails loudly for known unsupported and unknown keywords", async () => {
-    const unsupported = expectOk(
+  void test("uses exact runtime support for known keywords and rejects unknown keywords", async () => {
+    const runtimeBacked = expectOk(
       await jsonSchemaInputPlugin.prepare(
         fileDocument('{ "contains": { "type": "string" }, "type": "array" }'),
         options({ validator: "none" }),
       ),
     );
-    expectErrCode(
-      await jsonSchemaInputPlugin.lower(unsupported, options({ validator: "none" })),
-      "unsupported_keyword",
+    const lowered = expectOk(
+      await jsonSchemaInputPlugin.lower(runtimeBacked, options({ validator: "none" })),
     );
+    assert.equal(lowered.runtimePrograms?.length, 1);
 
     const unknown = expectOk(
       await jsonSchemaInputPlugin.prepare(
@@ -186,22 +190,6 @@ void describe("jsonSchemaInputPlugin lower", () => {
       await jsonSchemaInputPlugin.lower(unknown, options({ validator: "none" })),
       "unknown_keyword",
     );
-  });
-
-  void test("treats OpenCode ref metadata as inert profile data", async () => {
-    const prepared = expectOk(
-      await jsonSchemaInputPlugin.prepare(
-        fileDocument('{ "type": "object", "ref": "Config" }'),
-        options({ sourceProfile: "opencode", validator: "none" }),
-      ),
-    );
-    const lowered = await jsonSchemaInputPlugin.lower(
-      prepared,
-      options({ sourceProfile: "opencode", validator: "none" }),
-    );
-    expectOk(lowered);
-
-    assert.ok(diagnosticCodes(lowered).includes("json-schema/ignored-keyword"));
   });
 });
 
@@ -246,7 +234,7 @@ void describe("jsonSchemaInputPlugin advanced lower", () => {
     );
     assert.deepEqual(
       count.calls.map((call) => String(call.method)),
-      ["int", "gte", "lt"],
+      ["refine", "gte", "lt"],
     );
     assert.equal(model.kind, "reference");
     assert.equal(String(model.symbol), `schema:${externalSchemaUri}#/$defs/model`);
@@ -283,7 +271,7 @@ void describe("jsonSchemaInputPlugin precise lower", () => {
     const lowered = parseEmissionModule(
       expectOk(await jsonSchemaInputPlugin.lower(prepared, options({ validator: "none" }))),
     );
-    const root = rootExpression(lowered);
+    const root = unwrapPreservedObjectInput(rootExpression(lowered));
     const metadata = objectPropertyExpression(root, "metadata");
     const pair = objectPropertyExpression(root, "pair");
     const slug = objectPropertyExpression(root, "slug");
@@ -393,7 +381,7 @@ void describe("jsonSchemaInputPlugin precise diagnostics", () => {
     }
   });
 
-  void test("collects unsupported keyword diagnostics from referenced external schemas", async () => {
+  void test("collects exact runtime semantics from referenced external schemas", async () => {
     const pluginOptions = options({
       externalSchemas: {
         [externalSchemaUri]: { $defs: { tags: { contains: { type: "string" }, type: "array" } } },
@@ -407,29 +395,35 @@ void describe("jsonSchemaInputPlugin precise diagnostics", () => {
       ),
     );
 
-    const result = await jsonSchemaInputPlugin.lower(prepared, pluginOptions);
+    const result = expectOk(await jsonSchemaInputPlugin.lower(prepared, pluginOptions));
 
-    expectErrCode(result, "unsupported_keyword");
-    assert.ok(diagnosticPointers(result).includes("/$defs/tags/contains"));
+    assert.equal(result.runtimePrograms?.length, 1);
   });
 
-  void test("fails before ignoring Draft 7 ref sibling assertions", async () => {
+  void test("preserves Draft 7 ref sibling semantics with exact runtime", async () => {
     const pluginOptions = options({ dialect: "draft-7", validator: "none" });
-    const prepared = expectOk(
-      await jsonSchemaInputPlugin.prepare(
-        fileDocument(
-          JSON.stringify({
-            definitions: { value: { type: "string" } },
-            $ref: "#/definitions/value",
-            type: "number",
-          }),
-        ),
-        pluginOptions,
-      ),
-    );
-    const result = await jsonSchemaInputPlugin.lower(prepared, pluginOptions);
+    const schema = {
+      definitions: { value: { type: "string" } },
+      $ref: "#/definitions/value",
+      type: "number",
+    } satisfies JsonSchemaValue;
+    const result = await compileToZodSource({
+      document: {
+        source: { id: "draft-7-ref-sibling", kind: "inline" },
+        text: JSON.stringify(schema),
+      },
+      output: { typeName: "Draft7RefSibling" },
+      plugin: jsonSchemaInputPlugin,
+      pluginOptions,
+    });
 
-    expectErrCode(result, "unrepresentable_schema_combination");
+    assert.equal(result.ok, true);
+    const { generatedSchema } = await compileGeneratedSchema(schema, { dialect: "draft-7" });
+    const accepted = "source";
+    const acceptedResult = generatedSchema.safeParse(accepted);
+    if (!acceptedResult.success) assert.fail("expected Draft 7 $ref target to accept a string");
+    assert.deepEqual(acceptedResult.data, accepted);
+    assert.equal(generatedSchema.safeParse(rejectedNumber).success, false);
   });
 });
 

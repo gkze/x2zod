@@ -1,18 +1,9 @@
 import assert from "node:assert/strict";
-import { rmSync } from "node:fs";
-import { writeFile } from "node:fs/promises";
+import { writeFileSync } from "node:fs";
 import nodePath from "node:path";
 import { describe, test } from "node:test";
 
-import {
-  buildNodeBundle,
-  createTemporaryDirectory,
-  importGeneratedExport,
-  isNativePreviewShutdownStderr,
-  isRecord,
-  nativePreviewExternals,
-  runNode,
-} from "../../../test/native-source-harness";
+import { importGeneratedExport, isRecord } from "../../../test/native-source-harness";
 import {
   buildZodSourceFile,
   ts,
@@ -32,17 +23,14 @@ import {
   zodCallName,
   zodCallReceiverExpression,
 } from "./ast-helpers";
+import {
+  createGeneratedSourceHarness,
+  emitGeneratedDeclarations,
+} from "./generated-source-harness";
 
 const rootSymbol = zodSymbol("root");
 const generatedFileName = "/__x2zod__/x2zod.generated.ts";
-const corePackageRootDirectory = nodePath.resolve(import.meta.dirname, "..");
-const coreEntrypoint = "src/index.ts";
 const sourcePrinterEntryPoint = nodePath.join(import.meta.dirname, "source-print-helper.ts");
-const coreTestTempDirectory = nodePath.join(corePackageRootDirectory, "node_modules/.cache");
-const coreTestTempPrefix = "x2zod-test-";
-const bundledCoreFileName = "index.mjs";
-const bundledSourcePrinterFileName = "source-print-helper.mjs";
-const generatedRuntimeFileName = "generated-runtime.ts";
 const maximumCount = 10;
 const firstDivisor = 0.1;
 const secondDivisor = 0.2;
@@ -55,6 +43,7 @@ type RuntimeZodSchema = Readonly<{ safeParse: (value: unknown) => RuntimeParseRe
 type RuntimeUser = Readonly<{
   __proto__: string;
   count: number;
+  insensitive: string;
   maybe?: string | undefined;
   pair: readonly [string, number];
   payload: Readonly<{ value: string }>;
@@ -88,31 +77,6 @@ const exportedVariableNames = (sourceFile: ts.SourceFile): readonly string[] =>
     )
     .map((statement) => variableDeclaration(statement).name.text);
 
-const buildCoreBundle = (bundleFile: string): void => {
-  buildNodeBundle({
-    cwd: corePackageRootDirectory,
-    entryPoint: coreEntrypoint,
-    externals: nativePreviewExternals,
-    outfile: bundleFile,
-  });
-};
-
-const buildSourcePrinterBundle = (bundleFile: string): void => {
-  buildNodeBundle({
-    cwd: corePackageRootDirectory,
-    entryPoint: sourcePrinterEntryPoint,
-    externals: nativePreviewExternals,
-    outfile: bundleFile,
-  });
-};
-
-const printWithNativeEmitter = (printerBundleFile: string, coreBundleFile: string): string =>
-  runNode({
-    allowedStderr: isNativePreviewShutdownStderr,
-    args: [printerBundleFile, coreBundleFile],
-    cwd: corePackageRootDirectory,
-  });
-
 const isRuntimeZodSchema = (value: unknown): value is RuntimeZodSchema =>
   isRecord(value) && typeof value["safeParse"] === "function";
 
@@ -124,6 +88,7 @@ const importGeneratedUserSchema = async (generatedFile: string): Promise<Runtime
 const validRuntimeUser = (): RuntimeUser => {
   const value = {
     count: 1,
+    insensitive: "ABC",
     pair: ["left", 2],
     payload: { value: "present" },
     slug: "abc",
@@ -296,6 +261,35 @@ void describe("buildZodSourceFile declaration ordering and exports", () => {
     assert.deepEqual(variableNames(sourceFile), ["leafSchema", "middleSchema", "userSchema"]);
   });
 
+  void test("emits lazy references only within cyclic declaration components", () => {
+    const nodeSymbol = zodSymbol("node");
+    const sourceFile = sourceFileFor(
+      zodModule(rootSymbol, [
+        zodDeclaration(
+          nodeSymbol,
+          zodPlan.object({ next: zodPlan.optional(zodPlan.reference(nodeSymbol)) }),
+        ),
+        zodDeclaration(rootSymbol, zodPlan.reference(nodeSymbol)),
+      ]),
+    );
+    const declarations = variableStatements(sourceFile).map((statement) =>
+      variableDeclaration(statement),
+    );
+    const nodeDeclaration = declarations.find(
+      (declaration) => declaration.name.text === "nodeSchema",
+    );
+    const rootDeclaration = declarations.find(
+      (declaration) => declaration.name.text === "userSchema",
+    );
+    if (nodeDeclaration === undefined || rootDeclaration === undefined)
+      throw new Error("Missing cyclic source declarations.");
+
+    const next = propertyInitializer(nodeDeclaration, "next");
+    assert.equal(zodCallName(next), "optional");
+    assert.equal(zodCallName(zodCallReceiverExpression(next)), "lazy");
+    assert.notEqual(rootDeclaration.initializer["kind"], ts.SyntaxKind.CallExpression);
+  });
+
   void test("exports named declarations only when requested", () => {
     const addressSymbol = zodSymbol("address");
     const module = zodModule(rootSymbol, [
@@ -321,23 +315,20 @@ void describe("buildZodSourceFile declaration ordering and exports", () => {
 
 void describe("buildZodSourceFile native printing", () => {
   void test("returns source files printable by the aligned native TypeScript emitter", async () => {
-    const directory = createTemporaryDirectory({
-      prefix: coreTestTempPrefix,
-      rootDirectory: coreTestTempDirectory,
+    const harness = createGeneratedSourceHarness({
+      prefix: "x2zod-test-",
+      printerEntryPoint: sourcePrinterEntryPoint,
     });
-    const coreBundleFile = nodePath.join(directory, bundledCoreFileName);
-    const printerBundleFile = nodePath.join(directory, bundledSourcePrinterFileName);
-    const generatedFile = nodePath.join(directory, generatedRuntimeFileName);
 
     try {
-      buildCoreBundle(coreBundleFile);
-      buildSourcePrinterBundle(printerBundleFile);
-      const printedSource = printWithNativeEmitter(printerBundleFile, coreBundleFile);
+      const printedSource = harness.print();
 
       assert.ok(printedSource.includes("export const userSchema"));
       assert.ok(printedSource.includes("export type User"));
       assert.ok(printedSource.includes("z.enum"));
       assert.ok(printedSource.includes("new RegExp"));
+      assert.ok(printedSource.includes('new RegExp("^[a-z]+$")'));
+      assert.ok(printedSource.includes('new RegExp("^abc$", "i")'));
       assert.ok(printedSource.includes("z.tuple"));
       assert.ok(printedSource.includes(".int().gt(0).lte(10)"));
       assert.ok(printedSource.includes('["__proto__"]: z.string()'));
@@ -345,8 +336,8 @@ void describe("buildZodSourceFile native printing", () => {
       assert.ok(printedSource.includes(".required({ value: true })"));
       assert.ok(printedSource.includes(".min(1).max(2)"));
 
-      await writeFile(generatedFile, printedSource);
-      const userSchema = await importGeneratedUserSchema(generatedFile);
+      writeFileSync(harness.generatedFile, printedSource);
+      const userSchema = await importGeneratedUserSchema(harness.generatedFile);
 
       assert.equal(userSchema.safeParse(validRuntimeUser()).success, true);
       assert.equal(userSchema.safeParse({ ...validRuntimeUser(), maybe: "present" }).success, true);
@@ -369,8 +360,17 @@ void describe("buildZodSourceFile native printing", () => {
         userSchema.safeParse({ ...validRuntimeUser(), tags: ["a", "b", "c"] }).success,
         false,
       );
+
+      for (const typeName of ["z", "x2zodPreserveObjectInput"]) {
+        const sourceFile = nodePath.join(harness.directory, `generated-${typeName}.ts`);
+        writeFileSync(sourceFile, harness.print(["default", typeName]));
+        emitGeneratedDeclarations(
+          sourceFile,
+          nodePath.join(harness.directory, `declarations-${typeName}`),
+        );
+      }
     } finally {
-      rmSync(directory, { force: true, recursive: true });
+      harness.dispose();
     }
   });
 });
@@ -394,6 +394,28 @@ void describe("buildZodSourceFile declaration naming", () => {
     ]);
 
     assert.deepEqual(variableNames(sourceFileFor(module)), ["caféConfigSchema", "userSchema"]);
+  });
+
+  void test("uses declaration hint values and order independently of adapter provenance", () => {
+    const configSymbol = zodSymbol("config");
+    const moduleFor = (provenance: readonly [string, string]): ZodEmissionModule =>
+      zodModule(rootSymbol, [
+        zodDeclaration(configSymbol, zodPlan.string(), [
+          zodDeclarationNameHint("Protocol Message", provenance[0]),
+          zodDeclarationNameHint("Graph Type", provenance[1]),
+        ]),
+        zodDeclaration(rootSymbol, zodPlan.reference(configSymbol)),
+      ]);
+
+    const protobufFirst = variableNames(
+      sourceFileFor(moduleFor(["protobuf/message", "graphql/type"])),
+    );
+    const graphqlFirst = variableNames(
+      sourceFileFor(moduleFor(["graphql/type", "protobuf/message"])),
+    );
+
+    assert.deepEqual(protobufFirst, ["protocolMessageSchema", "userSchema"]);
+    assert.deepEqual(graphqlFirst, protobufFirst);
   });
 
   void test("deduplicates declaration names from stable symbol identity", () => {

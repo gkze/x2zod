@@ -25,26 +25,77 @@ const expectInvalidRoot = (
 };
 
 void describe("parseZodEmissionModule", () => {
-  void test(
-    "rejects missing roots, duplicate symbols, unresolved refs, invalid factory args, " +
-      "and cycles",
-    () => {
-      expectInvalidModule({ declarations: [], root: "root" }, "invalid_zod_emission_module");
-      expectInvalidModule(
+  void test("rejects missing roots, duplicate symbols, unresolved refs, and invalid factory args", () => {
+    expectInvalidModule({ declarations: [], root: "root" }, "invalid_zod_emission_module");
+    expectInvalidModule(
+      {
+        declarations: [
+          { expression: zodPlan.string(), symbol: "root" },
+          { expression: zodPlan.number(), symbol: "root" },
+        ],
+        root: "root",
+      },
+      "invalid_zod_emission_module",
+    );
+    expectInvalidRoot(zodPlan.reference(zodSymbol("missing")), "unresolved_reference");
+    expectInvalidRoot({ factory: "array", kind: "factory" });
+  });
+
+  void test("rejects non-terminating cycles and accepts data-descending recursion", () => {
+    expectInvalidRoot(zodPlan.reference(zodSymbol("root")), "cyclic_reference");
+    expectInvalidModule(
+      {
+        declarations: [
+          { expression: zodPlan.reference(zodSymbol("peer")), symbol: "root" },
+          { expression: zodPlan.reference(zodSymbol("root")), symbol: "peer" },
+        ],
+        root: "root",
+      },
+      "cyclic_reference",
+    );
+    assert.equal(
+      parseZodEmissionModule(
+        rootModule(zodPlan.object({ child: zodPlan.reference(zodSymbol("root")) })),
+      ).ok,
+      true,
+    );
+  });
+
+  void test("accepts nonempty adapter-specific declaration name hint provenance", () => {
+    const parsed = parseZodEmissionModule({
+      declarations: [
         {
-          declarations: [
-            { expression: zodPlan.string(), symbol: "root" },
-            { expression: zodPlan.number(), symbol: "root" },
+          expression: zodPlan.string(),
+          nameHints: [
+            { provenance: "protobuf/message", value: "Message" },
+            { provenance: "graphql/type", value: "Type" },
+            { value: "Default" },
           ],
-          root: "root",
+          symbol: "root",
         },
-        "invalid_zod_emission_module",
-      );
-      expectInvalidRoot(zodPlan.reference(zodSymbol("missing")), "unresolved_reference");
-      expectInvalidRoot({ factory: "array", kind: "factory" });
-      expectInvalidRoot(zodPlan.reference(zodSymbol("root")), "cyclic_reference");
-    },
-  );
+      ],
+      root: "root",
+    });
+
+    assert.equal(parsed.ok, true);
+    assert.deepEqual(
+      parsed.value.declarations[0]?.nameHints.map((hint) => hint.provenance),
+      ["protobuf/message", "graphql/type", "explicit"],
+    );
+    expectInvalidModule(
+      {
+        declarations: [
+          {
+            expression: zodPlan.string(),
+            nameHints: [{ provenance: "", value: "Root" }],
+            symbol: "root",
+          },
+        ],
+        root: "root",
+      },
+      "invalid_zod_emission_module",
+    );
+  });
 });
 
 void describe("parseZodEmissionModule method validation", () => {

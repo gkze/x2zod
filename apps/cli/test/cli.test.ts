@@ -90,7 +90,7 @@ void test("runCLI compile help routes through the requested plugin option parser
     assertCLISuccess(result);
     assert.ok(result.stdoutText.includes("--external-schema"));
     assert.ok(result.stdoutText.includes("--source-profile"));
-    assert.ok(result.stdoutText.includes("JSON Schema dialect."));
+    assert.ok(result.stdoutText.includes("JSON Schema dialect override;"));
   }, cliWorkspaceTemp);
 });
 

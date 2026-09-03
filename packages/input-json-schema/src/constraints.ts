@@ -134,7 +134,7 @@ const applyJsonSchemaStringPattern = (
   }
 
   try {
-    new RegExp(pattern).test("");
+    new RegExp(pattern, "u").test("");
   } catch {
     context.addDiagnostic({
       code: "invalid_schema_document",
@@ -144,7 +144,7 @@ const applyJsonSchemaStringPattern = (
     return zodPlan.unknown();
   }
 
-  return zodPlan.regex(request.expression, pattern);
+  return zodPlan.regex(request.expression, pattern, { unicode: true });
 };
 
 export const applyJsonSchemaStringConstraints = (

@@ -31,6 +31,11 @@
       "id": "mise-config-schema",
       "path": "mise-config.schema.json",
       "url": "https://raw.githubusercontent.com/jdx/mise/e47826c162671248d8a1726d7f3043e9b9c00092/schema/mise.json"
+    },
+    {
+      "id": "schemastore-package-schema",
+      "path": "schemastore-package.schema.json",
+      "url": "https://raw.githubusercontent.com/SchemaStore/schemastore/d651805897ab2484548bcf3718624b459cb6cf21/src/schemas/json/package.json"
     }
   ]
 }

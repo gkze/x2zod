@@ -99,6 +99,25 @@ const propertyNamesPointer = (pointer: JsonPointer): JsonPointer =>
 const unevaluatedPropertiesPointer = (pointer: JsonPointer): JsonPointer =>
   jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.unevaluatedProperties);
 
+const prototypeSetterKey = "__proto__";
+
+const hasPatternProperties = (schema: JsonObject): boolean => {
+  const patternProperties = schema[jsonSchemaKeywords.patternProperties];
+  return isJsonObject(patternProperties) && Object.keys(patternProperties).length > 0;
+};
+
+const needsExplicitPrototypeProperty = (schema: JsonObject): boolean => {
+  if (hasPatternProperties(schema)) return false;
+  const additionalProperties = schema[jsonSchemaKeywords.additionalProperties];
+  if (additionalProperties === false || isJsonObject(additionalProperties)) return true;
+  if (additionalProperties !== undefined) return false;
+  const unevaluatedProperties = schema[jsonSchemaKeywords.unevaluatedProperties];
+  return unevaluatedProperties === false || isJsonObject(unevaluatedProperties);
+};
+
+const applyStrictObjectBoundary = (schema: JsonObject, object: ZodExpression): ZodExpression =>
+  hasPatternProperties(schema) ? zodPlan.passthrough(object) : zodPlan.strict(object);
+
 const lowerAdditionalPropertyValue = (
   schema: JsonObject,
   pointer: JsonPointer,
@@ -148,7 +167,7 @@ const objectShape = ({
   schema,
 }: ObjectShapeRequest): Record<string, ZodExpression> => {
   const properties = schema[jsonSchemaKeywords.properties];
-  const shape: Record<string, ZodExpression> = {};
+  const shape = new Map<string, ZodExpression>();
 
   if (properties !== undefined && !isJsonObject(properties))
     addInvalidSchemaDiagnostic(
@@ -161,7 +180,7 @@ const objectShape = ({
     for (const [key, propertySchema] of Object.entries(properties))
       if (isJsonSchemaValue(propertySchema)) {
         const expression = context.lowerSchema(propertyPointer(pointer, key), propertySchema);
-        shape[key] = required.has(key) ? expression : zodPlan.optional(expression);
+        shape.set(key, required.has(key) ? expression : zodPlan.optional(expression));
       } else
         addInvalidSchemaDiagnostic(
           context,
@@ -170,9 +189,16 @@ const objectShape = ({
         );
 
   for (const key of required)
-    shape[key] ??= lowerRequiredUndeclaredPropertyValue(schema, pointer, context);
+    if (!shape.has(key))
+      shape.set(key, lowerRequiredUndeclaredPropertyValue(schema, pointer, context));
 
-  return shape;
+  if (!shape.has(prototypeSetterKey) && needsExplicitPrototypeProperty(schema))
+    shape.set(
+      prototypeSetterKey,
+      zodPlan.optional(lowerRequiredUndeclaredPropertyValue(schema, pointer, context)),
+    );
+
+  return Object.fromEntries(shape);
 };
 
 export const applyJsonSchemaRequiredKeys = (
@@ -231,7 +257,7 @@ const applyUnevaluatedProperties = (request: UnevaluatedPropertiesRequest): ZodE
   const unevaluatedProperties = schema[jsonSchemaKeywords.unevaluatedProperties];
   if (unevaluatedProperties === undefined || unevaluatedProperties === true)
     return zodPlan.passthrough(object);
-  if (unevaluatedProperties === false) return zodPlan.strict(object);
+  if (unevaluatedProperties === false) return applyStrictObjectBoundary(schema, object);
   if (isJsonObject(unevaluatedProperties))
     return zodPlan.catchall(
       object,
@@ -287,13 +313,17 @@ export const lowerJsonSchemaObject = (
   const additionalProperties = schema[jsonSchemaKeywords.additionalProperties];
   const withPropertyNames = (expression: ZodExpression): ZodExpression =>
     applyPropertyNames({ context, expression, pointer, schema });
+  const withOwnPropertySemantics = (expression: ZodExpression): ZodExpression =>
+    zodPlan.preserveObjectInput(expression, requiredKeys);
+  const finalize = (expression: ZodExpression): ZodExpression =>
+    withPropertyNames(withOwnPropertySemantics(expression));
 
-  if (additionalProperties === false) return withPropertyNames(zodPlan.strict(object));
+  if (additionalProperties === false) return finalize(applyStrictObjectBoundary(schema, object));
   if (additionalProperties === undefined)
-    return withPropertyNames(applyUnevaluatedProperties({ context, object, pointer, schema }));
-  if (additionalProperties === true) return withPropertyNames(zodPlan.passthrough(object));
+    return finalize(applyUnevaluatedProperties({ context, object, pointer, schema }));
+  if (additionalProperties === true) return finalize(zodPlan.passthrough(object));
   if (isJsonSchemaValue(additionalProperties))
-    return withPropertyNames(
+    return finalize(
       zodPlan.catchall(
         object,
         context.lowerSchema(additionalPropertiesPointer(pointer), additionalProperties),
@@ -305,5 +335,5 @@ export const lowerJsonSchemaObject = (
     additionalPropertiesPointer(pointer),
     "JSON Schema additionalProperties must be a boolean or schema object.",
   );
-  return withPropertyNames(object);
+  return finalize(object);
 };

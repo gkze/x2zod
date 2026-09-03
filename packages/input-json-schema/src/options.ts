@@ -4,6 +4,7 @@ import { createJsonSchemaValueSchema } from "./document";
 import type { JsonSchemaValue } from "./document";
 import { jsonSchemaDialects, jsonSchemaSourceProfiles, jsonSchemaValidators } from "./metadata";
 import type { JsonSchemaDialect, JsonSchemaSourceProfile, JsonSchemaValidator } from "./metadata";
+import { normalizeJsonSchemaRetrievalUri } from "./retrieval-uri";
 
 type JsonSchemaCLIOptionMetadata = Readonly<{
   description: string;
@@ -22,7 +23,7 @@ export type {
 } from "./metadata";
 
 type JsonSchemaInputPluginOptionsOutput = Readonly<{
-  dialect: JsonSchemaDialect;
+  dialect?: JsonSchemaDialect | undefined;
   externalSchemas: Readonly<Record<string, JsonSchemaValue>>;
   sourceProfile: JsonSchemaSourceProfile;
   validator: JsonSchemaValidator;
@@ -66,19 +67,30 @@ export const jsonSchemaSourceProfileSchema: z.ZodType<
 // The document parser's schema intentionally accepts unknown raw input.
 const jsonSchemaInputValueSchema: z.ZodType<JsonSchemaValue, JsonSchemaValue> =
   createJsonSchemaValueSchema<JsonSchemaValue>();
-
 const externalSchemasSchemaValue: z.ZodType<
   Readonly<Record<string, JsonSchemaValue>>,
   Readonly<Record<string, JsonSchemaValue>>
-> = z.record(z.string(), jsonSchemaInputValueSchema).readonly();
+> = z
+  .record(z.string(), jsonSchemaInputValueSchema)
+  .readonly()
+  .superRefine((schemas, context) => {
+    for (const uri of Object.keys(schemas))
+      if (!normalizeJsonSchemaRetrievalUri(uri, "External schema registry key").ok)
+        context.addIssue({
+          code: "custom",
+          message:
+            "External schema registry keys must be valid absolute, fragmentless retrieval URIs.",
+          path: [uri],
+        });
+  });
 
 const jsonSchemaInputPluginOptionsSchemaValue: z.ZodType<
   JsonSchemaInputPluginOptionsOutput,
   JsonSchemaInputPluginOptionsInputValue
 > = z
   .strictObject({
-    dialect: withCLI(jsonSchemaDialectSchema.default("draft-2020-12"), {
-      description: "JSON Schema dialect.",
+    dialect: withCLI(jsonSchemaDialectSchema.exactOptional(), {
+      description: "JSON Schema dialect override; inferred from $schema, otherwise 2020-12.",
       short: "-d",
       valueName: "DIALECT",
     }),
@@ -107,6 +119,8 @@ export const jsonSchemaInputPluginOptionsSchema: z.ZodType<
 > = jsonSchemaInputPluginOptionsSchemaValue;
 
 export type JsonSchemaInputPluginOptions = z.output<typeof jsonSchemaInputPluginOptionsSchemaValue>;
+export type ResolvedJsonSchemaInputPluginOptions = Omit<JsonSchemaInputPluginOptions, "dialect"> &
+  Readonly<{ dialect: JsonSchemaDialect }>;
 export type JsonSchemaInputPluginOptionsInput = z.input<
   typeof jsonSchemaInputPluginOptionsSchemaValue
 >;

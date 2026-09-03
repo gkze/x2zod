@@ -1,22 +1,45 @@
 import { readFileSync } from "node:fs";
+import { pathToFileURL } from "node:url";
 
 import { compileToZodSource } from "@x2zod/core";
+import type { ZodEmissionTransformInput } from "@x2zod/core";
 
 import {
   diagnosticText,
-  optionalArgument,
   requiredArgument,
   writeNativeSourceFile,
 } from "../../../test/native-print-helper";
-import { jsonSchemaInputPlugin, jsonSchemaValueSchema } from "../src";
+import { jsonSchemaDialectSchema, jsonSchemaInputPlugin, jsonSchemaValueSchema } from "../src";
 
 const schemaPathArgumentIndex = 2;
-const externalSchemaPathArgumentIndex = 3;
-const externalSchemaUri = "https://example.com/model.schema.json";
+const dialectArgumentPrefix = "--dialect=";
+const externalSchemaUriArgumentPrefix = "--external-schema-uri=";
+const mapPropertiesArgument = "--map-properties";
+const defaultExternalSchemaUri = "https://example.com/model.schema.json";
 const runtimeCaseTypeName = "RuntimeCase";
 
 const schemaPath = requiredArgument(schemaPathArgumentIndex, "JSON Schema fixture");
-const externalSchemaPath = optionalArgument(externalSchemaPathArgumentIndex);
+const runtimeArguments = process.argv.slice(schemaPathArgumentIndex + 1);
+const dialectArgument = runtimeArguments.find((argument) =>
+  argument.startsWith(dialectArgumentPrefix),
+);
+const dialect =
+  dialectArgument === undefined
+    ? undefined
+    : jsonSchemaDialectSchema.parse(dialectArgument.slice(dialectArgumentPrefix.length));
+const externalSchemaPath = runtimeArguments.find(
+  (argument) =>
+    argument !== mapPropertiesArgument &&
+    !argument.startsWith(dialectArgumentPrefix) &&
+    !argument.startsWith(externalSchemaUriArgumentPrefix),
+);
+const externalSchemaUriArgument = runtimeArguments.find((argument) =>
+  argument.startsWith(externalSchemaUriArgumentPrefix),
+);
+const externalSchemaUri =
+  externalSchemaUriArgument === undefined
+    ? defaultExternalSchemaUri
+    : externalSchemaUriArgument.slice(externalSchemaUriArgumentPrefix.length);
 const externalSchemas =
   externalSchemaPath === undefined
     ? {}
@@ -26,11 +49,26 @@ const externalSchemas =
         ),
       };
 
+const transforms: readonly ZodEmissionTransformInput[] = runtimeArguments.includes(
+  mapPropertiesArgument,
+)
+  ? [{ kind: "map-properties", options: { keys: { decodedCase: "camelCase", kind: "case" } } }]
+  : [];
+
 const result = await compileToZodSource({
-  document: { source: { kind: "file", path: schemaPath }, text: readFileSync(schemaPath, "utf8") },
+  document: {
+    source: { kind: "file", path: schemaPath },
+    text: readFileSync(schemaPath, "utf8"),
+    retrievalUri: pathToFileURL(schemaPath).href,
+  },
   output: { typeName: runtimeCaseTypeName },
   plugin: jsonSchemaInputPlugin,
-  pluginOptions: { externalSchemas, validator: "none" },
+  pluginOptions: {
+    externalSchemas,
+    ...(dialect === undefined ? {} : { dialect }),
+    validator: "none",
+  },
+  transforms,
 });
 
 if (!result.ok) throw new Error(diagnosticText(result.diagnostics));

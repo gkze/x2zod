@@ -24,6 +24,7 @@ export type { JsonObject, JsonPrimitive, JsonValue } from "type-fest";
 export type JsonSchemaValue = boolean | JsonObject;
 
 export type ParsedJsonSchemaDocument = Readonly<{
+  retrievalUri?: string;
   schema: JsonSchemaValue;
   source: InputDocument["source"];
 }>;
@@ -256,7 +257,14 @@ export const parseJsonSchemaDocument = (
   collectLocation({ document, lineStarts, locations }, root);
 
   return resultFromJsonSchemaDiagnostics(
-    { locations, value: { schema: schema.value, source: document.source } },
+    {
+      locations,
+      value: {
+        schema: schema.value,
+        source: document.source,
+        ...(document.retrievalUri === undefined ? {} : { retrievalUri: document.retrievalUri }),
+      },
+    },
     schema.diagnostics ?? [],
   );
 };

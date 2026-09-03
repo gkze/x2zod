@@ -1,64 +1,34 @@
-import { NodeFlags, SyntaxKind } from "@typescript/native-preview/unstable/ast";
-import type {
-  BinaryOperator,
-  BindingName,
-  Expression,
-  ParameterDeclaration,
-  TypeNode,
-  VariableStatement,
-} from "@typescript/native-preview/unstable/ast";
+import { SyntaxKind } from "@typescript/native-preview/unstable/ast";
+import type { Expression, VariableStatement } from "@typescript/native-preview/unstable/ast";
 import {
   createArrayTypeNode,
   createArrowFunction,
   createAsExpression,
-  createBinaryExpression,
   createBlock,
-  createCallExpression,
-  createElementAccessExpression,
   createIdentifier,
   createIfStatement,
   createKeywordExpression,
   createKeywordTypeNode,
-  createParameterDeclaration,
-  createPropertyAccessExpression,
   createReturnStatement,
   createStringLiteral,
   createToken,
   createTypeOfExpression,
   createTypeOperatorNode,
   createTypeReferenceNode,
-  createVariableDeclaration,
-  createVariableDeclarationList,
-  createVariableStatement,
 } from "@typescript/native-preview/unstable/ast/factory";
 
+import {
+  createSourceArrowParameter as createArrowParameter,
+  createSourceBinary as createBinary,
+  createSourceConstStatement as createConstStatement,
+  createSourceElementAccess as createElementAccess,
+  createSourceFunctionCall as createFunctionCall,
+  createSourcePropertyAccess as createPropertyAccess,
+} from "./source-ast";
+
 const noTokenFlags = 0;
-const jsonEqualHelperName = "x2zodJsonEqual";
+export const jsonEqualHelperName = "x2zodJsonEqual";
 export const uniqueItemsHelperName = "x2zodUniqueItems";
-
-const createArrowParameter = (name: string, type?: TypeNode): ParameterDeclaration =>
-  createParameterDeclaration(undefined, undefined, createIdentifier(name), undefined, type);
-
-const createPropertyAccess = (expression: Expression, name: string): Expression =>
-  createPropertyAccessExpression(expression, undefined, createIdentifier(name), NodeFlags.None);
-
-const createElementAccess = (expression: Expression, key: Expression): Expression =>
-  createElementAccessExpression(expression, undefined, key, NodeFlags.None);
-
-const createFunctionCall = (expression: Expression, args: readonly Expression[]): Expression =>
-  createCallExpression(expression, undefined, undefined, args, NodeFlags.None);
-
-const createBinary = (left: Expression, operator: BinaryOperator, right: Expression): Expression =>
-  createBinaryExpression(undefined, left, undefined, createToken(operator), right);
-
-const createConstStatement = (name: BindingName, initializer: Expression): VariableStatement =>
-  createVariableStatement(
-    undefined,
-    createVariableDeclarationList(
-      [createVariableDeclaration(name, undefined, undefined, initializer)],
-      NodeFlags.Const,
-    ),
-  );
 
 const createIsArray = (expression: Expression): Expression =>
   createFunctionCall(createPropertyAccess(createIdentifier("Array"), "isArray"), [expression]);
