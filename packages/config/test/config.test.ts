@@ -142,7 +142,11 @@ void test("defineConfig types target kinds and plugin option inputs from the plu
   const target = {
     input: { path: "schema.json" },
     kind: pluginKey,
-    options: { dialect: "draft-7", sourceProfile: "opencode" },
+    options: {
+      dialect: "draft-7",
+      inertKeywords: { xStringMetadata: "string" },
+      sourceProfile: "opencode",
+    },
     output: { path: "schema.ts", typeName: "User" },
   } satisfies X2ZodTargetFor<typeof plugins, "json-schema">;
 
@@ -226,7 +230,7 @@ void test("resolveX2ZodConfig validates and resolves plugin options and output d
       user: {
         input: { mediaType: "application/schema+json", path: "schema.json" },
         kind: "json-schema",
-        options: { sourceProfile: "opencode" },
+        options: { inertKeywords: { xStringMetadata: "string" }, sourceProfile: "opencode" },
         output: { path: "generated/user.ts", typeName: "User" },
       },
     },
@@ -242,6 +246,7 @@ void test("resolveX2ZodConfig validates and resolves plugin options and output d
   assert.equal(userTarget.name, "user");
   assert.deepEqual(userTarget.options, {
     externalSchemas: {},
+    inertKeywords: { xStringMetadata: "string" },
     sourceProfile: "opencode",
     validator: "ajv",
   });
@@ -355,6 +360,7 @@ void test("loadX2ZodConfig loads x2zod.config.ts through c12 and validates it", 
     assert.deepEqual(userTarget.options, {
       dialect: "draft-7",
       externalSchemas: {},
+      inertKeywords: {},
       sourceProfile: "none",
       validator: "ajv",
     });

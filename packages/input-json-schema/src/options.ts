@@ -2,21 +2,34 @@ import { z } from "zod/v4";
 
 import { createJsonSchemaValueSchema } from "./document";
 import type { JsonSchemaValue } from "./document";
-import { jsonSchemaDialects, jsonSchemaSourceProfiles, jsonSchemaValidators } from "./metadata";
-import type { JsonSchemaDialect, JsonSchemaSourceProfile, JsonSchemaValidator } from "./metadata";
+import {
+  jsonSchemaDialects,
+  jsonSchemaInertKeywordValueTypes,
+  jsonSchemaKeywordPolicy,
+  jsonSchemaSourceProfiles,
+  jsonSchemaValidators,
+} from "./metadata";
+import type {
+  JsonSchemaDialect,
+  JsonSchemaInertKeywords,
+  JsonSchemaSourceProfile,
+  JsonSchemaValidator,
+} from "./metadata";
 import { normalizeJsonSchemaRetrievalUri } from "./retrieval-uri";
 
 type JsonSchemaCLIOptionMetadata = Readonly<{
   description: string;
   long?: string | undefined;
   short: string;
-  valueMode?: "json-file-map" | "string-array" | undefined;
+  valueMode?: "json-file-map" | "string-array" | "string-map" | undefined;
   valueName?: string | undefined;
 }>;
 
 export { jsonSchemaInputPluginKind } from "./metadata";
 export type {
   JsonSchemaDialect,
+  JsonSchemaInertKeywords,
+  JsonSchemaInertKeywordValueType,
   JsonSchemaInputPluginKind,
   JsonSchemaSourceProfile,
   JsonSchemaValidator,
@@ -25,6 +38,7 @@ export type {
 type JsonSchemaInputPluginOptionsOutput = Readonly<{
   dialect?: JsonSchemaDialect | undefined;
   externalSchemas: Readonly<Record<string, JsonSchemaValue>>;
+  inertKeywords: JsonSchemaInertKeywords;
   sourceProfile: JsonSchemaSourceProfile;
   validator: JsonSchemaValidator;
 }>;
@@ -32,6 +46,7 @@ type JsonSchemaInputPluginOptionsOutput = Readonly<{
 type JsonSchemaInputPluginOptionsInputValue = Readonly<{
   dialect?: JsonSchemaDialect | undefined;
   externalSchemas?: Readonly<Record<string, JsonSchemaValue>> | undefined;
+  inertKeywords?: JsonSchemaInertKeywords | undefined;
   sourceProfile?: JsonSchemaSourceProfile | undefined;
   validator?: JsonSchemaValidator | undefined;
 }>;
@@ -84,6 +99,25 @@ const externalSchemasSchemaValue: z.ZodType<
         });
   });
 
+const inertKeywordsSchemaValue: z.ZodType<JsonSchemaInertKeywords, JsonSchemaInertKeywords> = z
+  .record(z.string().min(1), z.enum(jsonSchemaInertKeywordValueTypes))
+  .readonly()
+  .superRefine((keywords, context) => {
+    for (const keyword of Object.keys(keywords))
+      if (keyword.startsWith("$"))
+        context.addIssue({
+          code: "custom",
+          message: "Inert keyword names must not use the JSON Schema $-reserved namespace.",
+          path: [keyword],
+        });
+      else if (jsonSchemaKeywordPolicy(keyword) === "supported")
+        context.addIssue({
+          code: "custom",
+          message: "Standard JSON Schema keywords cannot be configured as inert metadata.",
+          path: [keyword],
+        });
+  });
+
 const jsonSchemaInputPluginOptionsSchemaValue: z.ZodType<
   JsonSchemaInputPluginOptionsOutput,
   JsonSchemaInputPluginOptionsInputValue
@@ -100,6 +134,13 @@ const jsonSchemaInputPluginOptionsSchemaValue: z.ZodType<
       short: "-E",
       valueMode: "json-file-map",
       valueName: "ID=FILE",
+    }),
+    inertKeywords: withCLI(inertKeywordsSchemaValue.default({}), {
+      description: "Exact custom JSON Schema keywords to accept as typed inert metadata.",
+      long: "--inert-keyword",
+      short: "-K",
+      valueMode: "string-map",
+      valueName: "NAME=TYPE",
     }),
     sourceProfile: withCLI(jsonSchemaSourceProfileSchema.default("none"), {
       description: "JSON Schema source compatibility profile.",

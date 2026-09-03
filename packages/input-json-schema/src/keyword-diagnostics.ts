@@ -2,6 +2,7 @@ import type { JsonPointer } from "@x2zod/core";
 
 import type { JsonSchemaDiagnosticSink } from "./diagnostics";
 import type { JsonSchemaValue } from "./document";
+import { configuredInertKeywordValueType, jsonSchemaValueType } from "./inert-keywords";
 import {
   jsonSchemaKeywordPolicyForDialect,
   jsonSchemaKeywords,
@@ -67,6 +68,41 @@ const allowProfileKeyword = (
   return true;
 };
 
+type ConfiguredInertKeywordRequest = Readonly<{
+  context: KeywordDiagnosticsContext;
+  key: string;
+  pointer: JsonPointer;
+  schema: Exclude<JsonSchemaValue, boolean>;
+}>;
+
+const allowConfiguredInertKeyword = ({
+  context,
+  key,
+  pointer,
+  schema,
+}: ConfiguredInertKeywordRequest): boolean => {
+  const expectedType = configuredInertKeywordValueType(key, context.options.inertKeywords);
+  if (expectedType === undefined) return false;
+
+  const actualType = jsonSchemaValueType(schema[key]);
+  if (actualType !== expectedType) {
+    context.addDiagnostic({
+      code: "invalid_schema_document",
+      message: `Configured inert keyword ${key} must have a ${expectedType} value; received ${actualType ?? "an invalid JSON"} value.`,
+      pointer,
+    });
+    return true;
+  }
+
+  context.addDiagnostic({
+    code: "json-schema/ignored-keyword",
+    message: `Configured keyword ${key} is accepted as validation-inert metadata.`,
+    pointer,
+    severity: "warning",
+  });
+  return true;
+};
+
 export const collectKeywordDiagnostics = (
   schema: JsonSchemaValue,
   pointer: JsonPointer,
@@ -97,7 +133,16 @@ export const collectKeywordDiagnostics = (
       });
     } else if (policy.validation || !jsonSchemaValidationKeywords.has(key)) {
       const keywordPolicy = jsonSchemaKeywordPolicyForDialect(key, policy.dialect);
-      if (keywordPolicy !== "supported" && !allowProfileKeyword(key, keyPointer, effectiveContext))
+      if (
+        keywordPolicy !== "supported" &&
+        !allowConfiguredInertKeyword({
+          context: effectiveContext,
+          key,
+          pointer: keyPointer,
+          schema,
+        }) &&
+        !allowProfileKeyword(key, keyPointer, effectiveContext)
+      )
         context.addDiagnostic({
           code: "unknown_keyword",
           message: `JSON Schema keyword is not recognized by the selected source profile: ${key}.`,

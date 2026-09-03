@@ -89,8 +89,43 @@ void test("runCLI compile help routes through the requested plugin option parser
 
     assertCLISuccess(result);
     assert.ok(result.stdoutText.includes("--external-schema"));
+    assert.ok(result.stdoutText.includes("--inert-keyword"));
     assert.ok(result.stdoutText.includes("--source-profile"));
     assert.ok(result.stdoutText.includes("JSON Schema dialect override;"));
+  }, cliWorkspaceTemp);
+});
+
+void test("runCLI compile accepts repeatable typed inert keyword flags", async () => {
+  await withTempDirectory(async (directory) => {
+    await writeConfiguredUserTarget(directory);
+    await writeJsonFile(path.join(directory, "schema.json"), {
+      type: "string",
+      xBooleanMetadata: true,
+      xStringMetadata: "documentation",
+    });
+
+    const result = await runCLITest(
+      [
+        "compile",
+        "--kind",
+        "json-schema",
+        "-i",
+        "schema.json",
+        "-K",
+        "xBooleanMetadata=boolean",
+        "--inert-keyword",
+        "xStringMetadata=string",
+        "-o",
+        "generated/user.ts",
+        "-n",
+        "User",
+      ],
+      { cwd: directory },
+    );
+
+    assertCLISuccess(result);
+    const generated = await readGeneratedText(directory);
+    assert.ok(generated.includes("export type User = z.infer<typeof userSchema>;"));
   }, cliWorkspaceTemp);
 });
 

@@ -3,10 +3,13 @@ export const jsonSchemaInputPluginKind = "json-schema" as const;
 export const jsonSchemaDialects = ["draft-2020-12", "draft-2019-09", "draft-7"] as const;
 export const jsonSchemaValidators = ["ajv", "none"] as const;
 export const jsonSchemaSourceProfiles = ["none", "opencode", "schemastore"] as const;
+export const jsonSchemaInertKeywordValueTypes = ["boolean", "null", "number", "string"] as const;
 
 export type JsonSchemaDialect = (typeof jsonSchemaDialects)[number];
 export type JsonSchemaValidator = (typeof jsonSchemaValidators)[number];
 export type JsonSchemaSourceProfile = (typeof jsonSchemaSourceProfiles)[number];
+export type JsonSchemaInertKeywordValueType = (typeof jsonSchemaInertKeywordValueTypes)[number];
+export type JsonSchemaInertKeywords = Readonly<Record<string, JsonSchemaInertKeywordValueType>>;
 export type JsonSchemaInputPluginKind = typeof jsonSchemaInputPluginKind;
 export type JsonSchemaKeywordPolicy = "supported" | "unknown";
 

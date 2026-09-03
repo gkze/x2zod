@@ -25,7 +25,11 @@ import type { z } from "zod/v4";
 import { isRecord } from "./structural";
 import { schemaError, ZodCLIOptionSchemaError } from "./zod-cli-errors";
 import { optionNamesForField, readCLIMetadata } from "./zod-cli-metadata";
-import type { ZodCLIOptionFieldMetadata, ZodCLIOptionMetadata } from "./zod-cli-metadata";
+import type {
+  ZodCLIOptionFieldMetadata,
+  ZodCLIOptionMetadata,
+  ZodCLIOptionValueMode,
+} from "./zod-cli-metadata";
 import {
   arrayElementSchema,
   innerSchema,
@@ -145,7 +149,8 @@ const createRequiredFieldParser = (schema: ZodSchema, context: FieldParserContex
   const baseSchema = unwrapSupportedWrappers(schema, path);
   const def = schemaDef(baseSchema, path);
 
-  if (metadata.valueMode === "string-array" || metadata.valueMode === "json-file-map")
+  if (metadata.valueMode !== undefined) {
+    assertValueModeSchemaType(metadata.valueMode, def.type, path);
     return multiple(
       createValueOption(
         optionNames,
@@ -154,6 +159,7 @@ const createRequiredFieldParser = (schema: ZodSchema, context: FieldParserContex
       ),
       { min: 1 },
     );
+  }
 
   if (def.type === "array")
     return multiple(
@@ -169,6 +175,15 @@ const createRequiredFieldParser = (schema: ZodSchema, context: FieldParserContex
     );
 
   return createValueOption(optionNames, valueParserForSchema(baseSchema, metadata, path), metadata);
+};
+
+const assertValueModeSchemaType = (
+  valueMode: ZodCLIOptionValueMode,
+  type: unknown,
+  path: readonly string[],
+): void => {
+  if (valueMode === "string-map" && type !== "record")
+    throw schemaError(path, "string-map CLI option value mode requires a Zod record");
 };
 
 const createValueOption = (
