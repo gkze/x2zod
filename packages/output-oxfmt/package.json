@@ -1,6 +1,6 @@
 {
   "name": "@x2zod/output-oxfmt",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "description": "Oxfmt output processor plugin for x2zod.",
   "license": "MIT",
   "repository": {

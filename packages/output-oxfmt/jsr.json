@@ -1,6 +1,6 @@
 {
   "name": "@x2zod/output-oxfmt",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "license": "MIT",
   "exports": "./src/index.ts",
   "publish": { "exclude": ["test/**"], "include": ["package.json", "src/**/*.ts"] }
