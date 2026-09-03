@@ -50,6 +50,7 @@ const printerHelperEntryPoint = nodePath.join(testDirectory, "target-print-helpe
 const bundledPrinterFileName = "target-print-helper.mjs";
 const generatedModuleFileName = "target.generated.ts";
 const optionsFileName = "plugin-options.json";
+const generatedTargetTestTimeoutMs = 15_000;
 const jsonSchemaNativePreviewExternals = [...nativePreviewExternals, "jsonc-parser"] as const;
 const lastArrayItemOffset = 1;
 const ajvOptions = { allErrors: true, logger: false, strict: false } satisfies Options;
@@ -331,6 +332,7 @@ void describe("JSON Schema public target E2E matrix", () => {
   ))
     void test(
       [target.name, "emits Zod declarations with Ajv runtime parity"].join(" "),
+      { timeout: generatedTargetTestTimeoutMs },
       async () => {
         await assertGeneratedTarget(target);
       },
