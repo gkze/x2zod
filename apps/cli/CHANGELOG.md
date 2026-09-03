@@ -1,5 +1,20 @@
 # @x2zod/cli
 
+## 0.3.0
+
+### Minor Changes
+
+- ea583e6: Add deterministic runtime-program emission, stable declaration configuration,
+  host-provided document retrieval URIs, and full pinned required-suite support for JSON Schema
+  Draft 7, Draft 2019-09, and Draft 2020-12. Add a strict SchemaStore compatibility profile for its
+  inert `tsType` and `x-intellij-language-injection` annotations.
+
+### Patch Changes
+
+- Updated dependencies [ea583e6]
+  - @x2zod/config@0.4.0
+  - @x2zod/core@0.6.0
+
 ## 0.2.2
 
 ### Patch Changes
