@@ -15,7 +15,7 @@ import {
   nativePreviewExternals,
   runNode,
 } from "../../../test/native-source-harness";
-import type { JsonSchemaDialect, JsonSchemaValue } from "../src";
+import type { JsonSchemaDialect, JsonSchemaInertKeywords, JsonSchemaValue } from "../src";
 
 const packageRootDirectory = nodePath.resolve(import.meta.dirname, "..");
 const tempRootDirectory = nodePath.join(packageRootDirectory, "node_modules/.cache");
@@ -93,6 +93,7 @@ export const compileGeneratedSchema = async (
     externalSchema?: JsonSchemaValue;
     externalSchemaRelativePath?: string;
     externalSchemaUri?: string;
+    inertKeywords?: JsonSchemaInertKeywords;
     schemaExportName?: string;
     transforms?: readonly ZodEmissionTransformInput[];
   }> = {},
@@ -123,6 +124,11 @@ export const compileGeneratedSchema = async (
       optionalArguments = [
         ...optionalArguments,
         `--declaration-export-mode=${options.declarationExportMode}`,
+      ];
+    if (options.inertKeywords !== undefined)
+      optionalArguments = [
+        ...optionalArguments,
+        `--inert-keywords=${JSON.stringify(options.inertKeywords)}`,
       ];
     if (options.externalSchema !== undefined)
       optionalArguments = [...optionalArguments, externalSchemaFile];

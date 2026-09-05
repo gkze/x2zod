@@ -59,6 +59,56 @@ void test("uses the external resource dialect and base URI for an exported refer
   assert.equal(generatedSchema.safeParse({ value: 1 }).success, false);
 });
 
+void test("keeps inert metadata out of root and independently exported runtime validators", async () => {
+  const externalSchemaUri = "https://example.com/inert-keywords/thing";
+  const schema = { $id: "https://example.com/inert-keywords/root", $ref: externalSchemaUri };
+  const externalSchema = {
+    $id: externalSchemaUri,
+    title: "Thing",
+    type: "object",
+    minProperties: 1,
+    properties: { xStringMetadata: { type: "string" } },
+  };
+  const annotatedSchema = { ...schema, xNumberMetadata: 1 };
+  const annotatedOptions = {
+    declarationExportMode: "all" as const,
+    externalSchemaUri,
+    externalSchema: {
+      ...externalSchema,
+      xStringMetadata: "resource documentation",
+      properties: { xStringMetadata: { type: "string", xBooleanMetadata: true } },
+    },
+    inertKeywords: {
+      xBooleanMetadata: "boolean",
+      xNumberMetadata: "number",
+      xStringMetadata: "string",
+    } as const,
+  };
+  const [baseline, root, exported] = await Promise.all([
+    compileGeneratedSchema(schema, {
+      declarationExportMode: "all",
+      externalSchema,
+      externalSchemaUri,
+    }),
+    compileGeneratedSchema(annotatedSchema, annotatedOptions),
+    compileGeneratedSchema(annotatedSchema, {
+      ...annotatedOptions,
+      schemaExportName: "thingSchema",
+    }),
+  ]);
+
+  assert.equal(root.source, baseline.source);
+  assert.equal(exported.source, baseline.source);
+  for (const { generatedSchema } of [root, exported]) {
+    assert.deepEqual(generatedSchema.safeParse({ xStringMetadata: "instance data" }), {
+      data: { xStringMetadata: "instance data" },
+      success: true,
+    });
+    assert.equal(generatedSchema.safeParse({}).success, false);
+    assert.equal(generatedSchema.safeParse({ xStringMetadata: 1 }).success, false);
+  }
+});
+
 void test("starts an exported dynamic schema in its own resource scope", async () => {
   const externalSchema: JsonSchemaValue = {
     $id: "https://example.com/tree",

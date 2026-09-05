@@ -9,12 +9,18 @@ import {
   requiredArgument,
   writeNativeSourceFile,
 } from "../../../test/native-print-helper";
-import { jsonSchemaDialectSchema, jsonSchemaInputPlugin, jsonSchemaValueSchema } from "../src";
+import {
+  jsonSchemaDialectSchema,
+  jsonSchemaInputPlugin,
+  jsonSchemaInputPluginOptionsSchema,
+  jsonSchemaValueSchema,
+} from "../src";
 
 const schemaPathArgumentIndex = 2;
 const dialectArgumentPrefix = "--dialect=";
 const declarationExportModeArgumentPrefix = "--declaration-export-mode=";
 const externalSchemaUriArgumentPrefix = "--external-schema-uri=";
+const inertKeywordsArgumentPrefix = "--inert-keywords=";
 const mapPropertiesArgument = "--map-properties";
 const defaultExternalSchemaUri = "https://example.com/model.schema.json";
 const runtimeCaseTypeName = "RuntimeCase";
@@ -37,11 +43,23 @@ const declarationExportMode =
     : declarationExportModeSchema.parse(
         declarationExportModeArgument.slice(declarationExportModeArgumentPrefix.length),
       );
+const inertKeywordsArgument = runtimeArguments.find((argument) =>
+  argument.startsWith(inertKeywordsArgumentPrefix),
+);
+const inertKeywords =
+  inertKeywordsArgument === undefined
+    ? {}
+    : jsonSchemaInputPluginOptionsSchema.parse({
+        inertKeywords: JSON.parse(
+          inertKeywordsArgument.slice(inertKeywordsArgumentPrefix.length),
+        ) as unknown,
+      }).inertKeywords;
 const externalSchemaPath = runtimeArguments.find(
   (argument) =>
     argument !== mapPropertiesArgument &&
     !argument.startsWith(declarationExportModeArgumentPrefix) &&
     !argument.startsWith(dialectArgumentPrefix) &&
+    !argument.startsWith(inertKeywordsArgumentPrefix) &&
     !argument.startsWith(externalSchemaUriArgumentPrefix),
 );
 const externalSchemaUriArgument = runtimeArguments.find((argument) =>
@@ -76,6 +94,7 @@ const result = await compileToZodSource({
   plugin: jsonSchemaInputPlugin,
   pluginOptions: {
     externalSchemas,
+    inertKeywords,
     ...(dialect === undefined ? {} : { dialect }),
     validator: "none",
   },
