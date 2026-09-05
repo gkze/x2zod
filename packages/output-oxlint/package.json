@@ -1,6 +1,6 @@
 {
   "name": "@x2zod/output-oxlint",
-  "version": "0.1.11",
+  "version": "0.1.12",
   "description": "Oxlint output processor plugin for x2zod.",
   "license": "MIT",
   "repository": {
