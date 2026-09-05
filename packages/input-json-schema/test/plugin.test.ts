@@ -16,6 +16,7 @@ import type {
   JsonSchemaValue,
 } from "../src";
 import { compileGeneratedSchema } from "./generated-schema-harness";
+import { assertRuntimeEntrypointPrograms } from "./runtime-program-assertions";
 
 const finalCallOffset = 1;
 const rejectedNumber = 42;
@@ -178,7 +179,7 @@ void describe("jsonSchemaInputPlugin lower", () => {
     const lowered = expectOk(
       await jsonSchemaInputPlugin.lower(runtimeBacked, options({ validator: "none" })),
     );
-    assert.equal(lowered.runtimePrograms?.length, 1);
+    assertRuntimeEntrypointPrograms(lowered, ["root"]);
 
     const unknown = expectOk(
       await jsonSchemaInputPlugin.prepare(
@@ -397,7 +398,7 @@ void describe("jsonSchemaInputPlugin precise diagnostics", () => {
 
     const result = expectOk(await jsonSchemaInputPlugin.lower(prepared, pluginOptions));
 
-    assert.equal(result.runtimePrograms?.length, 1);
+    assertRuntimeEntrypointPrograms(result, ["root", `schema:${externalSchemaUri}#/$defs/tags`]);
   });
 
   void test("preserves Draft 7 ref sibling semantics with exact runtime", async () => {

@@ -110,12 +110,6 @@ const collectStringLengthDiagnostics = (
       message: "JSON Schema maxLength must be a non-negative integer.",
       pointer: jsonSchemaPointerWithSegment(request.pointer, jsonSchemaKeywords.maxLength),
     });
-  if (isStringLength(minLength) && isStringLength(maxLength) && minLength > maxLength)
-    context.addDiagnostic({
-      code: "invalid_schema_document",
-      message: "JSON Schema minLength cannot be greater than maxLength.",
-      pointer: jsonSchemaPointerWithSegment(request.pointer, jsonSchemaKeywords.maxLength),
-    });
 };
 
 const applyJsonSchemaStringPattern = (
@@ -156,6 +150,9 @@ export const applyJsonSchemaStringConstraints = (
 
   const minLength = request.schema[jsonSchemaKeywords.minLength];
   const maxLength = request.schema[jsonSchemaKeywords.maxLength];
+
+  if (isStringLength(minLength) && isStringLength(maxLength) && minLength > maxLength)
+    return zodPlan.never();
 
   if (isStringLength(minLength) || isStringLength(maxLength))
     constrained = zodPlan.refine(

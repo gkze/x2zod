@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import nodePath from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-import type { ZodEmissionTransformInput } from "@x2zod/core";
+import type { DeclarationExportMode, ZodEmissionTransformInput } from "@x2zod/core";
 
 import {
   buildNodeBundle,
@@ -89,9 +89,11 @@ export const compileGeneratedSchema = async (
   schema: JsonSchemaValue,
   options: Readonly<{
     dialect?: JsonSchemaDialect;
+    declarationExportMode?: DeclarationExportMode;
     externalSchema?: JsonSchemaValue;
     externalSchemaRelativePath?: string;
     externalSchemaUri?: string;
+    schemaExportName?: string;
     transforms?: readonly ZodEmissionTransformInput[];
   }> = {},
 ): Promise<GeneratedSchemaFixture> => {
@@ -117,6 +119,11 @@ export const compileGeneratedSchema = async (
     let optionalArguments: readonly string[] = [];
     if (options.dialect !== undefined)
       optionalArguments = [...optionalArguments, `--dialect=${options.dialect}`];
+    if (options.declarationExportMode !== undefined)
+      optionalArguments = [
+        ...optionalArguments,
+        `--declaration-export-mode=${options.declarationExportMode}`,
+      ];
     if (options.externalSchema !== undefined)
       optionalArguments = [...optionalArguments, externalSchemaFile];
     const externalSchemaUri =
@@ -135,7 +142,7 @@ export const compileGeneratedSchema = async (
     await writeFile(generatedFile, source);
     const generatedSchema = await importGeneratedExport(
       generatedFile,
-      generatedSchemaExport,
+      options.schemaExportName ?? generatedSchemaExport,
       isRuntimeZodSchema,
     );
 

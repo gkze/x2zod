@@ -19,10 +19,13 @@ export type CompileToZodSourceRequest<
 > = Readonly<{
   document: InputDocumentInput;
   plugin: InputPlugin<TPreparedInput, TPluginOptions, TPluginOptionsInput, TPluginKind>;
-  pluginOptions: TPluginOptionsInput;
   output: ZodSourceOutputOptions;
   transforms?: readonly ZodEmissionTransformInput[] | undefined;
-}>;
+}> &
+  (
+    | Readonly<{ pluginOptions: TPluginOptionsInput; resolvedPluginOptions?: never }>
+    | Readonly<{ pluginOptions?: never; resolvedPluginOptions: TPluginOptions }>
+  );
 
 export type CompileToZodSourceResult = Result<Readonly<{ sourceFile: SourceFile }>>;
 
@@ -81,21 +84,17 @@ export const compileToZodSource = async <
   TPreparedInput,
   TPluginOptions,
   TPluginOptionsInput = TPluginOptions,
->({
-  document,
-  output,
-  plugin,
-  pluginOptions,
-  transforms,
-}: CompileToZodSourceRequest<
-  TPreparedInput,
-  TPluginOptions,
-  TPluginOptionsInput
->): Promise<CompileToZodSourceResult> => {
+>(
+  request: CompileToZodSourceRequest<TPreparedInput, TPluginOptions, TPluginOptionsInput>,
+): Promise<CompileToZodSourceResult> => {
+  const { document, output, plugin, transforms } = request;
   const parsedDocument = parseInputDocument(document);
   if (!parsedDocument.ok) return parsedDocument;
 
-  const parsedOptions = parsePluginOptions(plugin.kind, plugin.optionsSchema, pluginOptions);
+  const parsedOptions =
+    "resolvedPluginOptions" in request
+      ? ok(request.resolvedPluginOptions)
+      : parsePluginOptions(plugin.kind, plugin.optionsSchema, request.pluginOptions);
   if (!parsedOptions.ok) return parsedOptions;
 
   const prepared = await runPluginStep({

@@ -6,6 +6,7 @@ import type { Result, ZodEmissionModuleInput } from "@x2zod/core";
 import { jsonSchemaInputPlugin, jsonSchemaInputPluginOptionsSchema } from "../src";
 import type { JsonObject, JsonSchemaDialect, JsonSchemaInputPluginOptions } from "../src";
 import { compileGeneratedSchema } from "./generated-schema-harness";
+import { assertRuntimeEntrypointPrograms } from "./runtime-program-assertions";
 
 const stockSchemaUri = (dialect: JsonSchemaDialect): string =>
   `https://json-schema.org/draft/${dialect === "draft-2020-12" ? "2020-12" : "2019-09"}/schema`;
@@ -300,7 +301,7 @@ void test("projects validation policy onto pointer targets in arbitrary data", a
     pluginOptions,
   );
   assert.equal(result.ok, true);
-  assert.equal(result.value.runtimePrograms?.length, 1);
+  assertRuntimeEntrypointPrograms(result.value, ["root", "schema:/examples/0"]);
 });
 
 void test("keeps a materialized local pointer bound despite an unused duplicate identifier", async () => {
@@ -418,8 +419,12 @@ void test("inherits an external container policy for direct and indirect refs", 
 
   assert.equal(direct.ok, true);
   assert.equal(indirect.ok, true);
-  assert.equal(direct.value.runtimePrograms?.length, 1);
-  assert.equal(indirect.value.runtimePrograms?.length, 1);
+  assertRuntimeEntrypointPrograms(direct.value, ["root", `schema:${containerUri}#/$defs/target`]);
+  assertRuntimeEntrypointPrograms(indirect.value, [
+    "root",
+    `schema:${containerUri}#`,
+    `schema:${containerUri}#/$defs/target`,
+  ]);
 });
 
 void test("normalizes trailing registry fragments for custom metaschemas", async () => {

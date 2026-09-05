@@ -3,39 +3,29 @@
   "extends": ["//"],
   "tasks": {
     "gen": {
-      "inputs": [
-        "package.json",
-        "src/build-inputs.ts",
-        "src/generate-build-inputs-schema.ts",
-        "tsconfig.json"
-      ],
+      "inputs": ["package.json", "src/**/*.ts", "$TURBO_ROOT$/.oxfmtrc.json", "tsconfig.json"],
       "outputs": ["schema/build-inputs.schema.json"]
     },
     "gen:check": {
       "inputs": [
         "package.json",
         "schema/build-inputs.schema.json",
-        "src/build-inputs.ts",
-        "src/generate-build-inputs-schema.ts",
+        "src/**/*.ts",
+        "$TURBO_ROOT$/.oxfmtrc.json",
         "tsconfig.json"
       ],
       "outputs": []
     },
     "gen:schema": {
-      "inputs": [
-        "package.json",
-        "src/build-inputs.ts",
-        "src/generate-build-inputs-schema.ts",
-        "tsconfig.json"
-      ],
+      "inputs": ["package.json", "src/**/*.ts", "$TURBO_ROOT$/.oxfmtrc.json", "tsconfig.json"],
       "outputs": ["schema/build-inputs.schema.json"]
     },
     "gen:check:schema": {
       "inputs": [
         "package.json",
         "schema/build-inputs.schema.json",
-        "src/build-inputs.ts",
-        "src/generate-build-inputs-schema.ts",
+        "src/**/*.ts",
+        "$TURBO_ROOT$/.oxfmtrc.json",
         "tsconfig.json"
       ],
       "outputs": []

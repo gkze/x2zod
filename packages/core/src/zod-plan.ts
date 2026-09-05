@@ -225,13 +225,7 @@ export const zodMethodCallSchema: z.ZodType<ZodMethodCall, ZodMethodCallInput> =
   zodMethodCallSchemaValue;
 
 const zodObjectPropertySchemaValue: z.ZodType<ZodObjectProperty, ZodObjectPropertyInput> = z.lazy(
-  () =>
-    z
-      .strictObject({
-        key: z.string().min(nonEmptyStringLength),
-        expression: zodExpressionSchemaValue,
-      })
-      .readonly(),
+  () => z.strictObject({ key: z.string(), expression: zodExpressionSchemaValue }).readonly(),
 );
 export const zodObjectPropertySchema: z.ZodType<ZodObjectProperty, ZodObjectPropertyInput> =
   zodObjectPropertySchemaValue;
@@ -303,6 +297,7 @@ const zodDeclarationSchemaValue: z.ZodType<ZodDeclaration, ZodDeclarationInput> 
   .strictObject({
     symbol: zodSymbolSchemaValue,
     expression: zodExpressionSchemaValue,
+    exportExpression: zodExpressionSchemaValue.optional(),
     nameHints: z.array(zodDeclarationNameHintSchemaValue).readonly().default([]),
   })
   .readonly();

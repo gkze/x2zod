@@ -38,6 +38,8 @@ export type X2ZodCompilableTarget = Readonly<{
   kind: string;
   name: string;
   options: unknown;
+  optionsInput?: unknown;
+  optionsResolved?: true;
   output: X2ZodCompilableOutput;
   plugin: X2ZodLoadedInputPlugin;
   transforms?: readonly ZodEmissionTransformInput[] | undefined;
@@ -85,7 +87,7 @@ export type ResolveX2ZodCompilableTargetRequest = Readonly<{
 
 export type ResolveX2ZodCompilableTargetResult = Readonly<{
   pluginOptions: unknown;
-  target: X2ZodCompilableTarget;
+  target: X2ZodCompilableTarget & Readonly<{ optionsInput: unknown; optionsResolved: true }>;
 }>;
 
 const asExecutablePlugin = (plugin: X2ZodLoadedInputPlugin): ExecutableInputPlugin =>
@@ -172,19 +174,21 @@ const resolveAnonymousCompilableTarget = async ({
   if (input === undefined) throw new Error("Missing required input option.");
   const kind = requireValue(overrides.kind, "--kind");
   const plugin = requireAnonymousPlugin(kind, pluginRegistry);
-  const pluginOptions = await resolveZodCLIOptionOverrides(
+  const optionsInput = await resolveZodCLIOptionOverrides(
     plugin.optionsSchema,
     overrides.pluginOptions ?? {},
     optionTransformContext,
   );
 
   return {
-    pluginOptions,
+    pluginOptions: optionsInput,
     target: {
       input,
       kind,
       name: "<anonymous>",
-      options: pluginOptions,
+      options: plugin.optionsSchema.parse(optionsInput),
+      optionsInput,
+      optionsResolved: true,
       output: outputFromAnonymousOverrides(overrides),
       plugin,
       transforms: [],
@@ -207,18 +211,26 @@ const resolveConfiguredCompilableTarget = async ({
   if (overrides.kind !== undefined && overrides.kind !== target.kind)
     throw new Error(`Target ${targetName} uses kind ${target.kind}, not ${overrides.kind}.`);
 
-  const pluginOptions = await mergeZodCLIOptionOverrides({
-    context: optionTransformContext,
-    existingOptions: target.options,
-    overrides: overrides.pluginOptions ?? {},
-    schema: target.plugin.optionsSchema,
-  });
+  const hasOptionOverrides = Object.values(overrides.pluginOptions ?? {}).some(
+    (value) => value !== undefined,
+  );
+  const optionsInput = hasOptionOverrides
+    ? await mergeZodCLIOptionOverrides({
+        context: optionTransformContext,
+        existingOptions: target.optionsInput,
+        overrides: overrides.pluginOptions ?? {},
+        schema: target.plugin.optionsSchema,
+      })
+    : target.optionsInput;
   return {
-    pluginOptions,
+    pluginOptions: optionsInput,
     target: {
       ...target,
       input: inputFromOverrides(overrides) ?? target.input,
-      options: pluginOptions,
+      options: hasOptionOverrides
+        ? target.plugin.optionsSchema.parse(optionsInput)
+        : target.options,
+      optionsInput,
       output: outputWithOverrides(target.output, overrides),
     },
   };
@@ -268,7 +280,9 @@ export const compileX2ZodTarget = async (
     document,
     output: output ?? zodSourceOutputOptionsForConfig(target.output),
     plugin: asExecutablePlugin(target.plugin),
-    pluginOptions: pluginOptions ?? target.options,
+    ...(pluginOptions === undefined && target.optionsResolved === true
+      ? { resolvedPluginOptions: target.options }
+      : { pluginOptions: pluginOptions === undefined ? target.options : pluginOptions }),
     transforms: transforms ?? target.transforms ?? [],
   });
 };

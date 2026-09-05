@@ -223,6 +223,8 @@ export type X2ZodResolvedTargetFor<
   kind: TKind;
   name: string;
   options: z.output<TPlugins[TKind]["optionsSchema"]>;
+  optionsInput: z.input<TPlugins[TKind]["optionsSchema"]>;
+  optionsResolved: true;
   output: X2ZodResolvedOutputConfig<TOutputProcessors>;
   plugin: TPlugins[TKind];
   transforms: X2ZodResolvedTargetTransformConfig;

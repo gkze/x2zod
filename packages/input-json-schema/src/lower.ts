@@ -409,6 +409,7 @@ export const declareSchema = (request: DeclareSchemaRequest, context: LoweringCo
   context.visiting.add(address);
   const expression = lowerJsonSchema({ context, location, pointer, schema });
   context.visiting.delete(address);
+  context.declarationLocations.set(address, location);
   context.declarations.set(
     address,
     zodDeclaration(

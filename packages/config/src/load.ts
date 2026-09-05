@@ -523,6 +523,8 @@ const readResolvedTarget = (
     kind,
     name,
     options: resolvedOptions,
+    optionsInput: options === undefined ? emptyOptions : options,
+    optionsResolved: true,
     output: resolvedOutput,
     plugin,
     transforms: transforms ?? [],

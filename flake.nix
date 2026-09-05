@@ -198,6 +198,7 @@
           dontConfigure = true;
           dontBuild = true;
           doCheck = true;
+          doInstallCheck = true;
 
           env = {
             TURBO_TELEMETRY_DISABLED = "1";
@@ -233,10 +234,28 @@
               "$appRoot"/
 
             makeWrapper ${lib.getExe pkgs.bun} "$out/bin/x2zod" \
-              --chdir "$appRoot" \
-              --add-flags "run apps/cli/src/cli.ts"
+              --add-flags "--no-env-file run $appRoot/apps/cli/src/cli.ts"
 
             runHook postInstall
+          '';
+
+          installCheckPhase = ''
+            runHook preInstallCheck
+
+            fixtureRoot="$(mktemp -d)"
+            printf '{"type":"string"}\n' > "$fixtureRoot/schema.json"
+            printf '%s\n' \
+              "import { jsonSchemaInputPlugin } from '$out/lib/x2zod/packages/input-json-schema/src/index.ts';" \
+              'export default { plugins: { input: { "json-schema": jsonSchemaInputPlugin } }, targets: {} };' \
+              > "$fixtureRoot/x2zod.config.mjs"
+            (
+              cd "$fixtureRoot"
+              "$out/bin/x2zod" compile --kind json-schema \
+                --input schema.json --output generated.ts --type-name Example
+              test -s generated.ts
+            )
+
+            runHook postInstallCheck
           '';
 
           meta = {

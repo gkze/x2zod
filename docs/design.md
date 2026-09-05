@@ -274,6 +274,13 @@ options are completed from the user's current config rather than from static she
 After option parsing, core treats options as opaque `TOptions`. It does not inspect fields such as
 `validator`, `dialect`, `externalSchemas`, or any future plugin-specific setting.
 
+Resolved targets retain both `optionsInput` and parsed `options`, with `optionsResolved: true`. CLI
+overrides merge into `optionsInput` before final validation; unchanged targets reuse their parsed
+options. Manually constructed targets without that marker continue to validate their `options` as
+raw input. Core accepts either raw `pluginOptions` or already validated `resolvedPluginOptions`,
+exclusively. Callers of the resolved form own option validation against the selected plugin schema.
+This keeps defaults and option transformations from being applied again during compilation.
+
 ## Zod Expression Plan
 
 Input plugins lower their input language into a thin Zod expression plan exposed by `@x2zod/core`.
@@ -343,6 +350,7 @@ consistent in a TypeScript module:
 export type ZodDeclaration = {
   readonly symbol: ZodSymbol;
   readonly expression: ZodExpression;
+  readonly exportExpression?: ZodExpression;
   readonly nameHints: readonly ZodDeclarationNameHint[];
 };
 
@@ -353,6 +361,10 @@ export type ZodDeclarationNameHint = { readonly value: string; readonly provenan
 not interpret it when allocating names, so future input plugins can use values such as
 `protobuf/message` or `graphql/type` without extending a core-owned enumeration. Omitting it still
 defaults to `explicit`.
+
+An optional `exportExpression` supplies standalone validation for an exported declaration while
+internal references continue using `expression`. This lets plugins preserve context-sensitive
+reference semantics and enforce the full contract when a named schema is used independently.
 
 The escape hatch is helper-backed runtime semantics, not arbitrary plugin-owned source. Semantics
 that native or planned Zod expressions cannot preserve, such as `not`, `if` / `then` / `else`,
@@ -418,8 +430,8 @@ Schema-level helpers use explicit wrapper expressions rather than pretending to 
 methods. `zodPlan.preserveObjectInput(object, requiredOwnKeys)` wraps a structural object schema and
 retains its inferred input type while enforcing both the wrapped schema and the explicitly listed
 own keys at runtime. Optional fields and additional-key behavior remain the wrapped schema's
-concern. Property-key output transforms fail loudly when they would cross this input-preserving
-boundary.
+concern. When nested property transforms produce codecs, the wrapper applies their decode and encode
+operations while retaining other own properties, including an own `__proto__` field.
 
 Core validates each request or wrapper against its receiver, derives the required helper IDs by
 traversing the final source model, and emits one module-local definition per helper ID in catalog

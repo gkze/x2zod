@@ -8,11 +8,13 @@ import type {
 import {
   createArrayTypeNode,
   createIdentifier,
+  createQualifiedName,
   createIntersectionTypeNode,
   createKeywordExpression,
   createKeywordTypeNode,
   createLiteralTypeNode,
   createNumericLiteral,
+  createOptionalTypeNode,
   createPropertySignatureDeclaration,
   createStringLiteral,
   createToken,
@@ -25,6 +27,7 @@ import {
 } from "@typescript/native-preview/unstable/ast/factory";
 
 import { createSourceZodType as zodType } from "./source-ast";
+import { optionalExpression } from "./source-expression-optionality";
 import type {
   SourceArgument,
   SourceEmissionModule,
@@ -53,6 +56,7 @@ type RecursiveDeclarationTypes = Readonly<{
 }>;
 
 type ValueTypeContext = Readonly<{
+  declarations: ReadonlyMap<ZodSymbol, SourceExpression>;
   recursiveNames: ReadonlyMap<ZodSymbol, RecursiveDeclarationTypeNames>;
   schemaConstNames: ReadonlyMap<ZodSymbol, string>;
 }>;
@@ -106,9 +110,6 @@ const arrayElements = (argument: SourceArgument | undefined): readonly SourceArg
 
 const literalArguments = (argument: SourceArgument | undefined): readonly ZodLiteralValue[] =>
   arrayElements(argument).flatMap((element) => (element.kind === "literal" ? [element.value] : []));
-
-const optionalCall = (calls: readonly SourceMethodCall[]): boolean =>
-  calls.some((call) => call.method === "optional");
 
 const requiredKeys = (calls: readonly SourceMethodCall[]): ReadonlySet<string> =>
   new Set(
@@ -167,10 +168,10 @@ const objectConfigValueType = (
     ? objectType
     : createIntersectionTypeNode([
         objectType,
-        createTypeReferenceNode(createIdentifier("Record"), [
-          createKeywordTypeNode(SyntaxKind.StringKeyword),
-          additionalValue,
-        ]),
+        createTypeReferenceNode(
+          createQualifiedName(createIdentifier("globalThis"), createIdentifier("Record")),
+          [createKeywordTypeNode(SyntaxKind.StringKeyword), additionalValue],
+        ),
       ]);
 };
 
@@ -183,23 +184,48 @@ const objectValueType = (
   const properties = shape?.kind === "object" ? shape.properties : [];
   const required = requiredKeys(expression.calls);
   const members: TypeElement[] = properties.map((property) => {
-    const optional = optionalCall(property.expression.calls) && !required.has(property.key);
+    const optional =
+      optionalExpression({ ...request, expression: property.expression }) &&
+      !required.has(property.key);
     const type = project({ ...request, expression: property.expression });
     return createPropertySignatureDeclaration(
       undefined,
       propertyName(property.key),
       optional ? createToken(SyntaxKind.QuestionToken) : undefined,
       required.has(property.key)
-        ? createTypeReferenceNode(createIdentifier("Exclude"), [
-            type,
-            createKeywordTypeNode(SyntaxKind.UndefinedKeyword),
-          ])
+        ? createTypeReferenceNode(
+            createQualifiedName(createIdentifier("globalThis"), createIdentifier("Exclude")),
+            [type, createKeywordTypeNode(SyntaxKind.UndefinedKeyword)],
+          )
         : type,
       createIdentifier("undefined"),
     );
   });
   const configured = objectConfigValueType(createTypeLiteralNode(members), project, request);
   return applyValueCalls(configured, expression.calls);
+};
+
+const tupleValueType = (
+  request: FactoryValueTypeRequest,
+  project: ValueTypeProjector,
+): TypeNode => {
+  const items = arrayElements(request.expression.args[0]);
+  let optionalStart = items.length;
+  while (optionalStart > 0) {
+    const child = expressionArgument(items[optionalStart - 1]);
+    if (child === undefined || !optionalExpression({ ...request, expression: child })) break;
+    optionalStart -= 1;
+  }
+  return createTupleTypeNode(
+    items.map((argument, index) => {
+      const child = expressionArgument(argument);
+      const type =
+        child === undefined
+          ? createKeywordTypeNode(SyntaxKind.UnknownKeyword)
+          : project({ ...request, expression: child });
+      return index >= optionalStart ? createOptionalTypeNode(type) : type;
+    }),
+  );
 };
 
 const factoryValueType = (
@@ -253,19 +279,17 @@ const factoryValueType = (
     }
     case "record": {
       return applyCalls(
-        createTypeReferenceNode(createIdentifier("Record"), [
-          nested(expression.args[0]),
-          nested(expression.args[1]),
-        ]),
+        createTypeReferenceNode(
+          createQualifiedName(createIdentifier("globalThis"), createIdentifier("Record")),
+          [nested(expression.args[0]), nested(expression.args[1])],
+        ),
       );
     }
     case "string": {
       return applyCalls(createKeywordTypeNode(SyntaxKind.StringKeyword));
     }
     case "tuple": {
-      return applyCalls(
-        createTupleTypeNode(arrayElements(expression.args[0]).map((argument) => nested(argument))),
-      );
+      return applyCalls(tupleValueType(request, project));
     }
     case "union": {
       return applyCalls(
@@ -311,7 +335,11 @@ const valueType: ValueTypeProjector = (request) => {
     }
     case "wrapper": {
       return applyValueCalls(
-        valueType({ ...request, expression: expression.expression, projection: "input" }),
+        valueType({
+          ...request,
+          expression: expression.expression,
+          projection: expression.parseStructural ? projection : "input",
+        }),
         expression.calls,
       );
     }
@@ -324,16 +352,46 @@ const valueType: ValueTypeProjector = (request) => {
 const recursiveSchemaType = (
   expression: SourceExpression,
   names: RecursiveDeclarationTypeNames,
-): TypeNode =>
-  expression.kind === "codec"
-    ? zodType("ZodCodec", [
-        zodType("ZodType", [
-          createKeywordTypeNode(SyntaxKind.UnknownKeyword),
-          namedType(names.input),
+  context: ValueTypeContext,
+): TypeNode => {
+  const schemaType =
+    expression.kind === "codec"
+      ? zodType("ZodCodec", [
+          zodType("ZodType", [
+            createKeywordTypeNode(SyntaxKind.UnknownKeyword),
+            namedType(names.input),
+          ]),
+          zodType("ZodType", [namedType(names.output), namedType(names.output)]),
+        ])
+      : zodType("ZodType", [namedType(names.output), namedType(names.input)]);
+  const optionalMarkers = (["input", "output"] as const).flatMap((projection) =>
+    optionalExpression({ context, expression, projection })
+      ? [
+          createPropertySignatureDeclaration(
+            undefined,
+            createIdentifier(projection === "input" ? "optin" : "optout"),
+            undefined,
+            literalType("optional"),
+            createIdentifier("undefined"),
+          ),
+        ]
+      : [],
+  );
+  return optionalMarkers.length === 0
+    ? schemaType
+    : createIntersectionTypeNode([
+        schemaType,
+        createTypeLiteralNode([
+          createPropertySignatureDeclaration(
+            undefined,
+            createIdentifier("_zod"),
+            undefined,
+            createTypeLiteralNode(optionalMarkers),
+            createIdentifier("undefined"),
+          ),
         ]),
-        zodType("ZodType", [namedType(names.output), namedType(names.output)]),
-      ])
-    : zodType("ZodType", [namedType(names.output), namedType(names.input)]);
+      ]);
+};
 
 const allocateRecursiveNames = (
   symbols: readonly ZodSymbol[],
@@ -369,6 +427,7 @@ export const createRecursiveDeclarationTypes = (input: {
     input.allocator,
   );
   const context: ValueTypeContext = {
+    declarations,
     recursiveNames: names,
     schemaConstNames: input.schemaConstNames,
   };
@@ -394,7 +453,7 @@ export const createRecursiveDeclarationTypes = (input: {
           undefined,
           createIdentifier(declarationNames.schema),
           undefined,
-          recursiveSchemaType(expression, declarationNames),
+          recursiveSchemaType(expression, declarationNames, context),
         ),
       );
   }

@@ -1,5 +1,12 @@
-import { ok, zodDeclaration, zodPlan, zodSymbol } from "@x2zod/core";
-import type { Diagnostic, Result, SourceLocationMap, ZodEmissionModuleInput } from "@x2zod/core";
+import { ok, zodPlan } from "@x2zod/core";
+import type {
+  Diagnostic,
+  Result,
+  SourceLocationMap,
+  ZodDeclaration,
+  ZodEmissionModuleInput,
+  ZodRuntimeProgram,
+} from "@x2zod/core";
 
 import { resultFromJsonSchemaDiagnostics } from "./diagnostics";
 import { defaultJsonSchemaDialectPolicy } from "./dialect";
@@ -15,9 +22,11 @@ import { declareSchema } from "./lower";
 import { loweringDiagnosticSink as diagnosticSink } from "./lower-diagnostics";
 import type { LoweringContext } from "./lower-types";
 import { jsonSchemaValidationKeywords } from "./metadata";
-import { jsonSchemaDeclarationNameHints } from "./name-hints";
 import type { ResolvedJsonSchemaInputPluginOptions } from "./options";
-import { createJsonSchemaReferenceResolver } from "./reference";
+import {
+  createJsonSchemaReferenceResolver,
+  createJsonSchemaReferenceResolverFromGraph,
+} from "./reference";
 import type { JsonSchemaAddress } from "./reference";
 import { resolveJsonSchemaResourcePolicies } from "./resource-policies";
 import { stripReachableRuntimeDocument } from "./runtime-schema-projection";
@@ -123,30 +132,47 @@ const createRuntimeRequest = (
   };
 };
 
-const runtimeFallbackResult = async (
+const guardRuntimeDeclarations = async (
   context: LoweringContext,
-  document: ParsedJsonSchemaDocument,
   runtimeRequest: ReturnType<typeof createRuntimeRequest>,
+  fallback: boolean,
 ): Promise<Result<ZodEmissionModuleInput>> => {
-  const runtimeProgram = await createStandaloneRuntimeProgram(runtimeRequest);
-  if (!runtimeProgram.ok) return runtimeProgram;
-  return ok(
-    {
-      declarations: [
-        zodDeclaration(
-          zodSymbol(rootSymbol),
-          zodPlan.runtimeGuard(zodPlan.unknown(), runtimeProgram.value.id, "encoded-input"),
-          jsonSchemaDeclarationNameHints(context.references.root.pointer, document.schema),
-        ),
-      ],
-      root: rootSymbol,
-      runtimePrograms: [runtimeProgram.value],
-    },
-    [
-      ...context.diagnostics.filter((diagnostic) => diagnostic.severity !== "error"),
-      ...(runtimeProgram.diagnostics ?? []),
-    ],
-  );
+  const declarations: ZodDeclaration[] = [];
+  const runtimePrograms: ZodRuntimeProgram[] = [];
+  const diagnostics = context.diagnostics.filter((diagnostic) => diagnostic.severity !== "error");
+  for (const [address, declaration] of context.declarations) {
+    const location = context.declarationLocations.get(address);
+    if (location === undefined) throw new Error("Missing JSON Schema declaration location.");
+    const declarationRequest = {
+      ...runtimeRequest,
+      references: createJsonSchemaReferenceResolverFromGraph(context.references.graph, location),
+    };
+    const projection = jsonSchemaRuntimeProjection(declarationRequest);
+    const structural =
+      fallback || projection === "conservative"
+        ? { ...declaration, expression: zodPlan.unknown() }
+        : declaration;
+    const isRoot = declaration.symbol === rootSymbol;
+    if (projection === "none" && !fallback) declarations.push(declaration);
+    else {
+      // Serialize compiler/native-parser state instead of spawning one process per declaration.
+      const compiled = await createStandaloneRuntimeProgram(declarationRequest);
+      if (!compiled.ok) return compiled;
+      const program = {
+        ...compiled.value,
+        id: isRoot ? compiled.value.id : `${compiled.value.id}:${declaration.symbol}`,
+      };
+      runtimePrograms.push(program);
+      diagnostics.push(...(compiled.diagnostics ?? []));
+      const guarded = zodPlan.runtimeGuard(
+        zodPlan.reference(structural.symbol),
+        program.id,
+        "encoded-input",
+      );
+      declarations.push({ ...structural, exportExpression: guarded });
+    }
+  }
+  return ok({ declarations, root: rootSymbol, runtimePrograms }, diagnostics);
 };
 
 export const lowerJsonSchemaDocument = async (
@@ -188,6 +214,7 @@ export const lowerJsonSchemaDocument = async (
   });
   if (!resolvedResourcePolicies.ok) return resolvedResourcePolicies;
   const context: LoweringContext = {
+    declarationLocations: new Map(),
     declarations: new Map(),
     diagnostics: [],
     formatAssertionVocabulary,
@@ -215,31 +242,8 @@ export const lowerJsonSchemaDocument = async (
     normalizedOptions.externalSchemas,
     context,
   );
-  if (!structuralModule.ok) {
-    if (!hasOnlyExactRuntimeRecoverableErrors(context.diagnostics)) return structuralModule;
-    return runtimeFallbackResult(context, document, runtimeRequest);
-  }
-  const runtimeProjection = jsonSchemaRuntimeProjection(runtimeRequest);
-  if (runtimeProjection === "none") return structuralModule;
-  const runtimeProgram = await createStandaloneRuntimeProgram(runtimeRequest);
-  if (!runtimeProgram.ok) return runtimeProgram;
-  return ok(
-    {
-      ...structuralModule.value,
-      declarations: structuralModule.value.declarations.map((declaration) =>
-        declaration.symbol === rootSymbol
-          ? {
-              ...declaration,
-              expression: zodPlan.runtimeGuard(
-                runtimeProjection === "conservative" ? zodPlan.unknown() : declaration.expression,
-                runtimeProgram.value.id,
-                "encoded-input",
-              ),
-            }
-          : declaration,
-      ),
-      runtimePrograms: [runtimeProgram.value],
-    },
-    [...(structuralModule.diagnostics ?? []), ...(runtimeProgram.diagnostics ?? [])],
-  );
+  if (!structuralModule.ok && !hasOnlyExactRuntimeRecoverableErrors(context.diagnostics))
+    return structuralModule;
+  const guarded = await guardRuntimeDeclarations(context, runtimeRequest, !structuralModule.ok);
+  return guarded;
 };

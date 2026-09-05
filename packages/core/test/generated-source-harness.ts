@@ -25,6 +25,7 @@ export type GeneratedSourceHarness = Readonly<{
 export const createGeneratedSourceHarness = (input: {
   readonly prefix: string;
   readonly printerEntryPoint: string;
+  readonly nativeProcessTimeoutMs?: number;
 }): GeneratedSourceHarness => {
   const directory = createTemporaryDirectory({
     prefix: input.prefix,
@@ -63,11 +64,18 @@ export const createGeneratedSourceHarness = (input: {
         allowedStderr: isNativePreviewShutdownStderr,
         args: [printerBundleFile, coreBundleFile, ...args],
         cwd: corePackageRootDirectory,
+        ...(input.nativeProcessTimeoutMs === undefined
+          ? {}
+          : { timeoutMs: input.nativeProcessTimeoutMs }),
       }),
   };
 };
 
-export const emitGeneratedDeclarations = (sourceFile: string, outputDirectory: string): void => {
+export const emitGeneratedDeclarations = (
+  sourceFile: string,
+  outputDirectory: string,
+  timeoutMs?: number,
+): void => {
   mkdirSync(outputDirectory, { recursive: true });
   const result = spawnSync(
     typeScriptBinary,
@@ -87,8 +95,19 @@ export const emitGeneratedDeclarations = (sourceFile: string, outputDirectory: s
       "es2022",
       sourceFile,
     ],
-    { cwd: corePackageRootDirectory, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
+    {
+      cwd: corePackageRootDirectory,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+      ...(timeoutMs === undefined ? {} : { timeout: timeoutMs, killSignal: "SIGKILL" }),
+    },
   );
 
+  if (result.error !== undefined)
+    throw new Error(`Generated declaration emit failed: ${result.error.message}`, {
+      cause: result.error,
+    });
+  if (result.signal !== null)
+    throw new Error(`Generated declaration emit was terminated by ${result.signal}.`);
   assert.equal(result.status, 0, `${result.stdout}${result.stderr}`);
 };

@@ -27,12 +27,21 @@ export const renderBuildInputsLock = (
   downloadedInputs: readonly DownloadedBuildInput[],
   materializedArchives: readonly MaterializedArchiveBuildInput[],
 ): string => {
-  const downloadedFileLockEntriesByUrl = new Map<string, BuildInputsLockEntry>(
-    downloadedInputs.map((downloaded) => [
-      downloaded.input.url,
-      { sha256: downloaded.sha256, sizeBytes: downloaded.sizeBytes },
-    ]),
-  );
+  const downloadedFileLockEntriesByUrl = new Map<string, BuildInputsLockEntry>();
+  for (const downloaded of downloadedInputs) {
+    const existing = downloadedFileLockEntriesByUrl.get(downloaded.input.url);
+    if (
+      existing !== undefined &&
+      (existing.sha256 !== downloaded.sha256 || existing.sizeBytes !== downloaded.sizeBytes)
+    )
+      throw new Error(
+        `Build inputs sharing ${downloaded.input.url} produced different normalized content. Use the same formatting policy for every output of this URL.`,
+      );
+    downloadedFileLockEntriesByUrl.set(downloaded.input.url, {
+      sha256: downloaded.sha256,
+      sizeBytes: downloaded.sizeBytes,
+    });
+  }
   const materializedArchivesById = new Map(
     materializedArchives.map((materialized) => [materialized.input.id, materialized]),
   );

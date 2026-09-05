@@ -153,6 +153,13 @@
       },
     },
     {
+      "files": ["packages/input-json-schema/src/lower-document.ts"],
+      "rules": {
+        // Compile independent entrypoints serially to bound validator and native parser state.
+        "no-await-in-loop": "off",
+      },
+    },
+    {
       "files": [
         "scripts/check-native-tools.ts",
         "scripts/check-runtime-versions.ts",
