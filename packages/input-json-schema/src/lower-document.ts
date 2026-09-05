@@ -17,6 +17,7 @@ import {
   jsonSchemaDocumentResource,
   normalizeUserExternalSchemaRegistry,
 } from "./external-schema-registry";
+import { withoutConfiguredInertKeywords } from "./inert-keywords";
 import { collectKeywordDiagnostics } from "./keyword-diagnostics";
 import { declareSchema } from "./lower";
 import { loweringDiagnosticSink as diagnosticSink } from "./lower-diagnostics";
@@ -40,12 +41,16 @@ const rootSymbol = "root";
 const schemaWithoutValidationKeywords = (
   schema: JsonSchemaValue,
   policy: JsonSchemaDialectPolicy,
-): JsonSchemaValue =>
-  policy.validation || !isJsonObject(schema)
-    ? schema
-    : Object.fromEntries(
-        Object.entries(schema).filter(([key]) => !jsonSchemaValidationKeywords.has(key)),
-      );
+  inertKeywords: ResolvedJsonSchemaInputPluginOptions["inertKeywords"],
+): JsonSchemaValue => {
+  if (!isJsonObject(schema)) return schema;
+
+  const semanticSchema = withoutConfiguredInertKeywords(schema, inertKeywords);
+  if (policy.validation) return semanticSchema;
+  return Object.fromEntries(
+    Object.entries(semanticSchema).filter(([key]) => !jsonSchemaValidationKeywords.has(key)),
+  );
+};
 
 const exactRuntimeRecoverableDiagnosticCodes = new Set(["unrepresentable_schema_combination"]);
 
@@ -115,7 +120,8 @@ const createRuntimeRequest = (
           fallbackPolicy: policyForExternal(uri),
           retrievalUri: uri,
           schema,
-          stripSchema: schemaWithoutValidationKeywords,
+          stripSchema: (candidate, policy) =>
+            schemaWithoutValidationKeywords(candidate, policy, context.options.inertKeywords),
         }),
       ]),
     ),
@@ -127,7 +133,8 @@ const createRuntimeRequest = (
       retrievalUri:
         context.references.graph.location(context.references.graph.root)?.retrievalUri ?? "",
       schema: normalizedSchema,
-      stripSchema: schemaWithoutValidationKeywords,
+      stripSchema: (candidate, policy) =>
+        schemaWithoutValidationKeywords(candidate, policy, context.options.inertKeywords),
     }),
   };
 };

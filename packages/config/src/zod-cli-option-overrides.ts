@@ -13,11 +13,12 @@ type ResolveModeOverrideRequest = Readonly<{
   context: ZodCLIOptionTransformContext;
   path: readonly string[];
   value: unknown;
+  valueName?: string | undefined;
 }>;
 type MergeModeOverrideRequest = Readonly<{ existingValue: unknown; overrideValue: unknown }>;
 type ZodCLIOptionValueModeHandler = Readonly<{
   merge?: ((request: MergeModeOverrideRequest) => unknown) | undefined;
-  resolve: (request: ResolveModeOverrideRequest) => Promise<unknown>;
+  resolve: (request: ResolveModeOverrideRequest) => unknown;
 }>;
 
 export type ZodCLIOptionTransformContext = Readonly<{
@@ -32,7 +33,7 @@ export type MergeZodCLIOptionOverridesRequest = Readonly<{
   schema: ZodSchema;
 }>;
 
-const cliFileMapSeparator = "=";
+const cliMapSeparator = "=";
 
 const fieldMetadataByName = (schema: ZodSchema): ReadonlyMap<string, ZodCLIOptionMetadata> =>
   new Map(
@@ -55,10 +56,14 @@ const readRepeatableStringValues = (value: unknown, path: readonly string[]): re
   throw schemaError(path, "expected repeatable string option values");
 };
 
-const parseFileMapEntry = (entry: string, path: readonly string[]): readonly [string, string] => {
-  const separatorIndex = entry.indexOf(cliFileMapSeparator);
+const parseMapEntry = (
+  entry: string,
+  path: readonly string[],
+  expectedSyntax: string,
+): readonly [string, string] => {
+  const separatorIndex = entry.indexOf(cliMapSeparator);
   if (separatorIndex <= 0 || separatorIndex === entry.length - 1)
-    throw schemaError(path, "expected ID=FILE option values");
+    throw schemaError(path, `expected ${expectedSyntax} option values`);
 
   return [entry.slice(0, separatorIndex), entry.slice(separatorIndex + 1)];
 };
@@ -68,7 +73,7 @@ const loadJsonFileMapEntry = async (
   path: readonly string[],
   context: ZodCLIOptionTransformContext,
 ): Promise<readonly [string, unknown]> => {
-  const [id, filePath] = parseFileMapEntry(entry, path);
+  const [id, filePath] = parseMapEntry(entry, path, "ID=FILE");
   const text = await context.readTextFile(nodePath.resolve(context.baseDirectory, filePath));
   return [id, JSON.parse(text) as unknown];
 };
@@ -88,6 +93,17 @@ const loadJsonFileMap = async ({
   return Object.fromEntries(loadedEntries);
 };
 
+const parseStringMap = ({
+  path,
+  value,
+  valueName,
+}: ResolveModeOverrideRequest): Readonly<Record<string, string>> => {
+  const entries = readRepeatableStringValues(value, path);
+  return Object.fromEntries(
+    entries.map((entry) => parseMapEntry(entry, path, valueName ?? "NAME=VALUE")),
+  );
+};
+
 const mergeRecordValues = ({ existingValue, overrideValue }: MergeModeOverrideRequest): unknown =>
   isRecord(existingValue) && isRecord(overrideValue)
     ? { ...existingValue, ...overrideValue }
@@ -95,12 +111,8 @@ const mergeRecordValues = ({ existingValue, overrideValue }: MergeModeOverrideRe
 
 const optionValueModeHandlers: Record<ZodCLIOptionValueMode, ZodCLIOptionValueModeHandler> = {
   "json-file-map": { merge: mergeRecordValues, resolve: loadJsonFileMap },
-  "string-array": {
-    resolve: async ({ path, value }) => {
-      await Promise.resolve();
-      return readRepeatableStringValues(value, path);
-    },
-  },
+  "string-array": { resolve: ({ path, value }) => readRepeatableStringValues(value, path) },
+  "string-map": { merge: mergeRecordValues, resolve: parseStringMap },
 };
 
 const resolveModeOverride = async (
@@ -111,7 +123,10 @@ const resolveModeOverride = async (
     await Promise.resolve();
     return request.value;
   }
-  const resolved = await optionValueModeHandlers[metadata.valueMode].resolve(request);
+  const resolved = await optionValueModeHandlers[metadata.valueMode].resolve({
+    ...request,
+    valueName: metadata.valueName,
+  });
   return resolved;
 };
 

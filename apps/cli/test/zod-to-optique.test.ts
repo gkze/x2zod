@@ -161,6 +161,27 @@ void test("zodObjectToOptiqueOverrides suppresses defaults and parses string-arr
   );
 });
 
+void test("zodObjectToOptiqueOverrides accepts string-map metadata on record fields", () => {
+  const schema = z.strictObject({
+    inertKeywords: withCLI(z.record(z.string(), z.string()).default({}), {
+      long: "--inert-keyword",
+      short: "-K",
+      valueMode: "string-map",
+      valueName: "NAME=VALUE",
+    }),
+  });
+
+  assert.deepEqual(
+    runOverrides(schema, [
+      "--inert-keyword",
+      "xStringMetadata=string",
+      "-K",
+      "xBooleanMetadata=boolean",
+    ]),
+    { inertKeywords: ["xStringMetadata=string", "xBooleanMetadata=boolean"] },
+  );
+});
+
 void test("zodObjectToOptique requires at least one value for required array options", () => {
   const schema = z.strictObject({ refs: withCLI(z.array(z.string()), { short: "-r" }) });
 
@@ -282,5 +303,13 @@ void test("zodObjectToOptique rejects unsupported root and field schema shapes",
         }),
       ),
     "objects.<element>: unsupported CLI option schema type object",
+  );
+
+  assertThrowsMessage(
+    () =>
+      zodObjectToOptique(
+        z.strictObject({ invalid: withCLI(z.string(), { short: "-i", valueMode: "string-map" }) }),
+      ),
+    "invalid: string-map CLI option value mode requires a Zod record",
   );
 });

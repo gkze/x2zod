@@ -365,7 +365,8 @@ The design discussion after this landscape pass resolved the initial open questi
 - `format`, `default`, `deprecated`, `readOnly`, and `writeOnly` are recognized as validation-inert
   by default and are not emitted until the annotation IR exists.
 - Unknown non-ref keywords fail unless the selected source profile marks them as inert producer
-  metadata. The default profile is strict; named profiles cover exact OpenCode and SchemaStore
+  metadata or an exact caller-supplied inert-keyword rule accepts their primitive value. The default
+  profile and empty caller map are strict; named profiles cover exact OpenCode and SchemaStore
   annotations.
 - Refs emit named schema declarations and use those declarations at reference sites; plugins supply
   ordered name hints, while core owns final TypeScript identifier selection.
@@ -398,15 +399,32 @@ The first real target was the OpenCode config schema:
 Important observation: the schema includes both standard `$ref` and a nonstandard `ref` field. The
 JSON Schema plugin needs a policy for nonstandard metadata emitted by upstream tools. Treating every
 unknown key as fatal would reject this useful corpus; treating every unknown key as inert would hide
-mistakes. The selected policy is source profiles:
+mistakes. The selected policy combines source profiles with a strictly typed caller escape hatch:
 
 - default to the strict `none` profile;
 - ship an explicit `opencode` profile that treats nonstandard `ref` as inert producer metadata;
 - ship an explicit `schemastore` profile that treats `tsType` and `x-intellij-language-injection` as
   inert producer metadata;
+- expose `inertKeywords` as an exact-name map whose values are the required primitive kinds
+  `boolean`, `null`, `number`, or `string`, defaulting to `{}`;
+- reject empty names, `$`-prefixed names, and names reserved by standard JSON Schema dialects and
+  vocabularies, so configuration cannot suppress or redefine standard semantics;
+- require every reachable configured occurrence to match its declared primitive kind and fail at
+  that occurrence on a mismatch; objects and arrays cannot be declared inert through this option,
+  while unused external resources remain outside compilation diagnostics;
+- compose configuration additively with profiles: an explicit configured rule is checked first and
+  remains type-enforced, while an unmatched keyword may fall back to the selected profile's exact
+  built-in policy;
 - reject unknown keys that appear to contain subschemas or alter evaluation unless the active
-  profile has an exact documented compatibility rule;
-- report all ignored profile keys in diagnostics.
+  profile or caller map has an exact documented compatibility rule;
+- report every reachable profile- or configuration-ignored occurrence with an ignored-keyword
+  warning.
+
+Library and config callers provide the map directly. The CLI maps repeatable
+`--inert-keyword NAME=TYPE` arguments to the same option, with `TYPE` limited to the four primitive
+kinds above. Tests for this generic mechanism use synthetic keyword names. Consumer-specific names
+and pinned schema fixtures stay in the downstream repository that owns the compatibility decision;
+they do not become new `x2zod` profiles or acceptance corpora merely because a consumer needs them.
 
 The Mise config schema pinned to `v2026.7.5` is a second real-world acceptance corpus:
 
