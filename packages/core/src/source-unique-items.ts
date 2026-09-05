@@ -6,6 +6,7 @@ import {
   createAsExpression,
   createBlock,
   createIdentifier,
+  createQualifiedName,
   createIfStatement,
   createKeywordExpression,
   createKeywordTypeNode,
@@ -127,10 +128,13 @@ const createJsonEqualHelper = (): VariableStatement => {
   const rightRecord = createIdentifier("rightRecord");
   const leftKeys = createIdentifier("leftKeys");
   const rightKeys = createIdentifier("rightKeys");
-  const recordType = createTypeReferenceNode(createIdentifier("Record"), [
-    createKeywordTypeNode(SyntaxKind.StringKeyword),
-    createKeywordTypeNode(SyntaxKind.UnknownKeyword),
-  ]);
+  const recordType = createTypeReferenceNode(
+    createQualifiedName(createIdentifier("globalThis"), createIdentifier("Record")),
+    [
+      createKeywordTypeNode(SyntaxKind.StringKeyword),
+      createKeywordTypeNode(SyntaxKind.UnknownKeyword),
+    ],
+  );
   const helper = createArrowFunction(
     undefined,
     undefined,

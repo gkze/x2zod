@@ -48,9 +48,10 @@ import {
   createRemapPropertiesHelper,
   createSourceCodecExpression,
 } from "./source-codecs";
-import { resolveZodDeclarationNames } from "./source-declarations";
+import { projectExportDeclarations, resolveZodDeclarationNames } from "./source-declarations";
 import type { NamedZodDeclaration } from "./source-declarations";
 import {
+  createPreservedObjectCodecHelper,
   createZodHelperExpression,
   createZodHelperStatements,
   createZodWrapperExpression,
@@ -296,9 +297,8 @@ const createBaseZodExpression = (
 
   if (expression.kind === "wrapper")
     return createZodWrapperExpression(
-      expression.wrapper,
+      expression,
       createZodExpression(expression.expression, context),
-      expression.requiredOwnKeys,
     );
 
   return createCallExpression(
@@ -380,24 +380,25 @@ export const buildZodSourceFile = (
   const resolvedTransforms = resolveZodEmissionTransforms(transforms);
   if (!resolvedTransforms.ok) return resolvedTransforms;
 
-  const sourceModule = applyZodEmissionTransforms(validModule.value, resolvedTransforms.value);
-  if (!sourceModule.ok) return sourceModule;
-
   const output = resolveZodSourceOutputOptions(options);
   if (!output.ok) return output;
+  const exported = projectExportDeclarations(validModule.value, output.value.declarationExportMode);
+  const sourceModule = applyZodEmissionTransforms(exported.module, resolvedTransforms.value);
+  if (!sourceModule.ok) return sourceModule;
 
   const identifierAllocation = createSourceIdentifierAllocator(sourceModule.value);
-  const namedModule = resolveZodDeclarationNames(validModule.value, {
+  const namedModule = resolveZodDeclarationNames(exported.module, {
     ...output.value,
+    exportOrigins: exported.exportOrigins,
     identifierAllocator: identifierAllocation.allocator,
   });
   if (!namedModule.ok) return namedModule;
 
   const runtimeProgramEmission = resolveRuntimeProgramEmission(
-    validModule.value,
+    exported.module,
     identifierAllocation.allocator,
   );
-  const cyclicPeers = collectCyclicZodDeclarationPeers(validModule.value);
+  const cyclicPeers = collectCyclicZodDeclarationPeers(exported.module);
   const cyclicSymbols = namedModule.value.declarations
     .map((declaration) => declaration.declaration.symbol)
     .filter((symbol) => cyclicPeers.has(symbol));
@@ -427,6 +428,9 @@ export const buildZodSourceFile = (
     sourceFile: createSourceFile([
       createZodImport(output.value.zodImportPath),
       ...createZodHelperStatements(identifierAllocation.helperNames),
+      ...(identifierAllocation.needsPreservedObjectCodec
+        ? [createPreservedObjectCodecHelper()]
+        : []),
       ...createRuntimePredicateHelperStatements(identifierAllocation.runtimeGuardParseModes),
       ...(identifierAllocation.needsRemapHelper ? [createRemapPropertiesHelper()] : []),
       ...runtimeProgramEmission.programs.map((program) =>

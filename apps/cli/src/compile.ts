@@ -54,11 +54,7 @@ type CompileContext = Readonly<{
   stdout: CLIWriter;
 }>;
 
-type CompileTargetRequest = Readonly<{
-  context: CompileContext;
-  pluginOptions: unknown;
-  target: X2ZodCompilableTarget;
-}>;
+type CompileTargetRequest = Readonly<{ context: CompileContext; target: X2ZodCompilableTarget }>;
 
 type OutputPathConfig = Readonly<{ path: string }>;
 
@@ -185,17 +181,12 @@ const optionTransformContext = (context: CompileContext): ZodCLIOptionTransformC
   readTextFile: context.fileSystem.readTextFile,
 });
 
-const compileTarget = async ({
-  context,
-  pluginOptions,
-  target,
-}: CompileTargetRequest): Promise<void> => {
+const compileTarget = async ({ context, target }: CompileTargetRequest): Promise<void> => {
   const result = await compileX2ZodTarget({
     loadInputDocument: async (input) => {
       const document = await documentForInput(input, context);
       return document;
     },
-    pluginOptions,
     target,
   });
 
@@ -237,13 +228,13 @@ export const compileFromCLI = async (
       options,
     );
 
-    const { pluginOptions, target } = await resolveX2ZodCompilableTarget({
+    const { target } = await resolveX2ZodCompilableTarget({
       config,
       optionTransformContext: optionTransformContext(context),
       overrides,
       pluginRegistry,
     });
-    await compileTarget({ context, pluginOptions, target });
+    await compileTarget({ context, target });
     return 0;
   });
   return exitCode;
@@ -262,7 +253,7 @@ export const runConfiguredTargets = async (
     const results = await Promise.all(
       Object.values(config.targets).map(async (target): Promise<number> => {
         try {
-          await compileTarget({ context, pluginOptions: target.options, target });
+          await compileTarget({ context, target });
           return 0;
         } catch (error) {
           context.stderr(`${target.name}: ${formatErrorMessage(error)}\n`);

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { test } from "node:test";
@@ -21,6 +22,34 @@ import {
   writeJsonFile,
   writeOutputProcessorUserTarget,
 } from "./fixtures";
+
+void test("runCLI applies configured option transformations once", async () => {
+  await withTempDirectory(async (directory) => {
+    await writeFile(
+      path.join(directory, "x2zod.config.ts"),
+      [
+        'import assert from "node:assert/strict";',
+        'import { z } from "zod/v4";',
+        'import { ok, zodFactory } from "@x2zod/core";',
+        'import { withCLI } from "@x2zod/config/zod-to-optique";',
+        'const optionsSchema = z.strictObject({ name: withCLI(z.string().overwrite(value => value + "!"), { short: "-q" }) });',
+        'const plugin = { kind: "example", optionsSchema,',
+        '  prepare: async (_document, options) => { assert.equal(options.name, "name!"); return ok({ value: null }); },',
+        '  lower: async () => ok({ root: "root", declarations: [{ symbol: "root", expression: zodFactory("string") }] }) };',
+        "export default { plugins: { input: { example: plugin } }, targets: { sample: {",
+        '  kind: "example", input: { id: "options", text: "{}" }, options: { name: "name" },',
+        '  output: { path: "generated.ts", typeName: "Options" } } } };',
+      ].join("\n"),
+    );
+    assertCLISuccess(await runCLITest([], { cwd: directory }));
+    assertCLISuccess(await runCLITest(["compile", "-g", "sample"], { cwd: directory }));
+    assertCLISuccess(
+      await runCLITest(["compile", "-g", "sample", "-k", "example", "-q", "name"], {
+        cwd: directory,
+      }),
+    );
+  }, cliWorkspaceTemp);
+});
 
 void test("runCLI compile writes generated source for anonymous JSON Schema input", async () => {
   await withTempDirectory(async (directory) => {

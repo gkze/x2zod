@@ -10,10 +10,12 @@ const wrappedSourceExpression = (input: {
   readonly calls?: readonly SourceMethodCall[] | undefined;
   readonly expression: Extract<ZodExpression, { kind: "wrapper" }>;
   readonly requiredOwnKeys: readonly string[];
+  readonly parseStructural?: boolean;
   readonly source: SourceExpression;
 }): SourceExpression =>
   sourceWrapperExpression({
     calls: input.calls ?? [],
+    parseStructural: input.parseStructural ?? false,
     expression: input.source,
     requiredOwnKeys: input.requiredOwnKeys,
     wrapper: input.expression.wrapper,
@@ -50,6 +52,7 @@ export const projectZodWrapperExpression = (
           input: wrappedSourceExpression({
             expression,
             source: wrapped.schema.input,
+            parseStructural: true,
             requiredOwnKeys: expression.requiredOwnKeys,
           }),
           operation: wrapped.schema.operation,
@@ -64,6 +67,7 @@ export const projectZodWrapperExpression = (
           input: wrappedSourceExpression({
             expression,
             source: wrapped.schema,
+            parseStructural: true,
             requiredOwnKeys: expression.requiredOwnKeys,
           }),
           operation: { kind: "identity" },

@@ -291,9 +291,10 @@ const normalizeDownloadedContent = async (
     .otherwise(() => ensureTrailingNewline(responseText));
 };
 
-const downloadBuildInput = async (input: ResolvedBuildInputFile): Promise<DownloadedBuildInput> => {
-  const response = await fetch(input.url);
-
+const downloadBuildInput = async (
+  input: ResolvedBuildInputFile,
+  response: Response,
+): Promise<DownloadedBuildInput> => {
   if (!response.ok)
     throw new Error(
       `Failed to fetch ${input.url} for ${input.path}: ${response.status.toString()} ${response.statusText}`,
@@ -405,8 +406,17 @@ export const buildInputs = async (options: BuildInputsOptions = {}): Promise<Bui
 
   const selectedFileInputs = selectedInputs.filter(isFileBuildInput);
   const selectedArchiveInputs = selectedInputs.filter(isArchiveBuildInput);
+  const fileResponsesByUrl = new Map<string, Promise<Response>>();
   const downloadedInputs = await Promise.all(
-    selectedFileInputs.map((input) => downloadBuildInput(input)),
+    selectedFileInputs.map(async (input) => {
+      let response = fileResponsesByUrl.get(input.url);
+      if (response === undefined) {
+        response = fetch(input.url);
+        fileResponsesByUrl.set(input.url, response);
+      }
+      const downloadedResponse = await response;
+      return downloadBuildInput(input, downloadedResponse.clone());
+    }),
   );
   const downloadedArchives = await Promise.all(
     selectedArchiveInputs.map(downloadArchiveBuildInput),

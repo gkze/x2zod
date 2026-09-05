@@ -28,6 +28,7 @@ import type {
 } from "./zod-plan-metadata";
 import { validateZodCallReceivers } from "./zod-plan-receiver-validation";
 import type { ZodPlanValidationContext as ValidationContext } from "./zod-plan-receiver-validation";
+import { validateZodRecordKey } from "./zod-record-key-validation";
 
 type StringLiteralArgument = Readonly<{ kind: "literal"; value: string }>;
 
@@ -376,6 +377,8 @@ const validateExpressionShape = (
     .map((argument) => validateArgumentShape(argument, context))
     .find((result) => !result.ok);
   if (invalidArgument !== undefined) return invalidArgument;
+  const validRecordKey = validateZodRecordKey(expression, context);
+  if (!validRecordKey.ok) return validRecordKey;
 
   return validateZodCallReceivers(expression, context);
 };
@@ -420,8 +423,12 @@ export const validateZodEmissionModule = (module: ZodEmissionModule): Result<Zod
       }),
     );
 
-  const unresolvedReferences = module.declarations
-    .flatMap((declaration) => collectZodExpressionReferences(declaration.expression))
+  const expressions = module.declarations.flatMap((declaration) => [
+    declaration.expression,
+    ...(declaration.exportExpression === undefined ? [] : [declaration.exportExpression]),
+  ]);
+  const unresolvedReferences = expressions
+    .flatMap((expression) => collectZodExpressionReferences(expression))
     .filter((symbol) => !declaredSymbols.has(symbol));
   if (unresolvedReferences.length > 0)
     return err(
@@ -434,8 +441,8 @@ export const validateZodEmissionModule = (module: ZodEmissionModule): Result<Zod
     );
 
   const runtimeProgramIds = new Set(module.runtimePrograms.map((program) => program.id));
-  const unresolvedRuntimePrograms = module.declarations
-    .flatMap((declaration) => collectZodRuntimeProgramReferences(declaration.expression))
+  const unresolvedRuntimePrograms = expressions
+    .flatMap((expression) => collectZodRuntimeProgramReferences(expression))
     .filter((program) => !runtimeProgramIds.has(program));
   if (unresolvedRuntimePrograms.length > 0)
     return err(
@@ -452,8 +459,8 @@ export const validateZodEmissionModule = (module: ZodEmissionModule): Result<Zod
       module.declarations.map((declaration) => [declaration.symbol, declaration]),
     ),
   };
-  const invalidDeclaration = module.declarations
-    .map((declaration) => validateExpressionShape(declaration.expression, context))
+  const invalidDeclaration = expressions
+    .map((expression) => validateExpressionShape(expression, context))
     .find((result) => !result.ok);
   if (invalidDeclaration !== undefined) return invalidDeclaration;
 

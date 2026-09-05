@@ -135,6 +135,21 @@ tester.run("compact-control-statements", getRule("compact-control-statements"), 
       errors: [{ messageId: "compact" }],
       output: compactMultilineControlOutput,
     },
+    {
+      code: "if (ready) { run() } else { stop() }",
+      errors: [{ messageId: "compact" }, { messageId: "compact" }],
+      output: "if (ready) run(); else stop();",
+    },
+    {
+      code: "do { run() } while (ready); stop();",
+      errors: [{ messageId: "compact" }],
+      output: "do run(); while (ready); stop();",
+    },
+    {
+      code: "if (ready) { run() } stop();",
+      errors: [{ messageId: "compact" }],
+      output: "if (ready) run(); stop();",
+    },
   ],
   valid: [compactControlOutput],
 });
@@ -184,6 +199,18 @@ tester.run("const-arrow-functions", getRule("const-arrow-functions"), {
     indirectlyExportedFunctionDeclaration,
     overloadedFunctionDeclaration,
     typeOnlyExportedFunctionDeclaration,
+    [
+      "export {};",
+      "invoke();",
+      "function target() { return 1; }",
+      "function invoke() { return target(); }",
+    ].join("\n"),
+    [
+      "export {};",
+      "const result = invoke();",
+      "function target() { return 1; }",
+      "function invoke() { return target(); }",
+    ].join("\n"),
   ],
 });
 

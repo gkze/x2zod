@@ -142,6 +142,9 @@ const lowerRequiredUndeclaredPropertyValue = (
   pointer: JsonPointer,
   context: ObjectLoweringContext,
 ): ZodExpression => {
+  // Required keys may match patterns instead of the additional-key schema.
+  // The exact runtime predicate owns this distinction for dynamic keys.
+  if (hasPatternProperties(schema)) return zodPlan.unknown();
   if (schema[jsonSchemaKeywords.additionalProperties] !== undefined)
     return lowerAdditionalPropertyValue(schema, pointer, context);
 
@@ -255,6 +258,7 @@ const applyPropertyNames = ({
 const applyUnevaluatedProperties = (request: UnevaluatedPropertiesRequest): ZodExpression => {
   const { context, object, pointer, schema } = request;
   const unevaluatedProperties = schema[jsonSchemaKeywords.unevaluatedProperties];
+  if (hasPatternProperties(schema)) return zodPlan.passthrough(object);
   if (unevaluatedProperties === undefined || unevaluatedProperties === true)
     return zodPlan.passthrough(object);
   if (unevaluatedProperties === false) return applyStrictObjectBoundary(schema, object);
@@ -322,6 +326,7 @@ export const lowerJsonSchemaObject = (
   if (additionalProperties === undefined)
     return finalize(applyUnevaluatedProperties({ context, object, pointer, schema }));
   if (additionalProperties === true) return finalize(zodPlan.passthrough(object));
+  if (hasPatternProperties(schema)) return finalize(zodPlan.passthrough(object));
   if (isJsonSchemaValue(additionalProperties))
     return finalize(
       zodPlan.catchall(

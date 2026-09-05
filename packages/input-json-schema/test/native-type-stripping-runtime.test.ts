@@ -13,6 +13,41 @@ const tempRootDirectory = nodePath.join(packageRootDirectory, ".tmp");
 const typeScriptBinary = nodePath.resolve(packageRootDirectory, "../../node_modules/.bin/tsgo");
 const conditionalBranchKey = ["th", "en"].join("");
 
+const assertGeneratedDeclarations = async (source: string): Promise<void> => {
+  const directory = createTemporaryDirectory({
+    prefix: "x2zod-declaration-runtime-",
+    rootDirectory: tempRootDirectory,
+  });
+  const generatedFile = nodePath.join(directory, "generated.ts");
+  const declarationDirectory = nodePath.join(directory, "declarations");
+  try {
+    await writeFile(generatedFile, source);
+    const result = spawnSync(
+      typeScriptBinary,
+      [
+        "--declaration",
+        "--emitDeclarationOnly",
+        "--ignoreConfig",
+        "--module",
+        "nodenext",
+        "--moduleResolution",
+        "nodenext",
+        "--outDir",
+        declarationDirectory,
+        "--skipLibCheck",
+        "--strict",
+        "--target",
+        "es2022",
+        generatedFile,
+      ],
+      { cwd: packageRootDirectory, encoding: "utf8" },
+    );
+    assert.equal(result.status, 0, [result.stdout, result.stderr].join("\n"));
+  } finally {
+    rmSync(directory, { force: true, recursive: true });
+  }
+};
+
 void test("emits loop initializers accepted by Node native TypeScript stripping", async () => {
   const { source } = await compileGeneratedSchema({
     patternProperties: { "^x": { type: "string" } },
@@ -62,37 +97,29 @@ void test("emits recursive runtime metadata accepted by declaration generation",
     ]),
   };
   const { source } = await compileGeneratedSchema(schema, { dialect: "draft-2019-09" });
-  const directory = createTemporaryDirectory({
-    prefix: "x2zod-declaration-runtime-",
-    rootDirectory: tempRootDirectory,
-  });
-  const generatedFile = nodePath.join(directory, "generated.ts");
-  const declarationDirectory = nodePath.join(directory, "declarations");
+  await assertGeneratedDeclarations(source);
+});
 
-  try {
-    await writeFile(generatedFile, source);
-    const result = spawnSync(
-      typeScriptBinary,
-      [
-        "--declaration",
-        "--emitDeclarationOnly",
-        "--ignoreConfig",
-        "--module",
-        "nodenext",
-        "--moduleResolution",
-        "nodenext",
-        "--outDir",
-        declarationDirectory,
-        "--skipLibCheck",
-        "--strict",
-        "--target",
-        "es2022",
-        generatedFile,
-      ],
-      { cwd: packageRootDirectory, encoding: "utf8" },
-    );
-    assert.equal(result.status, 0, [result.stdout, result.stderr].join("\n"));
-  } finally {
-    rmSync(directory, { force: true, recursive: true });
-  }
+void test("emits honest types for required pattern keys and exported reference schemas", async () => {
+  const { source } = await compileGeneratedSchema(
+    {
+      $defs: {
+        Thing: {
+          type: "object",
+          additionalProperties: false,
+          patternProperties: { "^x_": { type: "string" } },
+          required: ["x_name"],
+        },
+      },
+      $ref: "#/$defs/Thing",
+    },
+    { declarationExportMode: "all" },
+  );
+  await assertGeneratedDeclarations(
+    [
+      source,
+      'export const acceptedRoot: RuntimeCase = { x_name: "Ada" };',
+      'export const acceptedReference: z.infer<typeof thingSchema> = { x_name: "Ada" };',
+    ].join("\n"),
+  );
 });

@@ -109,7 +109,10 @@ export const createStandaloneRuntimeProgram = async (
   const externalSchemas = reachableExternalSchemas(request);
   const runtimeRequest = { ...request, externalSchemas };
   const reachableLocations = reachableRuntimeLocationIds(runtimeRequest);
-  if (requestNeedsResourceGraphRuntime(runtimeRequest))
+  if (
+    request.references.root.location !== request.references.graph.root ||
+    requestNeedsResourceGraphRuntime(runtimeRequest)
+  )
     return createResourceGraphRuntimeProgram({ ...runtimeRequest, reachableLocations });
   try {
     const ajv = ajvForDialect(request.dialect);
@@ -152,7 +155,14 @@ export const createStandaloneRuntimeProgram = async (
         ?.retrievalUri,
     });
     addExternalSchemas(ajv, documents.externalSchemas);
-    const source = standaloneCode(ajv, ajv.compile(documents.schema));
+    const rootRetrievalUri = request.references.graph.location(
+      request.references.graph.root,
+    )?.retrievalUri;
+    if (rootRetrievalUri === undefined) throw new Error("Missing runtime root retrieval URI.");
+    ajv.addSchema(documents.schema, rootRetrievalUri);
+    const validate = ajv.getSchema(rootRetrievalUri);
+    if (validate === undefined) throw new Error("Missing runtime root validator.");
+    const source = standaloneCode(ajv, validate);
     const expressionSource = standaloneExpressionSource(source);
     if (!expressionSource.ok) return expressionSource;
     return ok(

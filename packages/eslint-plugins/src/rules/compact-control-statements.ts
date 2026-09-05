@@ -127,7 +127,10 @@ const getCompactControlledStatementText = (
   const controlHeader = sourceFile.text.slice(getNodeStart(sourceFile, body.parent), bodyStart);
   const replacementStart = getPreBlockWhitespaceStart(sourceFile.text, bodyStart);
   const statementStart = getNodeStart(sourceFile, statement);
-  const statementText = textForNode(sourceFile, statement);
+  const originalStatementText = textForNode(sourceFile, statement);
+  const statementText = originalStatementText.endsWith(";")
+    ? originalStatementText
+    : `${originalStatementText};`;
   const beforeStatement = sourceFile.text.slice(bodyStart + minimumPositiveInteger, statementStart);
   const afterStatement = sourceFile.text.slice(statement.end, body.end - minimumPositiveInteger);
 

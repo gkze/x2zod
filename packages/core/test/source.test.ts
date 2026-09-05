@@ -245,6 +245,37 @@ void describe("buildZodSourceFile built-in helpers", () => {
 });
 
 void describe("buildZodSourceFile declaration ordering and exports", () => {
+  void test("keeps internal references separate from independently exported expressions", () => {
+    const child = zodSymbol("child");
+    const module = zodModule(rootSymbol, [
+      { ...zodDeclaration(child, zodPlan.string()), exportExpression: zodPlan.literal("public") },
+      zodDeclaration(rootSymbol, zodPlan.object({ child: zodPlan.reference(child) })),
+    ]);
+    const rootOnly = sourceFileFor(module);
+    assert.deepEqual(variableNames(rootOnly), ["childSchema", "userSchema"]);
+    const all = sourceFileFor(module, {
+      declarationExportMode: "all",
+      declarationNameOverrides: { child: "Configured" },
+      typeName: "User",
+    });
+    assert.deepEqual(exportedVariableNames(all), ["configuredSchema", "userSchema"]);
+    const declarations = new Map(
+      variableStatements(all).map((statement) => {
+        const declaration = variableDeclaration(statement);
+        return [declaration.name.text, declaration] as const;
+      }),
+    );
+    const root = declarations.get("userSchema");
+    const internal = declarations.get("configuredSchemaInternal");
+    const exported = declarations.get("configuredSchema");
+    assert.ok(root);
+    assert.ok(internal);
+    assert.ok(exported);
+    assert.equal(propertyInitializer(root, "child")["text"], "configuredSchemaInternal");
+    assert.equal(zodCallName(internal.initializer), "string");
+    assert.equal(zodCallName(exported.initializer), "literal");
+  });
+
   void test("orders declarations before their reference sites", () => {
     const middleSymbol = zodSymbol("middle");
     const leafSymbol = zodSymbol("leaf");

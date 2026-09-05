@@ -40,12 +40,16 @@ import {
   createSourceFunctionCall as createFunctionCall,
   createSourcePropertyAccess as createPropertyAccess,
 } from "./source-ast";
+import type { SourceWrapperExpression } from "./source-model";
+import { preservedObjectCodecHelperName } from "./source-preserved-object-codecs";
 import {
   createUniqueItemsHelperStatements,
   jsonEqualHelperName,
   uniqueItemsHelperName,
 } from "./source-unique-items";
 import type { ZodHelperName, ZodHelperRequest, ZodWrapperName } from "./zod-helpers";
+
+export { createPreservedObjectCodecHelper } from "./source-preserved-object-codecs";
 
 const noTokenFlags = 0;
 const decimalPartsHelperName = "x2zodDecimalParts";
@@ -421,17 +425,23 @@ export const createZodHelperExpression = (request: ZodHelperRequest): Expression
 };
 
 export const createZodWrapperExpression = (
-  wrapper: ZodWrapperName,
+  expression: SourceWrapperExpression,
   schema: Expression,
-  requiredOwnKeys: readonly string[],
 ): Expression =>
-  createFunctionCall(createIdentifier(wrapperHelperNames[wrapper]), [
-    schema,
-    createArrayLiteralExpression(
-      requiredOwnKeys.map((key) => createStringLiteral(key, noTokenFlags)),
-      false,
+  createFunctionCall(
+    createIdentifier(
+      expression.parseStructural
+        ? preservedObjectCodecHelperName
+        : wrapperHelperNames[expression.wrapper],
     ),
-  ]);
+    [
+      schema,
+      createArrayLiteralExpression(
+        expression.requiredOwnKeys.map((key) => createStringLiteral(key, noTokenFlags)),
+        false,
+      ),
+    ],
+  );
 
 export const createZodHelperStatements = (
   helperNames: ReadonlySet<ZodHelperName>,

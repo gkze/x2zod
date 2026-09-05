@@ -238,6 +238,20 @@ const hasUnsafeFunctionDeclarationReference = (
 ): boolean => {
   const declarationStart = getNodeStart(sourceFile, functionDeclaration);
 
+  // Earlier initialization can call this declaration indirectly through another hoisted function.
+  if (
+    sourceFile.statements.some(
+      (statement) =>
+        getNodeStart(sourceFile, statement) < declarationStart &&
+        !isFunctionDeclaration(statement) &&
+        !isImportDeclaration(statement) &&
+        !isExportDeclaration(statement) &&
+        !isInterfaceDeclaration(statement) &&
+        !isTypeAliasDeclaration(statement),
+    )
+  )
+    return true;
+
   return getIdentifierReferences(sourceFile, nameNode.text).some((reference) => {
     if (isSameNode(reference, nameNode)) return false;
     if (getNodeStart(sourceFile, reference) < declarationStart) return true;

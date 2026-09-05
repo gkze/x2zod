@@ -153,10 +153,13 @@ export const createSourceCodecExpression = ({
   ]);
 
 const createRecordType = (): TypeNode =>
-  createTypeReferenceNode(createIdentifier("Record"), [
-    createKeywordTypeNode(SyntaxKind.StringKeyword),
-    createKeywordTypeNode(SyntaxKind.UnknownKeyword),
-  ]);
+  createTypeReferenceNode(
+    createQualifiedName(createIdentifier("globalThis"), createIdentifier("Record")),
+    [
+      createKeywordTypeNode(SyntaxKind.StringKeyword),
+      createKeywordTypeNode(SyntaxKind.UnknownKeyword),
+    ],
+  );
 
 const createMappingsType = (): TypeNode =>
   createTypeOperatorNode(

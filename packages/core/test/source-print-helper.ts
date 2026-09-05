@@ -79,6 +79,9 @@ const sourceMode = process.argv[sourceModeArgumentIndex];
 const typeName = process.argv[typeNameArgumentIndex] ?? "User";
 const propertyTransformMode = sourceMode === "property-transform";
 const preservedPropertyTransformMode = sourceMode === "preserved-property-transform";
+const nestedPreservedPropertyTransformMode =
+  sourceMode === "nested-preserved-property-transform" ||
+  sourceMode === "preserved-catchall-transform";
 const recursivePropertyTransformMode = sourceMode === "recursive-property-transform";
 const address = core.zodSymbol("address");
 let module = core.zodModule(root, [
@@ -150,10 +153,112 @@ if (recursivePropertyTransformMode)
       }),
     ),
   ]);
+if (nestedPreservedPropertyTransformMode)
+  module = core.zodModule(root, [
+    core.zodDeclaration(
+      root,
+      core.zodPlan.preserveObjectInput(
+        core.zodPlan.passthrough(
+          core.zodPlan.object({
+            nested: core.zodPlan.object({ first_name: core.zodPlan.string() }),
+            ["__proto__"]: core.zodPlan.optional(
+              core.zodPlan.object({ proto_value: core.zodPlan.string() }),
+            ),
+          }),
+        ),
+        [],
+      ),
+    ),
+  ]);
+if (sourceMode === "preserved-catchall-transform")
+  module = core.zodModule(root, [
+    core.zodDeclaration(
+      root,
+      core.zodPlan.preserveObjectInput(
+        core.zodPlan.catchall(
+          core.zodPlan.object({}),
+          core.zodPlan.object({ first_name: core.zodPlan.string() }),
+        ),
+        [],
+      ),
+    ),
+  ]);
+if (sourceMode === "recursive-optionality") {
+  const optional = core.zodSymbol("optional");
+  const next = core.zodSymbol("next");
+  module = core.zodModule(root, [
+    core.zodDeclaration(optional, core.zodPlan.optional(core.zodPlan.string())),
+    core.zodDeclaration(next, core.zodPlan.optional(core.zodPlan.reference(root))),
+    core.zodDeclaration(
+      root,
+      core.zodPlan.required(
+        core.zodPlan.object({
+          value: core.zodPlan.reference(optional),
+          next: core.zodPlan.reference(next),
+          tuple: core.zodPlan.tuple([core.zodPlan.optional(core.zodPlan.string())]),
+          requiredValue: core.zodPlan.optional(core.zodPlan.string()),
+        }),
+        ["requiredValue"],
+      ),
+    ),
+  ]);
+}
+if (sourceMode === "recursive-passthrough")
+  module = core.zodModule(root, [
+    core.zodDeclaration(
+      root,
+      core.zodPlan.passthrough(
+        core.zodPlan.object({ children: core.zodPlan.array(core.zodPlan.reference(root)) }),
+      ),
+    ),
+  ]);
+if (sourceMode === "record-keys") {
+  const key = core.zodSymbol("key");
+  module = core.zodModule(root, [
+    core.zodDeclaration(key, core.zodPlan.enum(["a", "b"])),
+    core.zodDeclaration(
+      root,
+      core.zodPlan.object({
+        reference: core.zodPlan.record(core.zodPlan.reference(key), core.zodPlan.string()),
+        union: core.zodPlan.record(
+          core.zodPlan.union([core.zodPlan.string(), core.zodPlan.number()]),
+          core.zodPlan.string(),
+        ),
+        intersection: core.zodPlan.record(
+          core.zodPlan.intersection(core.zodPlan.unknown(), core.zodPlan.string()),
+          core.zodPlan.string(),
+        ),
+        impossible: core.zodPlan.record(core.zodPlan.never(), core.zodPlan.string()),
+      }),
+    ),
+  ]);
+}
+if (sourceMode === "recursive-preserved-transform") {
+  const node = core.zodSymbol("wrapped-node");
+  module = core.zodModule(root, [
+    core.zodDeclaration(
+      node,
+      core.zodPlan.preserveObjectInput(
+        core.zodPlan.passthrough(
+          core.zodPlan.object({
+            snake_key: core.zodPlan.string(),
+            next: core.zodPlan.optional(core.zodPlan.reference(node)),
+          }),
+        ),
+        [],
+      ),
+    ),
+    core.zodDeclaration(root, core.zodPlan.object({ node: core.zodPlan.reference(node) })),
+  ]);
+}
 const result = core.buildZodSourceFile(
   module,
   { typeName },
-  propertyTransformMode || preservedPropertyTransformMode || recursivePropertyTransformMode
+  propertyTransformMode ||
+    preservedPropertyTransformMode ||
+    recursivePropertyTransformMode ||
+    nestedPreservedPropertyTransformMode ||
+    sourceMode === "recursive-preserved-transform"
     ? [{ kind: "map-properties", options: { keys: { decodedCase: "camelCase", kind: "case" } } }]
     : [],
 );

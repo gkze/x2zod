@@ -10,6 +10,7 @@ export type { JsonSchemaLocationId } from "./resource-graph";
 
 export type LoweringContext = Readonly<{
   declarations: Map<JsonSchemaAddress, ZodDeclaration>;
+  declarationLocations: Map<JsonSchemaAddress, JsonSchemaLocationId>;
   diagnostics: Diagnostic[];
   formatAssertionVocabulary: boolean;
   resourcePolicies: ReadonlyMap<JsonSchemaLocationId, JsonSchemaDialectPolicy>;

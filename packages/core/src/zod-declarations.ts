@@ -14,11 +14,14 @@ export type ZodDeclarationNameHintInput = Readonly<{
 export type ZodDeclaration = Readonly<{
   symbol: ZodSymbol;
   expression: ZodExpression;
+  /** Independent public entrypoint; internal references continue using expression. */
+  exportExpression?: ZodExpression | undefined;
   nameHints: readonly ZodDeclarationNameHint[];
 }>;
 export type ZodDeclarationInput = Readonly<{
   symbol: string;
   expression: ZodExpressionInput;
+  exportExpression?: ZodExpressionInput | undefined;
   nameHints?: readonly ZodDeclarationNameHintInput[] | undefined;
 }>;
 export type ZodEmissionModule = Readonly<{

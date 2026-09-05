@@ -8,6 +8,8 @@ import type { TypeScriptIdentifier, TypeScriptIdentifierAllocator } from "./type
 import type { ZodDeclaration, ZodEmissionModule, ZodSymbol } from "./zod-plan";
 import { collectZodExpressionReferences } from "./zod-plan-analysis";
 
+export { projectExportDeclarations } from "./source-export-declarations";
+
 const radixAlphanumeric = 36;
 const schemaSuffix = "Schema";
 const maximumBasicMultilingualPlaneCodePoint = 65_535;
@@ -27,6 +29,7 @@ type DeclarationNameResolution = Readonly<{
 type SourceDeclarationOptions = Readonly<{
   declarationNameOverrides?: Readonly<Record<string, TypeScriptIdentifier>>;
   declarationExportMode: DeclarationExportMode;
+  exportOrigins?: ReadonlyMap<ZodSymbol, ZodDeclaration> | undefined;
   identifierAllocator: TypeScriptIdentifierAllocator;
   typeName: TypeScriptIdentifier;
 }>;
@@ -160,10 +163,16 @@ export const resolveZodDeclarationNames = (
   });
   schemaConstNames.set(rootDeclaration.symbol, rootSchemaConstName);
 
+  const internalSymbols = new Set(
+    [...(options.exportOrigins?.values() ?? [])].map((declaration) => declaration.symbol),
+  );
   const candidateEntries = module.declarations
     .filter((declaration) => declaration.symbol !== module.root)
     .map((declaration) => ({
-      candidate: schemaNameCandidate(declaration, options.declarationNameOverrides),
+      candidate: `${schemaNameCandidate(
+        options.exportOrigins?.get(declaration.symbol) ?? declaration,
+        options.declarationNameOverrides,
+      )}${internalSymbols.has(declaration.symbol) ? "Internal" : ""}`,
       declaration,
     }));
   const counts = candidateCounts(candidateEntries.map((entry) => entry.candidate));
@@ -180,7 +189,8 @@ export const resolveZodDeclarationNames = (
     });
     namedDeclarationsBySymbol.set(declaration.symbol, {
       declaration,
-      exportSchema: options.declarationExportMode === "all",
+      exportSchema:
+        options.declarationExportMode === "all" && !internalSymbols.has(declaration.symbol),
       schemaConstName,
     });
     schemaConstNames.set(declaration.symbol, schemaConstName);

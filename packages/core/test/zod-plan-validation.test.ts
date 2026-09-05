@@ -25,6 +25,21 @@ const expectInvalidRoot = (
 };
 
 void describe("parseZodEmissionModule", () => {
+  void test("validates independently exported expressions", () => {
+    const result = parseZodEmissionModule({
+      declarations: [
+        {
+          expression: zodPlan.string(),
+          exportExpression: zodPlan.reference(zodSymbol("missing")),
+          symbol: "root",
+        },
+      ],
+      root: "root",
+    });
+    assert.equal(result.ok, false);
+    assert.equal(result.diagnostics[0].code, "unresolved_reference");
+  });
+
   void test("rejects missing roots, duplicate symbols, unresolved refs, and invalid factory args", () => {
     expectInvalidModule({ declarations: [], root: "root" }, "invalid_zod_emission_module");
     expectInvalidModule(
@@ -278,6 +293,69 @@ void describe("parseZodEmissionModule method receiver validation", () => {
         root: "root",
       },
       "invalid_zod_emission_module",
+    );
+  });
+});
+
+void describe("object and record key contracts", () => {
+  void test("accepts the empty string as an object property name", () => {
+    assert.equal(
+      parseZodEmissionModule(rootModule(zodPlan.object({ "": zodPlan.string() }))).ok,
+      true,
+    );
+  });
+
+  void test("rejects record keys outside property-key output types", () => {
+    for (const key of [
+      zodPlan.boolean(),
+      zodPlan.null(),
+      zodPlan.unknown(),
+      zodPlan.optional(zodPlan.string()),
+      zodPlan.object({}),
+      zodPlan.array(zodPlan.string()),
+    ])
+      expectInvalidRoot(zodPlan.record(key, zodPlan.string()));
+    expectInvalidModule(
+      {
+        root: "root",
+        declarations: [
+          {
+            symbol: "root",
+            expression: zodPlan.record(zodPlan.reference(zodSymbol("key")), zodPlan.string()),
+          },
+          { symbol: "key", expression: zodPlan.boolean() },
+        ],
+      },
+      "invalid_zod_emission_module",
+    );
+  });
+
+  void test("accepts string, number, literal, composed and referenced record keys", () => {
+    for (const key of [
+      zodPlan.string(),
+      zodPlan.number(),
+      zodPlan.literal(1),
+      zodPlan.enum(["a", "b"]),
+      zodPlan.never(),
+      zodPlan.union([zodPlan.string(), zodPlan.number()]),
+      zodPlan.intersection(zodPlan.unknown(), zodPlan.string()),
+    ])
+      assert.equal(
+        parseZodEmissionModule(rootModule(zodPlan.record(key, zodPlan.string()))).ok,
+        true,
+      );
+    assert.equal(
+      parseZodEmissionModule({
+        root: "root",
+        declarations: [
+          {
+            symbol: "root",
+            expression: zodPlan.record(zodPlan.reference(zodSymbol("key")), zodPlan.string()),
+          },
+          { symbol: "key", expression: zodPlan.string() },
+        ],
+      }).ok,
+      true,
     );
   });
 });

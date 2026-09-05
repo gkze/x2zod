@@ -25,6 +25,7 @@ export type SourceReferenceExpression = Readonly<{
   view: "input" | "output" | "schema";
 }>;
 export type SourceWrapperExpression = Readonly<{
+  parseStructural: boolean;
   calls: readonly SourceMethodCall[];
   expression: SourceExpression;
   kind: "wrapper";
@@ -32,6 +33,7 @@ export type SourceWrapperExpression = Readonly<{
   wrapper: ZodWrapperName;
 }>;
 export type SourceWrapperExpressionInput = Readonly<{
+  parseStructural?: boolean;
   calls: readonly SourceMethodCall[];
   expression: SourceExpression;
   requiredOwnKeys: readonly string[];
@@ -39,7 +41,7 @@ export type SourceWrapperExpressionInput = Readonly<{
 }>;
 export const sourceWrapperExpression = (
   input: SourceWrapperExpressionInput,
-): SourceWrapperExpression => ({ ...input, kind: "wrapper" });
+): SourceWrapperExpression => ({ parseStructural: false, ...input, kind: "wrapper" });
 export type SourceRuntimeGuardExpression = Readonly<{
   calls: readonly SourceMethodCall[];
   expression: SourceExpression;
@@ -86,6 +88,7 @@ export type SourceExpressionAnalysis = Readonly<{
   helperNames: ReadonlySet<ZodHelperName>;
   runtimeGuardParseModes: ReadonlySet<boolean>;
   usesPropertyMap: boolean;
+  usesPreservedObjectCodec: boolean;
 }>;
 
 const assertNever = (value: never): never => {
@@ -96,6 +99,7 @@ export const analyzeSourceExpression = (expression: SourceExpression): SourceExp
   const helperNames = new Set<ZodHelperName>();
   const runtimeGuardParseModes = new Set<boolean>();
   let usesPropertyMap = false;
+  let usesPreservedObjectCodec = false;
   const expressions = [expression];
   const argumentsToVisit: SourceArgument[] = [];
 
@@ -149,7 +153,8 @@ export const analyzeSourceExpression = (expression: SourceExpression): SourceExp
           break;
         }
         case "wrapper": {
-          helperNames.add(currentExpression.wrapper);
+          if (currentExpression.parseStructural) usesPreservedObjectCodec = true;
+          else helperNames.add(currentExpression.wrapper);
           expressions.push(currentExpression.expression);
           break;
         }
@@ -160,5 +165,5 @@ export const analyzeSourceExpression = (expression: SourceExpression): SourceExp
     }
   }
 
-  return { helperNames, runtimeGuardParseModes, usesPropertyMap };
+  return { helperNames, runtimeGuardParseModes, usesPropertyMap, usesPreservedObjectCodec };
 };

@@ -41,12 +41,6 @@ const collectArrayAssertionDiagnostics = (
       message: "JSON Schema maxItems must be a non-negative integer.",
       pointer: jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.maxItems),
     });
-  if (isItemCount(minItems) && isItemCount(maxItems) && minItems > maxItems)
-    context.addDiagnostic({
-      code: "invalid_schema_document",
-      message: "JSON Schema minItems cannot be greater than maxItems.",
-      pointer: jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.maxItems),
-    });
   if (uniqueItems !== undefined && typeof uniqueItems !== "boolean")
     context.addDiagnostic({
       code: "invalid_schema_document",

@@ -140,6 +140,42 @@ void describe("object and conditional exact runtime keywords", () => {
 });
 
 void describe("object property-key transforms", () => {
+  for (const boundary of [false, { type: "number" }] as const)
+    void test(`preserves required pattern keys with ${JSON.stringify(boundary)} additional properties`, async () => {
+      const { generatedSchema } = await compileGeneratedSchema(
+        {
+          additionalProperties: boundary,
+          patternProperties: { "^x_": { type: "string" } },
+          properties: { user_id: { type: "string" } },
+          required: ["user_id", "x_name"],
+          type: "object",
+        },
+        { transforms: propertyTransforms },
+      );
+      const result = generatedSchema.safeParse({ user_id: "user-1", x_name: "Ada" });
+      assert.equal(result.success, true);
+      assert.deepEqual(result.data, { userId: "user-1", xName: "Ada" });
+      assert.equal(generatedSchema.safeParse({ user_id: "user-1" }).success, false);
+      assert.equal(generatedSchema.safeParse({ user_id: "user-1", x_name: 1 }).success, false);
+    });
+
+  void test("keeps patterned additional values outside the structural catchall", async () => {
+    const { generatedSchema } = await compileGeneratedSchema(
+      {
+        additionalProperties: { type: "number" },
+        patternProperties: { "^x_": { type: "string" } },
+        properties: { user_id: { type: "string" } },
+        required: ["user_id"],
+        type: "object",
+      },
+      { transforms: propertyTransforms },
+    );
+    const result = generatedSchema.safeParse({ user_id: "user-1", x_name: "Ada", other: 1 });
+    assert.equal(result.success, true);
+    assert.deepEqual(result.data, { userId: "user-1", x_name: "Ada", other: 1 });
+    assert.equal(generatedSchema.safeParse({ user_id: "user-1", other: "invalid" }).success, false);
+  });
+
   void test("preserves dynamic pattern keys", async () => {
     const { generatedSchema, source } = await compileGeneratedSchema(
       {

@@ -1,24 +1,16 @@
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
+import { fileURLToPath } from "node:url";
 
-const packageRoot = path.resolve(import.meta.dirname, "..");
-const repositoryRoot = path.resolve(packageRoot, "../..");
-const oxfmtBinaryName = process.platform === "win32" ? "oxfmt.cmd" : "oxfmt";
-
-const pathExecutable = (binaryName: string): string | undefined =>
-  process.env["PATH"]
-    ?.split(path.delimiter)
-    .map((directory) => path.join(directory, binaryName))
-    .find((candidate) => existsSync(candidate));
-
-const oxfmtBinary = (): string =>
-  pathExecutable(oxfmtBinaryName) ??
-  path.join(repositoryRoot, "node_modules/.bin", oxfmtBinaryName);
+const oxfmtEntrypoint = path.join(
+  path.dirname(fileURLToPath(import.meta.resolve("oxfmt/package.json"))),
+  "bin",
+  "oxfmt",
+);
 
 export const formatWithOxfmt = (content: string, filePath: string): string => {
-  const result = spawnSync(oxfmtBinary(), ["--stdin-filepath", filePath], {
+  const result = spawnSync(process.execPath, [oxfmtEntrypoint, "--stdin-filepath", filePath], {
     encoding: "utf8",
     input: content,
   });
