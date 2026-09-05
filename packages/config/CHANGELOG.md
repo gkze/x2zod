@@ -1,5 +1,21 @@
 # @x2zod/config
 
+## 0.5.1
+
+### Patch Changes
+
+- 0e8c3e2: Preserve nested codec transformations and recursive optional types, avoid generated utility type
+  collisions, accept empty property names, and reject unsupported record keys before source emission.
+  Give exported JSON Schema references their complete validation contract and preserve pattern-matched
+  required properties and contradictory bounds without reducing JSON Schema conformance.
+
+  Parse plugin options once per input transition, keep lint autofixes safe around automatic semicolon
+  insertion and function hoisting, and make shared build inputs and installed formatter resolution
+  consistent.
+
+- Updated dependencies [0e8c3e2]
+  - @x2zod/core@0.6.1
+
 ## 0.5.0
 
 ### Minor Changes
