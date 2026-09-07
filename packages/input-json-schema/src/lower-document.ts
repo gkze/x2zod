@@ -25,6 +25,7 @@ import { loweringDiagnosticSink as diagnosticSink } from "./lower-diagnostics";
 import type { LoweringContext } from "./lower-types";
 import { jsonSchemaValidationKeywords } from "./metadata";
 import type { ResolvedJsonSchemaInputPluginOptions } from "./options";
+import type { PreparedJsonSchemaContext } from "./preflight";
 import {
   createJsonSchemaReferenceResolver,
   createJsonSchemaReferenceResolverFromGraph,
@@ -182,6 +183,52 @@ const guardRuntimeDeclarations = async (
   return ok({ declarations, root: rootSymbol, runtimePrograms }, diagnostics);
 };
 
+type LoweringPreparation = Readonly<{
+  options: ResolvedJsonSchemaInputPluginOptions;
+  policies: LoweringContext["resourcePolicies"];
+  references: LoweringContext["references"];
+}>;
+
+const prepareLowering = (
+  document: ParsedJsonSchemaDocument,
+  options: ResolvedJsonSchemaInputPluginOptions,
+  {
+    rootPolicy,
+    locations,
+    prepared,
+  }: Readonly<{
+    rootPolicy: JsonSchemaDialectPolicy;
+    locations: SourceLocationMap | undefined;
+    prepared: PreparedJsonSchemaContext | undefined;
+  }>,
+): Result<LoweringPreparation> => {
+  const normalizedRegistry =
+    prepared === undefined
+      ? normalizeUserExternalSchemaRegistry(options.externalSchemas)
+      : ok(prepared.options.externalSchemas);
+  if (!normalizedRegistry.ok) return normalizedRegistry;
+  const normalizedOptions = { ...options, externalSchemas: normalizedRegistry.value };
+  const references =
+    prepared === undefined
+      ? createJsonSchemaReferenceResolver(document, normalizedOptions)
+      : ok(createJsonSchemaReferenceResolverFromGraph(prepared.graph, prepared.graph.root));
+  if (!references.ok) return references;
+  const policies = resolveJsonSchemaResourcePolicies({
+    dialect: normalizedOptions.dialect,
+    externalSchemas: normalizedOptions.externalSchemas,
+    graph: references.value.graph,
+    locations,
+    rootPolicy,
+    prepared:
+      prepared === undefined
+        ? undefined
+        : { policies: prepared.policies, resources: prepared.policyResources },
+  });
+  return policies.ok
+    ? ok({ options: normalizedOptions, policies: policies.value, references: references.value })
+    : policies;
+};
+
 export const lowerJsonSchemaDocument = async (
   document: ParsedJsonSchemaDocument,
   options: ResolvedJsonSchemaInputPluginOptions,
@@ -192,6 +239,7 @@ export const lowerJsonSchemaDocument = async (
     unevaluatedVocabulary?: boolean | undefined;
     validationVocabulary?: boolean | undefined;
     projectAnnotations?: JsonSchemaAnnotationProjector | undefined;
+    preparedContext?: PreparedJsonSchemaContext | undefined;
   }> = {},
 ): Promise<Result<ZodEmissionModuleInput>> => {
   const {
@@ -201,26 +249,19 @@ export const lowerJsonSchemaDocument = async (
     unevaluatedVocabulary = true,
     validationVocabulary = true,
   } = request;
-  const normalizedRegistry = normalizeUserExternalSchemaRegistry(options.externalSchemas);
-  if (!normalizedRegistry.ok) return normalizedRegistry;
-  const normalizedOptions = { ...options, externalSchemas: normalizedRegistry.value };
-  const references = createJsonSchemaReferenceResolver(document, normalizedOptions);
-  if (!references.ok) return references;
   const rootPolicy: JsonSchemaDialectPolicy = {
     applicator: applicatorVocabulary,
-    dialect: normalizedOptions.dialect,
+    dialect: options.dialect,
     formatAssertion: formatAssertionVocabulary,
     unevaluated: unevaluatedVocabulary,
     validation: validationVocabulary,
   };
-  const resolvedResourcePolicies = resolveJsonSchemaResourcePolicies({
-    dialect: normalizedOptions.dialect,
-    externalSchemas: normalizedOptions.externalSchemas,
-    graph: references.value.graph,
-    locations,
+  const prepared = prepareLowering(document, options, {
     rootPolicy,
+    locations,
+    prepared: request.preparedContext,
   });
-  if (!resolvedResourcePolicies.ok) return resolvedResourcePolicies;
+  if (!prepared.ok) return prepared;
   const context: LoweringContext = {
     annotations: new Map(),
     annotationProjections: new Map(),
@@ -229,10 +270,10 @@ export const lowerJsonSchemaDocument = async (
     declarations: new Map(),
     diagnostics: [],
     formatAssertionVocabulary,
-    options: normalizedOptions,
-    resourcePolicies: resolvedResourcePolicies.value,
+    options: prepared.value.options,
+    resourcePolicies: prepared.value.policies,
     validationVocabulary,
-    references: references.value,
+    references: prepared.value.references,
     visiting: new Set<JsonSchemaAddress>(),
     sameValueReferences: new Set<JsonSchemaAddress>(),
     ...(locations === undefined ? {} : { locations }),
@@ -250,7 +291,7 @@ export const lowerJsonSchemaDocument = async (
   }
   const runtimeRequest = createRuntimeRequest(
     document.schema,
-    normalizedOptions.externalSchemas,
+    prepared.value.options.externalSchemas,
     context,
   );
   declareSchema(context.references.root, {

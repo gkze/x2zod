@@ -39,6 +39,7 @@ export type CLITestResult = Readonly<{
   stdoutText: string;
 }>;
 type ConfiguredTargetOptions = Readonly<{
+  runtimeMode?: "inline" | "shared";
   options?: string | undefined;
   schemaText?: string | undefined;
 }>;
@@ -116,7 +117,11 @@ export const writeJsonFile = async (filePath: string, value: unknown): Promise<v
 
 export const writeConfiguredUserTarget = async (
   directory: string,
-  { options, schemaText: targetSchemaText = schemaText }: ConfiguredTargetOptions = {},
+  {
+    options,
+    runtimeMode = "inline",
+    schemaText: targetSchemaText = schemaText,
+  }: ConfiguredTargetOptions = {},
 ): Promise<void> => {
   await mkdir(path.join(directory, "schemas"), { recursive: true });
   await writeFile(path.join(directory, "schemas", "user.schema.json"), targetSchemaText);
@@ -133,7 +138,7 @@ export const writeConfiguredUserTarget = async (
       '      kind: "json-schema",',
       '      input: { path: "schemas/user.schema.json" },',
       ...(options === undefined ? [] : [`      options: ${options},`]),
-      '      output: { path: "generated/user.ts", typeName: "User" },',
+      `      output: { path: "generated/user.ts", typeName: "User", runtimeMode: ${JSON.stringify(runtimeMode)} },`,
       "    },",
       "  },",
       "});",

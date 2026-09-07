@@ -3,6 +3,8 @@ import { spawnSync } from "node:child_process";
 import { writeFile } from "node:fs/promises";
 import nodePath from "node:path";
 
+import type { RuntimeMode } from "@x2zod/core";
+
 import {
   buildNodeBundle,
   importGeneratedExport,
@@ -29,6 +31,7 @@ export const generateSchemaFixture = async (
   request: Readonly<{
     pluginOptions?: JsonSchemaInputPluginOptionsInput | undefined;
     consumerSource?: string;
+    runtimeMode?: RuntimeMode;
   }> = {},
 ): Promise<FixtureValidator> => {
   const { pluginOptions = {}, consumerSource } = request;
@@ -48,7 +51,7 @@ export const generateSchemaFixture = async (
   });
   const source = runNode({
     allowedStderr: isNativePreviewShutdownStderr,
-    args: [bundleFile, schemaFile, "Fixture", optionsFile],
+    args: [bundleFile, schemaFile, "Fixture", optionsFile, request.runtimeMode ?? "inline"],
     cwd: packageDirectory,
     timeoutMs: compilerDeadlineMs,
   });

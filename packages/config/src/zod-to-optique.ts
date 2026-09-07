@@ -1,6 +1,5 @@
 import {
   choice,
-  ensureNonEmptyString,
   float,
   integer,
   map,
@@ -14,7 +13,6 @@ import {
 import type {
   Message,
   NonEmptyString,
-  OptionName,
   OptionOptions,
   Parser,
   ValueParser,
@@ -22,46 +20,21 @@ import type {
 } from "@optique/core";
 import type { z } from "zod/v4";
 
-import { isRecord } from "./structural";
-import { schemaError, ZodCLIOptionSchemaError } from "./zod-cli-errors";
-import { optionNamesForField, readCLIMetadata } from "./zod-cli-metadata";
-import type {
-  ZodCLIOptionFieldMetadata,
-  ZodCLIOptionMetadata,
-  ZodCLIOptionValueMode,
-} from "./zod-cli-metadata";
-import {
-  arrayElementSchema,
-  innerSchema,
-  isSupportedWrapperType,
-  objectShape,
-  schemaDef,
-  schemaType,
-  unwrapRootObjectSchema,
-  unwrapSupportedWrappers,
-} from "./zod-introspection";
-import type { ZodDef, ZodSchema } from "./zod-introspection";
+import { analyzeZodCLIFields } from "./zod-cli-analysis";
+import type { ZodCLIField, ZodCLIValue } from "./zod-cli-analysis";
+import { readCLIMetadata } from "./zod-cli-metadata";
+import type { ZodCLIOptionFieldMetadata, ZodCLIOptionMetadata } from "./zod-cli-metadata";
+import { objectShape, unwrapRootObjectSchema } from "./zod-introspection";
+import type { ZodSchema } from "./zod-introspection";
 
 export { ZodCLIOptionSchemaError } from "./zod-cli-errors";
 export { withCLI } from "./zod-cli-metadata";
 export type { ZodCLIOptionFieldMetadata, ZodCLIOptionMetadata } from "./zod-cli-metadata";
 
-type AbsenceBehavior =
-  | Readonly<{ type: "default"; value: () => unknown }>
-  | Readonly<{ type: "optional" }>
-  | Readonly<{ type: "required" }>;
+type ZodObjectToOptiqueBehavior = Readonly<{ defaultHelp: "show" | "hide"; validate: boolean }>;
 
-type FieldParserContext = Readonly<{
-  metadata: ZodCLIOptionMetadata;
-  optionNames: readonly [OptionName, OptionName];
-  path: readonly string[];
-}>;
-
-type OptionNameSourceContext = Readonly<{ fieldName: string; path: readonly string[] }>;
-type ZodObjectToOptiqueBehavior = Readonly<{ defaults: "apply" | "suppress"; validate: boolean }>;
-
-const schemaBehavior: ZodObjectToOptiqueBehavior = { defaults: "apply", validate: true };
-const overrideBehavior: ZodObjectToOptiqueBehavior = { defaults: "suppress", validate: false };
+const schemaBehavior: ZodObjectToOptiqueBehavior = { defaultHelp: "show", validate: true };
+const overrideBehavior: ZodObjectToOptiqueBehavior = { defaultHelp: "hide", validate: false };
 
 export const zodObjectToOptique = <TSchema extends ZodSchema>(
   schema: TSchema,
@@ -74,7 +47,7 @@ export const zodObjectToOptiqueOverrides = (
   createObjectParser<Readonly<Record<string, unknown>>>(schema, overrideBehavior);
 
 export const assertSupportedZodCLIOptionSchema = (schema: ZodSchema): void => {
-  createObjectParser<Readonly<Record<string, unknown>>>(schema, overrideBehavior);
+  analyzeZodCLIFields(schema);
 };
 
 export const zodCLIOptionFieldMetadata = (
@@ -92,19 +65,12 @@ const createObjectParser = <TOutput>(
   schema: ZodSchema,
   behavior: ZodObjectToOptiqueBehavior,
 ): Parser<"sync", TOutput> => {
-  const objectSchema = unwrapRootObjectSchema(schema);
-  const shape = objectShape(objectSchema);
-  const optionNameSources = new Map<string, string>();
-  const fieldParsers: Record<string, Parser> = {};
-
-  for (const [fieldName, fieldSchema] of Object.entries(shape)) {
-    const path = [fieldName];
-    const metadata = readCLIMetadata(fieldSchema, path);
-    const optionNames = optionNamesForField(fieldName, metadata, path);
-    const fieldContext = { metadata, optionNames, path };
-    assertUniqueOptionNames(optionNameSources, optionNames, { fieldName, path });
-    fieldParsers[fieldName] = createFieldParser(fieldSchema, fieldContext, behavior);
-  }
+  const fieldParsers = Object.fromEntries(
+    analyzeZodCLIFields(schema).map((field) => [
+      field.fieldName,
+      createFieldParser(field, behavior),
+    ]),
+  );
 
   return map(object(fieldParsers), (value) => {
     const stripped = stripUndefinedProperties(value);
@@ -112,160 +78,32 @@ const createObjectParser = <TOutput>(
   }) as Parser<"sync", TOutput>;
 };
 
-const assertUniqueOptionNames = (
-  sources: Map<string, string>,
-  names: readonly OptionName[],
-  context: OptionNameSourceContext,
-): void => {
-  for (const name of names) {
-    const previousFieldName = sources.get(name);
-    if (previousFieldName !== undefined)
-      throw schemaError(
-        context.path,
-        `option name ${name} is already used by ${previousFieldName}`,
-      );
-    sources.set(name, context.fieldName);
-  }
-};
+const createFieldParser = (field: ZodCLIField, behavior: ZodObjectToOptiqueBehavior): Parser => {
+  const valueOption = option(
+    ...field.optionNames,
+    valueParserFor(field.value),
+    optionOptions(field.metadata),
+  );
+  const baseParser: Parser = field.repeatable ? multiple(valueOption, { min: 1 }) : valueOption;
+  if (!field.optional) return baseParser;
 
-const createFieldParser = (
-  schema: ZodSchema,
-  context: FieldParserContext,
-  behavior: ZodObjectToOptiqueBehavior,
-): Parser => {
-  const baseParser = createRequiredFieldParser(schema, context);
-  const absence = absenceBehaviorForSchema(schema, context.path);
+  // Keep omitted values absent until the final object parse, including defaults with refinements.
+  const parser = optional(baseParser);
+  if (behavior.defaultHelp === "hide") return parser;
 
-  if (absence.type === "default")
-    return behavior.defaults === "apply"
-      ? withDefault(baseParser, absence.value)
-      : optional(baseParser);
-  if (absence.type === "optional") return optional(baseParser);
-  return baseParser;
-};
-
-const createRequiredFieldParser = (schema: ZodSchema, context: FieldParserContext): Parser => {
-  const { metadata, optionNames, path } = context;
-  const baseSchema = unwrapSupportedWrappers(schema, path);
-  const def = schemaDef(baseSchema, path);
-
-  if (metadata.valueMode !== undefined) {
-    assertValueModeSchemaType(metadata.valueMode, def.type, path);
-    return multiple(
-      createValueOption(
-        optionNames,
-        string({ metavar: optionValueName(metadata, "VALUE") }),
-        metadata,
-      ),
-      { min: 1 },
-    );
-  }
-
-  if (def.type === "array")
-    return multiple(
-      createValueOption(
-        optionNames,
-        valueParserForSchema(arrayElementSchema(baseSchema, path), metadata, [
-          ...path,
-          "<element>",
-        ]),
-        metadata,
-      ),
-      { min: 1 },
-    );
-
-  return createValueOption(optionNames, valueParserForSchema(baseSchema, metadata, path), metadata);
-};
-
-const assertValueModeSchemaType = (
-  valueMode: ZodCLIOptionValueMode,
-  type: unknown,
-  path: readonly string[],
-): void => {
-  if ((valueMode === "string-map" || valueMode === "boolean-map") && type !== "record")
-    throw schemaError(path, `${valueMode} CLI option value mode requires a Zod record`);
-};
-
-const createValueOption = (
-  optionNames: readonly [OptionName, OptionName],
-  valueParser: ValueParser,
-  metadata: ZodCLIOptionMetadata,
-): Parser => option(...optionNames, valueParser, optionOptions(metadata));
-
-const hasOptionalWrapper = (schema: ZodSchema, path: readonly string[]): boolean => {
-  let currentSchema = schema;
-  for (;;) {
-    const type = schemaType(currentSchema, path);
-    if (type === "optional") return true;
-    if (!isSupportedWrapperType(type)) return false;
-    currentSchema = innerSchema(currentSchema, path);
-  }
-};
-
-const absenceBehaviorForSchema = (schema: ZodSchema, path: readonly string[]): AbsenceBehavior => {
+  // Only Zod can resolve defaults inside unions and effects. Evaluate the preview at help time.
   const missingInput: unknown = undefined;
-  const absentParseResult = schema.safeParse(missingInput);
-  if (!absentParseResult.success)
-    return hasOptionalWrapper(schema, path) ? { type: "optional" } : { type: "required" };
-  return absentParseResult.data === undefined
-    ? { type: "optional" }
-    : { type: "default", value: () => schema.parse(missingInput) };
-};
-
-const valueParserForSchema = (
-  schema: ZodSchema,
-  metadata: ZodCLIOptionMetadata,
-  path: readonly string[],
-): ValueParser => {
-  const def = schemaDef(schema, path);
-
-  switch (def.type) {
-    case "boolean": {
-      return booleanValueParser(optionValueName(metadata, "BOOLEAN"));
-    }
-    case "enum": {
-      return enumValueParser(def, metadata, path);
-    }
-    case "number": {
-      return isIntegerNumber(def)
-        ? integer({ metavar: optionValueName(metadata, "INTEGER") })
-        : float({ metavar: optionValueName(metadata, "NUMBER") });
-    }
-    case "string": {
-      return string({ metavar: optionValueName(metadata, "STRING") });
-    }
-    default: {
-      throw schemaError(path, `unsupported CLI option schema type ${formatSchemaType(def.type)}`);
-    }
-  }
-};
-
-const enumValueParser = (
-  def: ZodDef,
-  metadata: ZodCLIOptionMetadata,
-  path: readonly string[],
-): ValueParser => {
-  if (!isRecord(def.entries)) throw schemaError(path, "enum schema has no entries");
-  const values = [...new Set(Object.values(def.entries))];
-  if (values.length === 0) throw schemaError(path, "empty enums are not supported");
-  if (!values.every((value) => typeof value === "string"))
-    throw schemaError(path, "only string enums are supported");
-  return choice(values as readonly string[], { metavar: optionValueName(metadata, "VALUE") });
-};
-
-const isIntegerNumber = (def: ZodDef): boolean =>
-  isSafeIntegerNumberFormat(def) ||
-  (def.checks ?? []).some((check) => {
-    if (!isRecord(check)) return false;
-    const nestedDef = isRecord(check["def"]) ? (check["def"] as ZodDef) : undefined;
-    return (
-      isSafeIntegerNumberFormat(check) ||
-      (nestedDef !== undefined && isSafeIntegerNumberFormat(nestedDef))
-    );
+  const documentation = withDefault(baseParser, () => {
+    const result = field.schema.safeParse(missingInput);
+    return result.success ? result.data : undefined;
   });
+  return { ...parser, getDocFragments: documentation.getDocFragments.bind(documentation) };
+};
 
-const isSafeIntegerNumberFormat = (def: ZodDef): boolean =>
-  def.check === "number_format" && def.format === "safeint";
+const valueParserFor = (value: ZodCLIValue): ValueParser =>
+  value.kind === "enum"
+    ? choice(value.values, { metavar: value.valueName })
+    : scalarValueParsers[value.kind](value.valueName);
 
 const booleanValueParser = (valueName: NonEmptyString): ValueParser<"sync", boolean> => ({
   choices: [true, false],
@@ -280,22 +118,15 @@ const booleanValueParser = (valueName: NonEmptyString): ValueParser<"sync", bool
   placeholder: false,
 });
 
-const optionValueName = (metadata: ZodCLIOptionMetadata, fallback: string): NonEmptyString => {
-  const valueName = metadata.valueName ?? fallback;
-  try {
-    ensureNonEmptyString(valueName);
-    return valueName;
-  } catch (error) {
-    if (error instanceof Error)
-      throw new ZodCLIOptionSchemaError([], `invalid CLI value name: ${error.message}`);
-    throw error;
-  }
+const scalarValueParsers = {
+  boolean: booleanValueParser,
+  integer: (valueName: NonEmptyString): ValueParser => integer({ metavar: valueName }),
+  number: (valueName: NonEmptyString): ValueParser => float({ metavar: valueName }),
+  string: (valueName: NonEmptyString): ValueParser => string({ metavar: valueName }),
 };
 
 const optionOptions = (metadata: ZodCLIOptionMetadata): OptionOptions =>
   metadata.description === undefined ? {} : { description: plainMessage(metadata.description) };
-
-const formatSchemaType = (type: unknown): string => (typeof type === "string" ? type : "<unknown>");
 
 const plainMessage = (value: string): Message => [{ text: value, type: "text" }];
 

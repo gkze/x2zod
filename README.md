@@ -213,3 +213,17 @@ bun --no-env-file run check
 bun --no-env-file run format
 bun --no-env-file run lint
 ```
+
+## Shared runtime output
+
+Output is self-contained apart from Zod by default. To share reusable helpers across generated
+modules, set `output.runtimeMode` to `"shared"` in a target's configuration, or pass
+`--runtime-mode shared` to `x2zod compile`. Use `"inline"` to explicitly retain the default
+behavior.
+
+Install `@x2zod/runtime` in the consuming project when using shared output. Use the runtime version
+shipped with your generator; regenerate modules before upgrading across a breaking runtime release.
+Generated modules still contain their schema-specific validators, data, and inferred types. The
+shared package supplies generic Zod helpers and JSON Schema evaluation machinery without importing
+the compiler. The library API accepts the same option in
+`compileToZodSource({ output: { typeName, runtimeMode: "shared" }, ... })`.

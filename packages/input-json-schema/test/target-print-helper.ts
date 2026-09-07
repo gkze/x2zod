@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
-import { compileToZodSource } from "@x2zod/core";
+import { compileToZodSource, runtimeModeSchema } from "@x2zod/core";
 
 import {
   diagnosticText,
@@ -14,6 +14,7 @@ import { jsonSchemaInputPlugin, jsonSchemaInputPluginOptionsSchema } from "../sr
 const schemaPathArgumentIndex = 2;
 const typeNameArgumentIndex = 3;
 const optionsPathArgumentIndex = 4;
+const runtimeModeArgumentIndex = 5;
 
 const schemaPath = requiredArgument(schemaPathArgumentIndex, "JSON Schema fixture");
 const typeName = requiredArgument(typeNameArgumentIndex, "output type name");
@@ -29,7 +30,10 @@ const result = await compileToZodSource({
     text: readFileSync(schemaPath, "utf8"),
     retrievalUri: pathToFileURL(schemaPath).href,
   },
-  output: { typeName },
+  output: {
+    typeName,
+    runtimeMode: runtimeModeSchema.parse(optionalArgument(runtimeModeArgumentIndex) ?? "inline"),
+  },
   plugin: jsonSchemaInputPlugin,
   pluginOptions,
 });

@@ -148,3 +148,5 @@ export const createRuntimeGuardExpression = (
     ),
     [structural, createIdentifier(programName)],
   );
+
+export { sharedHelperStatements, sharedRuntimePrograms } from "./source-shared";

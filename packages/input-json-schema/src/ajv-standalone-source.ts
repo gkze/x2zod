@@ -131,6 +131,10 @@ export const scanAjvStandaloneTokens = (source: string): readonly AjvStandaloneT
       kind = scanner.reScanSlashToken();
 
     if (kind === SyntaxKind.EndOfFile) break;
+    if (kind === SyntaxKind.CloseBraceToken && delimiters.at(lastItemOffset)?.kind === "template") {
+      delimiters.pop();
+      kind = scanner.reScanTemplateToken(false);
+    }
 
     const token: AjvStandaloneToken = {
       end: scanner.getTokenEnd(),
@@ -140,13 +144,8 @@ export const scanAjvStandaloneTokens = (source: string): readonly AjvStandaloneT
       value: scanner.getTokenValue(),
     };
     let closingDelimiter: Delimiter | undefined = undefined;
-    if (kind === SyntaxKind.CloseBraceToken) {
-      const delimiter = delimiters.at(lastItemOffset);
-      if (delimiter?.kind === "brace" || delimiter?.kind === "template") {
-        delimiters.pop();
-        closingDelimiter = delimiter;
-      }
-    } else if (kind === SyntaxKind.CloseBracketToken)
+    if (kind === SyntaxKind.CloseBraceToken) closingDelimiter = popDelimiter(delimiters, "brace");
+    else if (kind === SyntaxKind.CloseBracketToken)
       closingDelimiter = popDelimiter(delimiters, "bracket");
     else if (kind === SyntaxKind.CloseParenToken)
       closingDelimiter = popDelimiter(delimiters, "paren");

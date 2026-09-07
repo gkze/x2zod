@@ -67,6 +67,7 @@ export type {
   ZodRuntimeProgram,
   ZodRuntimeProgramId,
   ZodRuntimeProgramInput,
+  ZodSharedRuntimeProgram,
 } from "./runtime-program";
 export { runtimeProgramIntrinsicGlobals } from "./runtime-program-closure";
 export {
@@ -198,3 +199,6 @@ export type {
   ZodWrapperExpressionInput,
 } from "./zod-plan";
 export * as ts from "@typescript/native-preview/unstable/ast";
+
+export { runtimeModeSchema } from "./source-options";
+export type { RuntimeMode } from "./source-options";

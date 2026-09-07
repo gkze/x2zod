@@ -29,8 +29,9 @@ This is a new standalone TypeScript project scaffolded from the `mcpsync` repo s
   model, TypeScript source construction, and the aligned `ts` namespace.
 - `@x2zod/input-json-schema` should own JSON Schema parsing, dialect selection, schema validation
   policy, reference handling, source profiles, option schemas, and lowering.
-- Generated modules should import only Zod by default. Emit deduplicated helpers in generated source
-  when supported runtime semantics need code beyond Zod constructors.
+- Generated modules should import only Zod by default. The opt-in shared runtime mode imports
+  `@x2zod/runtime` helpers, with JSON Schema machinery behind its `json-schema` entry point. Keep
+  the runtime free of compiler dependencies and preserve inline/shared semantic parity.
 - The public compile result should return a finalized TypeScript compiler `SourceFile`; source text
   printing is a caller concern using the aligned `ts` API.
 

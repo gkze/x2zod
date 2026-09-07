@@ -1,0 +1,11 @@
+{
+  "name": "@x2zod/runtime",
+  "version": "0.1.0",
+  "license": "MIT",
+  "exports": {
+    ".": "./src/generated/helpers.ts",
+    "./json-schema": "./src/json-schema.ts",
+    "./json-schema-source": "./src/json-schema-source.ts"
+  },
+  "publish": { "exclude": ["test/**"], "include": ["package.json", "src/**/*.ts"] }
+}

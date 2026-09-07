@@ -1,0 +1,48 @@
+{
+  "name": "@x2zod/runtime",
+  "version": "0.1.0",
+  "description": "Optional shared machinery for x2zod-generated Zod modules.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gkze/x2zod.git",
+    "directory": "packages/runtime"
+  },
+  "files": [
+    "src"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/generated/helpers.ts",
+      "import": "./src/generated/helpers.ts"
+    },
+    "./json-schema": {
+      "types": "./src/json-schema.ts",
+      "import": "./src/json-schema.ts"
+    },
+    "./json-schema-source": {
+      "types": "./src/json-schema-source.ts",
+      "import": "./src/json-schema-source.ts"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "gen": "bun --no-env-file ../../packages/core/scripts/generate-runtime.ts",
+    "gen:check": "bun --no-env-file ../../packages/core/scripts/generate-runtime.ts --check",
+    "lint": "bun --no-env-file --cwd ../.. oxlint packages/runtime",
+    "test": "bun --no-env-file test ./test",
+    "typecheck": "tsgo --project tsconfig.json --noEmit"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@x2zod/core": "workspace:*",
+    "@x2zod/tsconfig": "workspace:*",
+    "zod": "4.4.3"
+  },
+  "peerDependencies": {
+    "zod": "^4.4.3"
+  }
+}

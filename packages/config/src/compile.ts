@@ -2,6 +2,7 @@ import { compileToZodSource } from "@x2zod/core";
 import type {
   CompileToZodSourceResult,
   DeclarationExportMode,
+  RuntimeMode,
   InputDocumentInput,
   InputPlugin,
   ZodEmissionTransformInput,
@@ -47,6 +48,7 @@ export type X2ZodCompilableTarget = Readonly<{
 
 export type X2ZodCompileTargetOverrides = Readonly<{
   declarationExportMode?: DeclarationExportMode | undefined;
+  runtimeMode?: RuntimeMode | undefined;
   inlineId?: string | undefined;
   inputPath?: string | undefined;
   inlineText?: string | undefined;
@@ -133,6 +135,7 @@ const outputFromAnonymousOverrides = (
   ...(overrides.declarationExportMode === undefined
     ? {}
     : { declarationExportMode: overrides.declarationExportMode }),
+  ...(overrides.runtimeMode === undefined ? {} : { runtimeMode: overrides.runtimeMode }),
   ...(overrides.zodImportPath === undefined ? {} : { zodImportPath: overrides.zodImportPath }),
 });
 
@@ -146,6 +149,7 @@ const outputWithOverrides = (
   ...(output.processors === undefined ? {} : { processors: output.processors }),
   typeName: overrides.typeName ?? output.typeName,
   zodImportPath: overrides.zodImportPath ?? output.zodImportPath,
+  runtimeMode: overrides.runtimeMode ?? output.runtimeMode,
 });
 
 const availableAnonymousPluginRegistry = (
@@ -246,6 +250,7 @@ export const zodSourceOutputOptionsForConfig = (
     ? {}
     : { declarationExportMode: output.declarationExportMode }),
   typeName: output.typeName,
+  ...(output.runtimeMode === undefined ? {} : { runtimeMode: output.runtimeMode }),
   ...(output.zodImportPath === undefined ? {} : { zodImportPath: output.zodImportPath }),
 });
 

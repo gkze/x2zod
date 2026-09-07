@@ -230,7 +230,7 @@ decision is auditable. The same rules apply recursively to the root document and
 registered external schemas; unused external resources remain quarantined from diagnostics and
 compilation.
 
-Core introspects a supported Zod option-schema subset and maps it to Optique parsers:
+Config introspects a supported Zod option-schema subset and maps it to Optique parsers:
 
 - root `z.object(...)` fields become named flags;
 - field names become kebab-case long flags, so `sourceProfile` becomes `--source-profile`;
@@ -255,6 +255,13 @@ plugin Zod option schema
   -> Optique token parsing, help, and shell completion
   -> Zod parse for defaults, refinements, transforms, and final TOptions
 ```
+
+Registration and parser construction inspect schema structure without evaluating defaults or
+refinements. Omitted CLI values remain absent until final Zod validation, which owns default
+factories and transformations. Override parsers return only explicitly supplied values so config
+resolution can merge them with the target's raw option input before validation. Explicit help
+rendering asks Zod to parse an omitted field lazily for its preview, including defaults inside
+unions and effects. A failed parse or an undefined result supplies no default preview.
 
 Unsupported option-schema shapes should fail plugin registration with clear diagnostics. Examples
 include nested objects, broad unions, records without an explicit supported CLI value mode, and
@@ -357,6 +364,11 @@ Internally, that builder records factories, arguments, chained method calls, ref
 arguments, and metadata method calls. Source annotations belong to the input plugin. Avoid bespoke
 semantic nodes such as `StringMinLengthCheck` or `ObjectAdditionalPropertiesPolicy` unless the
 emitter truly needs information that cannot be represented as planned Zod calls.
+
+Each factory and method has one operation specification. Its argument descriptors drive both the
+builder argument types and runtime plan validation. Public name tuples retain their ordering and are
+checked against the specification, including no-argument classifications. Runtime-only constraints
+such as array cardinality and regular-expression validity remain explicit validation rules.
 
 The module-level plan is separate from expression planning:
 
@@ -633,6 +645,13 @@ later as a performance or AOT-validation spike if it proves useful for this plug
 Preflight validator diagnostics should normalize to `x2zod` diagnostics using JSON Pointer locations
 before the plugin returns failures to core.
 
+Once the root dialect is known, preparation retains the normalized external registry, resource
+graph, and resource policies for lowering. Schema-document validation and reachable-schema
+vocabulary checks keep their own scopes while sharing that context; lowering resolves any resource
+policies outside the preflight scope. The `none` mode continues to defer resource preparation to
+lowering. Manually constructed prepared inputs remain supported; changed schema, registry, or policy
+inputs require a fresh context instead of stale reuse.
+
 ## Source Profiles
 
 Unknown-keyword policy and producer compatibility are separate JSON Schema plugin concerns. The
@@ -780,10 +799,24 @@ Generated modules should:
   projector without affecting validation;
 - format output through the TypeScript printer and Oxfmt in CLI/repo workflows.
 
-Generated modules should not import an `@x2zod/runtime` helper package in v1. Advanced helpers
-should be emitted into the generated module so the output stays self-contained apart from Zod.
-Built-in helper implementations are preferred; plugin-provided helper sources are allowed only
-through the typed helper ABI.
+Generated modules default to `runtimeMode: "inline"`, preserving self-contained output apart from
+Zod. Set `runtimeMode: "shared"` to import generic helpers from `@x2zod/runtime` and JSON Schema
+machinery from `@x2zod/runtime/json-schema`. Schema-specific validators, descriptors, Zod schemas,
+and inferred types remain in the generated module. Consumers must install the runtime package; use
+the runtime version shipped with the generator and regenerate before upgrading across a breaking
+runtime release. Inline mode does not require that consumer dependency.
+
+Core's runtime-program ABI permits an optional shared expression with a map from expression-local
+namespace bindings to module specifiers. Core validates both expressions, permits only declared
+imports as additional free identifiers, allocates collision-free module namespaces, and binds those
+names inside each initializer. Plugins without a shared expression retain inline emission in either
+mode. Core does not interpret plugin-specific runtime code. Runtime imports are deduplicated within
+the module. The runtime package contains no compiler dependencies at execution time.
+
+The core helper AST builders remain authoritative for both inline output and the generated runtime
+helper exports; `gen:check` detects drift. The JSON Schema runtime functions own evaluation
+semantics; the compiler-only source entry point serializes the same implementations for inline
+programs.
 
 ## JSON Schema Semantics
 
@@ -1043,3 +1076,10 @@ and declaration output in addition to checking runtime parity and unchanged pars
 For schemas already requiring exact runtime validation, same-value reference backedges use a local
 unknown projection to terminate structural lowering; exact runtime validation owns the cycle, while
 adjacent fields and ordinary value-descending recursive declarations retain their types.
+
+### JSON value type compatibility
+
+The plugin re-exports type-fest JSON types as its public JSON input contract. These accept readonly
+arrays as well as mutable arrays; Zod's inferred `z.json()` type accepts only mutable arrays. Keep
+the existing contract when validating or normalizing input rather than narrowing callers to the Zod
+inferred type. Domain option schemas continue to drive their own inferred types.

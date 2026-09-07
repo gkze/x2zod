@@ -11,15 +11,20 @@ const defaultZodImportPath = "zod/v4";
 const nonEmptyStringLength = 1;
 const typeNameField = "typeName";
 
+export type RuntimeMode = "inline" | "shared";
+export const runtimeModeSchema: z.ZodType<RuntimeMode, RuntimeMode> = z.enum(["inline", "shared"]);
+
 export type DeclarationExportMode = "all" | "root";
 export type ZodSourceOutputOptions = Readonly<{
   declarationNameOverrides?: Readonly<Record<string, string>> | undefined;
+  runtimeMode?: RuntimeMode | undefined;
   typeName: string;
   zodImportPath?: string | undefined;
   declarationExportMode?: DeclarationExportMode | undefined;
 }>;
 export type ResolvedZodSourceOutputOptions = Readonly<{
   declarationNameOverrides: Readonly<Record<string, TypeScriptIdentifier>>;
+  runtimeMode: RuntimeMode;
   typeName: TypeScriptIdentifier;
   zodImportPath: string;
   declarationExportMode: DeclarationExportMode;
@@ -42,6 +47,7 @@ const zodSourceOutputOptionsSchemaValue: z.ZodType<
       .record(zodSymbolSchema, typeScriptIdentifierSchemaValue)
       .default({})
       .readonly(),
+    runtimeMode: runtimeModeSchema.default("inline"),
     typeName: typeScriptIdentifierSchemaValue,
     zodImportPath: z.string().min(nonEmptyStringLength).default(defaultZodImportPath),
     declarationExportMode: declarationExportModeSchemaValue.default("root"),

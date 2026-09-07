@@ -272,6 +272,20 @@
         "$TURBO_ROOT$/test/**/*.ts"
       ],
       "outputs": []
+    },
+    "@x2zod/runtime#gen:check": {
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/packages/core/src/**/*.ts",
+        "$TURBO_ROOT$/packages/core/scripts/**/*.ts",
+        "$TURBO_ROOT$/packages/build-inputs/src/oxfmt.ts",
+        "$TURBO_ROOT$/test/native-print-helper.ts",
+        "$TURBO_ROOT$/test/native-source-harness.ts",
+        "$TURBO_ROOT$/test/structural.ts",
+        "$TURBO_ROOT$/.oxfmtrc.json"
+      ],
+      "outputs": [],
+      "passThroughEnv": ["X2ZOD_NODE_BINARY"]
     }
   }
 }
