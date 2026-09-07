@@ -32,8 +32,8 @@ const x2zodJsonEqual = (left: unknown, right: unknown): boolean => {
     return leftKeys.length === rightKeys.length && leftKeys.every(key => Object.hasOwn(rightRecord, key) && x2zodJsonEqual(leftRecord[key], rightRecord[key]));
 };
 const x2zodUniqueItems = (values: readonly unknown[]): boolean => values.every((value, index) => values.findIndex(candidate => x2zodJsonEqual(value, candidate)) === index);
-const x2zodPreserveObjectInput = <TSchema extends z.ZodType>(schema: TSchema, requiredOwnKeys: readonly string[]) => z.custom<z.input<TSchema>>(value => typeof value === "object" && value !== null && !Array.isArray(value) && requiredOwnKeys.every(key => Object.hasOwn(value, key)) && schema.safeParse(Object.assign(Object.create(null), value)).success);
-const x2zodPreserveObjectCodec = <TSchema extends z.ZodObject>(schema: TSchema, requiredOwnKeys: readonly string[]) => {
+const x2zodPreserveObjectInput = <TSchema extends z.ZodType>(schema: TSchema, requiredOwnKeys: readonly string[]): z.ZodCustom<z.input<TSchema>, z.input<TSchema>> => z.custom<z.input<TSchema>>(value => typeof value === "object" && value !== null && !Array.isArray(value) && requiredOwnKeys.every(key => Object.hasOwn(value, key)) && schema.safeParse(Object.assign(Object.create(null), value)).success);
+const x2zodPreserveObjectCodec = <TSchema extends z.ZodObject>(schema: TSchema, requiredOwnKeys: readonly string[]): z.ZodCodec<z.ZodCustom<z.input<TSchema>, z.input<TSchema>>, z.ZodCustom<z.output<TSchema>, z.output<TSchema>>> => {
     const transform = (value: globalThis.Record<string, unknown>, payload: z.core.ParsePayload, direction: "decode" | "encode") => {
         const ownValue = Object.assign(Object.create(null), value);
         const parsed = direction === "decode" ? schema.safeDecode(ownValue) : schema.safeEncode(ownValue);
@@ -56,8 +56,8 @@ const x2zodPreserveObjectCodec = <TSchema extends z.ZodObject>(schema: TSchema, 
     const hasOwnKeys = (value: unknown) => typeof value === "object" && value !== null && !Array.isArray(value) && requiredOwnKeys.every(key => Object.hasOwn(value, key));
     return z.codec(z.custom<z.input<TSchema>>(hasOwnKeys), z.custom<z.output<TSchema>>(hasOwnKeys), { decode: (value, payload) => transform(value, payload, "decode") as z.output<TSchema>, encode: (value, payload) => transform(value, payload, "encode") as z.input<TSchema> });
 };
-const x2zodApplyRuntimePredicate = <TSchema extends z.ZodType>(_schema: TSchema, predicate: (value: unknown) => boolean) => z.custom<z.infer<TSchema>>(predicate, "Input does not satisfy the source schema.");
-const x2zodApplyEncodedRuntimePredicate = <TInput, TOutput, TSchema extends z.ZodType<TOutput, TInput>>(schema: TSchema, predicate: (value: unknown) => boolean) => z.custom<TInput>(predicate, "Input does not satisfy the source schema.").pipe(schema);
+const x2zodApplyRuntimePredicate = <TSchema extends z.ZodType>(_schema: TSchema, predicate: (value: unknown) => boolean): z.ZodCustom<z.infer<TSchema>, z.infer<TSchema>> => z.custom<z.infer<TSchema>>(predicate, "Input does not satisfy the source schema.");
+const x2zodApplyEncodedRuntimePredicate = <TInput, TOutput, TSchema extends z.ZodType<TOutput, TInput>>(schema: TSchema, predicate: (value: unknown) => boolean): z.ZodPipe<z.ZodCustom<TInput, TInput>, TSchema> => z.custom<TInput>(predicate, "Input does not satisfy the source schema.").pipe(schema);
 const x2zodRemapProperties = <TOutput>(value: globalThis.Record<string, unknown>, mappings: readonly (readonly [
     string,
     string

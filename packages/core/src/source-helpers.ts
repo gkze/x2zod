@@ -39,6 +39,7 @@ import {
   createSourceConstStatement as createConstStatement,
   createSourceFunctionCall as createFunctionCall,
   createSourcePropertyAccess as createPropertyAccess,
+  createSourceZodType as zodType,
 } from "./source-ast";
 import type { SourceWrapperExpression } from "./source-model";
 import { preservedObjectCodecHelperName } from "./source-preserved-object-codecs";
@@ -390,7 +391,7 @@ const createPreserveObjectInputHelper = (): VariableStatement => {
         ),
       ),
     ],
-    undefined,
+    zodType("ZodCustom", [schemaInputType, schemaInputType]),
     createToken(SyntaxKind.EqualsGreaterThanToken),
     customSchema,
   );
