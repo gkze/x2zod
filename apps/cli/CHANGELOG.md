@@ -1,5 +1,21 @@
 # @x2zod/cli
 
+## 0.6.0
+
+### Minor Changes
+
+- 167137d: Add opt-in shared runtime output through the library, config, and CLI. Keep inline output
+  as the default, and share generic helpers and JSON Schema evaluation machinery through the new
+  runtime package while preserving schema-specific validation, inferred types, and declaration
+  emission.
+
+### Patch Changes
+
+- Updated dependencies [167137d]
+- Updated dependencies [167137d]
+  - @x2zod/config@0.7.0
+  - @x2zod/core@0.8.0
+
 ## 0.5.1
 
 ### Patch Changes
