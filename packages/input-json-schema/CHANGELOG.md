@@ -1,5 +1,24 @@
 # @x2zod/input-json-schema
 
+## 0.8.0
+
+### Minor Changes
+
+- 167137d: Add opt-in shared runtime output through the library, config, and CLI. Keep inline output
+  as the default, and share generic helpers and JSON Schema evaluation machinery through the new
+  runtime package while preserving schema-specific validation, inferred types, and declaration
+  emission.
+
+### Patch Changes
+
+- 167137d: Keep CLI option registration and parser construction free of default evaluation, reuse
+  prepared JSON Schema resource state during lowering, and derive Zod operation signatures from the
+  same specifications as runtime validation.
+- Updated dependencies [167137d]
+- Updated dependencies [167137d]
+  - @x2zod/core@0.8.0
+  - @x2zod/runtime@0.2.0
+
 ## 0.7.1
 
 ### Patch Changes
