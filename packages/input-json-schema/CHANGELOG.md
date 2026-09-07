@@ -1,5 +1,24 @@
 # @x2zod/input-json-schema
 
+## 0.7.1
+
+### Patch Changes
+
+- 005c01f: Preserve structural inference when exact runtime validation is required. Nested
+  property-name constraints, recoverable composition boundaries, and meta-schema references no
+  longer erase whole declarations to unknown. Retain recursive meta-schema types and merge
+  object-only allOf shapes with resource-scoped references; balance remaining intersections to
+  reduce TypeScript instantiation depth. Runtime predicates continue to enforce the complete source
+  schema without changing parsed values.
+
+  Add compile-time consumer and runtime regression coverage, including full SchemaStore package.json
+  with Bun catalogs and the Draft 7 meta-schema.
+
+  Export recursive type aliases so downstream inferred parse results can emit declarations.
+
+- Updated dependencies [005c01f]
+  - @x2zod/core@0.7.1
+
 ## 0.7.0
 
 ### Minor Changes

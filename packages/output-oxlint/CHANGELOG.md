@@ -1,5 +1,11 @@
 # @x2zod/output-oxlint
 
+## 0.1.14
+
+### Patch Changes
+
+- @x2zod/config@0.6.1
+
 ## 0.1.13
 
 ### Patch Changes
