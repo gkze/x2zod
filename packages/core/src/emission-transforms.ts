@@ -1,6 +1,7 @@
 import { createDiagnostic } from "./diagnostics";
 import {
   appendProjectedCalls,
+  outerDescriptionCalls,
   projectZodRuntimeGuardExpression,
 } from "./emission-runtime-transforms";
 import type { CallsProjection, ExpressionProjection } from "./emission-runtime-transforms";
@@ -24,7 +25,6 @@ import type {
   ZodDeclaration,
   ZodEmissionModule,
   ZodExpression,
-  ZodLiteralValue,
   ZodMethodCall,
   ZodSymbol,
 } from "./zod-plan";
@@ -76,11 +76,6 @@ const decodedKeyFunction =
     return decodedKey;
   };
 
-const sourceLiteralArgument = (value: ZodLiteralValue): SourceArgument => ({
-  kind: "literal",
-  value,
-});
-
 const unsupportedTransformComposition = (factory: string): Result<never> =>
   err(
     createDiagnostic({
@@ -90,7 +85,7 @@ const unsupportedTransformComposition = (factory: string): Result<never> =>
   );
 
 const transformedReferenceCall = (call: ZodMethodCall): boolean =>
-  zodMethodMetadataFor(call.method)?.wrapsReceiver !== true;
+  call.method !== "describe" && zodMethodMetadataFor(call.method)?.wrapsReceiver !== true;
 
 const isArrayHelperRefinement = (call: ZodMethodCall): boolean =>
   call.method === "refine" &&
@@ -142,8 +137,8 @@ const projectArgument = (
           : argument.value;
       return ok({
         changed: decodedValue !== argument.value,
-        decodedArgument: sourceLiteralArgument(decodedValue),
-        schemaArgument: sourceLiteralArgument(argument.value),
+        decodedArgument: { kind: "literal", value: decodedValue },
+        schemaArgument: { kind: "literal", value: argument.value },
       });
     }
     case "object": {
@@ -301,7 +296,10 @@ const projectObjectExpression = (
         changed,
         decodedSchema,
         schema: sourceCodec({
-          calls: projectedWrappingCalls.value.schemaCalls,
+          calls: [
+            ...outerDescriptionCalls(projectedObjectCalls.value.schemaCalls),
+            ...projectedWrappingCalls.value.schemaCalls,
+          ],
           input: schemaObject,
           operation: { kind: "map-properties", mappings: mappings.value },
           output: decodedObject,
@@ -374,6 +372,7 @@ const projectDeclaration = (
     projection.value.changed &&
     !(projection.value.schema.kind === "codec" && projection.value.schema.calls.length === 0)
       ? sourceCodec({
+          calls: outerDescriptionCalls(projection.value.schema.calls),
           input: projection.value.schema,
           operation: { kind: "identity" },
           output: projection.value.decodedSchema,

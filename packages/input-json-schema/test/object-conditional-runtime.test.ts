@@ -123,7 +123,7 @@ void describe("object and conditional exact runtime keywords", () => {
           },
           output: { typeName: "NestedRuntime" },
           plugin: jsonSchemaInputPlugin,
-          pluginOptions: { validator: "none" },
+          pluginOptions: { unknownKeywords: "reject", validator: "none" },
         });
         return result;
       }),

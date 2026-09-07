@@ -300,7 +300,7 @@ const preparePreflight = (
   const resources = graph.value.resources.filter((resource) =>
     selectedRetrievalUris.has(resource.retrievalUri),
   );
-  const ownership = validateJsonSchemaMetaSchemaIdentifierOwnership(resources);
+  const ownership = validateJsonSchemaMetaSchemaIdentifierOwnership(resources, graph.value);
   if (!ownership.ok) return ownership;
   const customMetaSchemas = resolveJsonSchemaCustomMetaSchemaTargets(
     graph.value,

@@ -4,9 +4,11 @@ import type { JsonSchemaDiagnosticSink } from "./diagnostics";
 import type { JsonSchemaValue } from "./document";
 import { configuredInertKeywordValueType, jsonSchemaValueType } from "./inert-keywords";
 import {
+  jsonSchemaCrossDialectKeywordPolicy,
   jsonSchemaKeywordPolicyForDialect,
   jsonSchemaKeywords,
   jsonSchemaSourceProfileMetadataKeywords,
+  jsonSchemaSourceProfileDeclarationKeywords,
   jsonSchemaValidationKeywords,
 } from "./metadata";
 import type { JsonSchemaDialect, ResolvedJsonSchemaInputPluginOptions } from "./options";
@@ -57,11 +59,16 @@ const allowProfileKeyword = (
   pointer: JsonPointer,
   context: KeywordDiagnosticsContext,
 ): boolean => {
-  if (!jsonSchemaSourceProfileMetadataKeywords[context.options.sourceProfile].has(key))
+  const declaration =
+    jsonSchemaSourceProfileDeclarationKeywords[context.options.sourceProfile].has(key);
+  if (
+    !declaration &&
+    !jsonSchemaSourceProfileMetadataKeywords[context.options.sourceProfile].has(key)
+  )
     return false;
   context.addDiagnostic({
     code: "json-schema/ignored-keyword",
-    message: `${context.options.sourceProfile} source profile accepts nonstandard ${key} as compatibility metadata.`,
+    message: `${context.options.sourceProfile} source profile accepts nonstandard ${key} as ${declaration ? "a compatibility declaration container" : "compatibility metadata"}.`,
     pointer,
     severity: "warning",
   });
@@ -97,6 +104,26 @@ const allowConfiguredInertKeyword = ({
   context.addDiagnostic({
     code: "json-schema/ignored-keyword",
     message: `Configured keyword ${key} is accepted as validation-inert metadata.`,
+    pointer,
+    severity: "warning",
+  });
+  return true;
+};
+
+const allowUnknownKeywordPolicy = (
+  key: string,
+  pointer: JsonPointer,
+  context: KeywordDiagnosticsContext,
+): boolean => {
+  if (key.startsWith("$")) return false;
+  if (jsonSchemaCrossDialectKeywordPolicy(key) !== "unknown") return false;
+  const policy = context.options.unknownKeywords;
+  if (policy === "ignore") return true;
+  if (policy === "reject") return false;
+
+  context.addDiagnostic({
+    code: "json-schema/ignored-keyword",
+    message: `Unknown keyword ${key} is accepted as a validation-inert vendor extension.`,
     pointer,
     severity: "warning",
   });
@@ -141,7 +168,8 @@ export const collectKeywordDiagnostics = (
           pointer: keyPointer,
           schema,
         }) &&
-        !allowProfileKeyword(key, keyPointer, effectiveContext)
+        !allowProfileKeyword(key, keyPointer, effectiveContext) &&
+        !allowUnknownKeywordPolicy(key, keyPointer, effectiveContext)
       )
         context.addDiagnostic({
           code: "unknown_keyword",

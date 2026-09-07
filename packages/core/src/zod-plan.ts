@@ -405,6 +405,8 @@ export const zodPlan = {
   boolean: (): ZodExpression => zodFactory("boolean"),
   catchall: (object: ZodExpression, value: ZodExpression): ZodExpression =>
     zodCall(object, "catchall", [zodExpressionArgument(value)]),
+  describe: (expression: ZodExpression, description: string): ZodExpression =>
+    zodCall(expression, "describe", [zodLiteralArgument(description)]),
   enum: (values: readonly [string, ...string[]]): ZodExpression =>
     zodFactory("enum", [zodArrayArgument(values.map((value) => zodLiteralArgument(value)))]),
   gt: (expression: ZodExpression, value: number): ZodExpression =>

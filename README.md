@@ -91,6 +91,40 @@ targets: {
 },
 ```
 
+### Unknown keyword policy
+
+Real-world schemas carry vendor extensions. The plugin resolves unknown keywords in order:
+
+1. exact `inertKeywords` rules (typed per JSON kind, taking precedence);
+2. the selected `sourceProfile` built-in rule;
+3. the generic `unknownKeywords` policy (`warn` default, `reject`, `ignore`), which only applies to
+   keywords unknown in every supported dialect.
+
+The generic policy rejects cross-dialect keywords (`definitions` under Draft 2020-12) and unknown
+`$`-prefixed keywords. Explicit OpenCode compatibility rules remain available. Schema-node
+`description` annotations can be projected into generated source with
+`annotationKeywords: { description: true }`.
+
+This changes the previous strict default: set `unknownKeywords: "reject"` (CLI:
+`--unknown-keywords reject`) to keep rejecting unrecognized keywords. Accepted metadata is opaque
+and does not add validation constraints. Unknown required vocabularies still fail.
+
+Library consumers can project vendor metadata through a configured plugin:
+
+```ts
+const plugin = createJsonSchemaInputPlugin({
+  projectAnnotations: ({ annotations }) => {
+    const docs = annotations.find(({ keyword }) => keyword === "vendorDocs")?.value;
+    return typeof docs === "string" ? { description: docs } : {};
+  },
+});
+```
+
+Import `createJsonSchemaInputPlugin` from `@x2zod/input-json-schema` and pass the resulting plugin
+to `compileToZodSource`. The deterministic callback receives immutable source metadata with resource
+and document locations. It returns only supported description metadata; invalid results fail
+compilation. Source annotations stay in the input plugin; core emits ordinary Zod method calls.
+
 `map-properties` is the traversal operation and `case` is its key projection. It emits bidirectional
 Zod codecs: `z.input` keeps original keys such as `user_id`, while `z.output` and `z.infer` expose
 `userId`; `z.encode` maps the decoded value back to its original wire keys. Only declared object

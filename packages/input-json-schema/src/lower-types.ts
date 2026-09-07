@@ -1,5 +1,10 @@
 import type { Diagnostic, JsonPointer, SourceLocationMap, ZodDeclaration } from "@x2zod/core";
 
+import type {
+  JsonSchemaAnnotationContext,
+  JsonSchemaAnnotationProjection,
+  JsonSchemaAnnotationProjector,
+} from "./annotations";
 import type { JsonSchemaDialectPolicy } from "./dialect";
 import type { JsonObject, JsonSchemaValue } from "./document";
 import type { ResolvedJsonSchemaInputPluginOptions } from "./options";
@@ -9,6 +14,9 @@ import type { JsonSchemaLocationId } from "./resource-graph";
 export type { JsonSchemaLocationId } from "./resource-graph";
 
 export type LoweringContext = Readonly<{
+  annotations: Map<JsonSchemaLocationId, JsonSchemaAnnotationContext>;
+  annotationProjections: Map<JsonSchemaLocationId, JsonSchemaAnnotationProjection>;
+  projectAnnotations?: JsonSchemaAnnotationProjector | undefined;
   declarations: Map<JsonSchemaAddress, ZodDeclaration>;
   declarationLocations: Map<JsonSchemaAddress, JsonSchemaLocationId>;
   diagnostics: Diagnostic[];
@@ -26,6 +34,7 @@ export type LocatedSchemaRequest<TSchema extends JsonSchemaValue = JsonSchemaVal
   location: JsonSchemaLocationId;
   pointer: JsonPointer;
   schema: TSchema;
+  sourceSchema?: JsonSchemaValue | undefined;
 }>;
 
 export type LowerTypeRequest = LocatedSchemaRequest<JsonObject> &
@@ -36,6 +45,7 @@ export type LowerChildSchemaRequest = Readonly<{
   parent: JsonSchemaLocationId;
   pointer: JsonPointer;
   schema: JsonSchemaValue;
+  sourceSchema?: JsonSchemaValue | undefined;
 }>;
 
 export type LowerReferenceRequest = Readonly<{

@@ -7,12 +7,14 @@ import {
   jsonSchemaInertKeywordValueTypes,
   jsonSchemaKeywordPolicy,
   jsonSchemaSourceProfiles,
+  jsonSchemaUnknownKeywordPolicies,
   jsonSchemaValidators,
 } from "./metadata";
 import type {
   JsonSchemaDialect,
   JsonSchemaInertKeywords,
   JsonSchemaSourceProfile,
+  JsonSchemaUnknownKeywordPolicy,
   JsonSchemaValidator,
 } from "./metadata";
 import { normalizeJsonSchemaRetrievalUri } from "./retrieval-uri";
@@ -21,7 +23,7 @@ type JsonSchemaCLIOptionMetadata = Readonly<{
   description: string;
   long?: string | undefined;
   short: string;
-  valueMode?: "json-file-map" | "string-array" | "string-map" | undefined;
+  valueMode?: "boolean-map" | "json-file-map" | "string-array" | "string-map" | undefined;
   valueName?: string | undefined;
 }>;
 
@@ -32,23 +34,28 @@ export type {
   JsonSchemaInertKeywordValueType,
   JsonSchemaInputPluginKind,
   JsonSchemaSourceProfile,
+  JsonSchemaUnknownKeywordPolicy,
   JsonSchemaValidator,
 } from "./metadata";
 
 type JsonSchemaInputPluginOptionsOutput = Readonly<{
+  annotationKeywords: JsonSchemaAnnotationKeywords;
   dialect?: JsonSchemaDialect | undefined;
   externalSchemas: Readonly<Record<string, JsonSchemaValue>>;
   inertKeywords: JsonSchemaInertKeywords;
   sourceProfile: JsonSchemaSourceProfile;
   validator: JsonSchemaValidator;
+  unknownKeywords: JsonSchemaUnknownKeywordPolicy;
 }>;
 
 type JsonSchemaInputPluginOptionsInputValue = Readonly<{
+  annotationKeywords?: JsonSchemaAnnotationKeywordsInput | undefined;
   dialect?: JsonSchemaDialect | undefined;
   externalSchemas?: Readonly<Record<string, JsonSchemaValue>> | undefined;
   inertKeywords?: JsonSchemaInertKeywords | undefined;
   sourceProfile?: JsonSchemaSourceProfile | undefined;
   validator?: JsonSchemaValidator | undefined;
+  unknownKeywords?: JsonSchemaUnknownKeywordPolicy | undefined;
 }>;
 
 const withCLI = <TSchema extends z.ZodType>(
@@ -78,10 +85,41 @@ export const jsonSchemaSourceProfileSchema: z.ZodType<
   JsonSchemaSourceProfile
 > = jsonSchemaSourceProfileSchemaValue;
 
+const jsonSchemaUnknownKeywordPolicySchemaValue: z.ZodType<
+  JsonSchemaUnknownKeywordPolicy,
+  JsonSchemaUnknownKeywordPolicy
+> = z.enum(jsonSchemaUnknownKeywordPolicies);
+export const jsonSchemaUnknownKeywordPolicySchema: z.ZodType<
+  JsonSchemaUnknownKeywordPolicy,
+  JsonSchemaUnknownKeywordPolicy
+> = jsonSchemaUnknownKeywordPolicySchemaValue;
+
 // Keep the public option input typed as JsonSchemaValue.
 // The document parser's schema intentionally accepts unknown raw input.
 const jsonSchemaInputValueSchema: z.ZodType<JsonSchemaValue, JsonSchemaValue> =
   createJsonSchemaValueSchema<JsonSchemaValue>();
+export type JsonSchemaAnnotationKeywords = Readonly<Record<string, boolean>>;
+export type JsonSchemaAnnotationKeywordsInput = Readonly<Record<string, boolean>>;
+
+const annotationKeywordsSchemaValue: z.ZodType<
+  JsonSchemaAnnotationKeywords,
+  JsonSchemaAnnotationKeywordsInput
+> = z
+  .record(z.string().min(1), z.boolean())
+  .readonly()
+  .superRefine((keywords, context) => {
+    for (const keyword of Object.keys(keywords))
+      if (keyword !== "description")
+        context.addIssue({
+          code: "custom",
+          message: `Unsupported annotation keyword: ${keyword}. Only description is recognized.`,
+          path: [keyword],
+        });
+  });
+export const jsonSchemaAnnotationKeywordsSchema: z.ZodType<
+  JsonSchemaAnnotationKeywords,
+  JsonSchemaAnnotationKeywordsInput
+> = annotationKeywordsSchemaValue;
 const externalSchemasSchemaValue: z.ZodType<
   Readonly<Record<string, JsonSchemaValue>>,
   Readonly<Record<string, JsonSchemaValue>>
@@ -123,6 +161,13 @@ const jsonSchemaInputPluginOptionsSchemaValue: z.ZodType<
   JsonSchemaInputPluginOptionsInputValue
 > = z
   .strictObject({
+    annotationKeywords: withCLI(annotationKeywordsSchemaValue.default({}), {
+      description: "Projection policy for recognized JSON Schema annotation keywords.",
+      long: "--annotation-keywords",
+      short: "-a",
+      valueMode: "boolean-map",
+      valueName: "NAME=BOOLEAN",
+    }),
     dialect: withCLI(jsonSchemaDialectSchema.exactOptional(), {
       description: "JSON Schema dialect override; inferred from $schema, otherwise 2020-12.",
       short: "-d",
@@ -151,6 +196,11 @@ const jsonSchemaInputPluginOptionsSchemaValue: z.ZodType<
       description: "JSON Schema validator policy.",
       short: "-v",
       valueName: "VALIDATOR",
+    }),
+    unknownKeywords: withCLI(jsonSchemaUnknownKeywordPolicySchema.default("warn"), {
+      description: "Unknown keyword policy: reject, warn, or ignore vendor extensions.",
+      short: "-u",
+      valueName: "POLICY",
     }),
   })
   .readonly();

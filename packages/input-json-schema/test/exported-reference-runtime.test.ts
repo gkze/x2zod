@@ -97,9 +97,10 @@ void test("keeps inert metadata out of root and independently exported runtime v
     }),
   ]);
 
-  assert.equal(root.source, baseline.source);
-  assert.equal(exported.source, baseline.source);
-  for (const { generatedSchema } of [root, exported]) {
+  // Inert metadata may select the isolated graph backend, but must not leak into emitted validators.
+  assert.equal(root.source, exported.source);
+  assert.ok(!root.source.includes("resource documentation"));
+  for (const { generatedSchema } of [baseline, root, exported]) {
     assert.deepEqual(generatedSchema.safeParse({ xStringMetadata: "instance data" }), {
       data: { xStringMetadata: "instance data" },
       success: true,

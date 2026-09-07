@@ -168,6 +168,19 @@ void describe("parseZodEmissionModule method validation", () => {
     expectInvalidRoot(zodPlan.refine(zodPlan.string(), zodHelper.uniqueItems()));
   });
 
+  void test("accepts describe calls with string literal arguments on any receiver", () => {
+    assert.equal(
+      parseZodEmissionModule(rootModule(zodPlan.describe(zodPlan.string(), "Tool configuration.")))
+        .ok,
+      true,
+    );
+    expectInvalidRoot({
+      calls: [{ args: [{ kind: "literal", value: 42 }], method: "describe" }],
+      factory: "string",
+      kind: "factory",
+    });
+  });
+
   void test("rejects invalid required keys and duplicate object keys", () => {
     expectInvalidRoot({
       args: [{ kind: "object", properties: [] }],

@@ -77,6 +77,11 @@ const numberLiteralArgument = {
   kind: "literal",
   valueType: "number",
 } satisfies ZodArgumentMetadata;
+const stringLiteralArgument = {
+  expected: "one string literal argument",
+  kind: "literal",
+  valueType: "string",
+} satisfies ZodArgumentMetadata;
 const regexArguments = {
   expected: "a pattern string and optional valid ECMAScript flag string",
   kind: "regex",
@@ -123,6 +128,7 @@ export const zodFactoryMetadata: Record<ZodFactoryName, ZodFactoryMetadata> = {
 
 export const zodMethodNames = [
   "catchall",
+  "describe",
   "gt",
   "gte",
   "int",
@@ -183,6 +189,7 @@ const wrappingMethodSpec = (args: ZodArgumentMetadata): ZodMethodSpec => ({
 
 export const zodMethodSpecs: Record<ZodKnownMethodName, ZodMethodSpec> = {
   catchall: methodSpec(expressionArgument, "object"),
+  describe: methodSpec(stringLiteralArgument, "any"),
   gt: methodSpec(numberLiteralArgument, "number"),
   gte: methodSpec(numberLiteralArgument, "number"),
   int: methodSpec(noArguments, "number"),

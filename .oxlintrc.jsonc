@@ -125,6 +125,13 @@
   },
   "overrides": [
     {
+      "files": ["packages/input-json-schema/src/annotations.ts"],
+      "rules": {
+        // Synchronous projector validation must consume rejected promises without awaiting them.
+        "promise/prefer-await-to-then": "off",
+      },
+    },
+    {
       "files": ["packages/core/src/**/*.ts", "packages/input-json-schema/src/**/*.ts"],
       "rules": {
         // Published library source should stay runtime-neutral; hosts, tests, and scripts own Node adapters.

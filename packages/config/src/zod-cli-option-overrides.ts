@@ -104,12 +104,22 @@ const parseStringMap = ({
   );
 };
 
+const parseBooleanMap = (request: ResolveModeOverrideRequest): Readonly<Record<string, boolean>> =>
+  Object.fromEntries(
+    Object.entries(parseStringMap(request)).map(([key, value]) => {
+      if (value !== "true" && value !== "false")
+        throw schemaError([...request.path, key], "expected true or false");
+      return [key, value === "true"];
+    }),
+  );
+
 const mergeRecordValues = ({ existingValue, overrideValue }: MergeModeOverrideRequest): unknown =>
   isRecord(existingValue) && isRecord(overrideValue)
     ? { ...existingValue, ...overrideValue }
     : overrideValue;
 
 const optionValueModeHandlers: Record<ZodCLIOptionValueMode, ZodCLIOptionValueModeHandler> = {
+  "boolean-map": { merge: mergeRecordValues, resolve: parseBooleanMap },
   "json-file-map": { merge: mergeRecordValues, resolve: loadJsonFileMap },
   "string-array": { resolve: ({ path, value }) => readRepeatableStringValues(value, path) },
   "string-map": { merge: mergeRecordValues, resolve: parseStringMap },

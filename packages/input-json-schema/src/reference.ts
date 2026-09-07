@@ -129,7 +129,7 @@ export const createJsonSchemaReferenceResolver = (
     graph.value.resources.filter(({ location }) => reachable.has(location)),
   );
   if (!selected.ok) return selected;
-  const ownership = validateJsonSchemaMetaSchemaIdentifierOwnership(selected.value);
+  const ownership = validateJsonSchemaMetaSchemaIdentifierOwnership(selected.value, graph.value);
   return ownership.ok
     ? { ...graph, value: createJsonSchemaReferenceResolverFromGraph(graph.value, graph.value.root) }
     : ownership;

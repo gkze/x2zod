@@ -5,11 +5,17 @@ import { isJsonArray, isJsonObject, isJsonSchemaValue, jsonStringValues } from "
 import type { JsonObject, JsonSchemaValue, JsonValue } from "./document";
 import {
   jsonSchemaAnyOfAllowedSiblingKeywords,
+  jsonSchemaCrossDialectKeywordPolicy,
   jsonSchemaKeywords,
   jsonSchemaSourceProfileMetadataKeywords,
+  jsonSchemaSourceProfileDeclarationKeywords,
   opencodeModelRef,
 } from "./metadata";
-import type { JsonSchemaDialect, JsonSchemaSourceProfile } from "./options";
+import type {
+  JsonSchemaDialect,
+  JsonSchemaSourceProfile,
+  JsonSchemaUnknownKeywordPolicy,
+} from "./options";
 import { jsonSchemaPointerWithSegment } from "./pointer";
 import type { ResolvedJsonSchemaReference } from "./reference";
 
@@ -18,6 +24,7 @@ type SiblingAssertionContext = JsonSchemaDiagnosticSink &
     dialect: JsonSchemaDialect;
     resolveReference: (ref: string) => ResolvedJsonSchemaReference | undefined;
     sourceProfile: JsonSchemaSourceProfile;
+    unknownKeywords: JsonSchemaUnknownKeywordPolicy;
   }>;
 
 type ReferenceResolutionContext = Readonly<{
@@ -162,7 +169,13 @@ const allowsTypeSibling = (
 
 const isMetadataSiblingKeyword = (key: string, context: SiblingAssertionContext): boolean =>
   jsonSchemaAnyOfAllowedSiblingKeywords.has(key) ||
-  jsonSchemaSourceProfileMetadataKeywords[context.sourceProfile].has(key);
+  jsonSchemaSourceProfileMetadataKeywords[context.sourceProfile].has(key) ||
+  jsonSchemaSourceProfileDeclarationKeywords[context.sourceProfile].has(key);
+
+const isAcceptedVendorExtensionKeyword = (key: string, context: SiblingAssertionContext): boolean =>
+  context.unknownKeywords !== "reject" &&
+  !key.startsWith("$") &&
+  jsonSchemaCrossDialectKeywordPolicy(key) === "unknown";
 
 const isSupportedUnevaluatedPropertiesSibling = (
   key: string,
@@ -188,6 +201,7 @@ const isAllowedSiblingKeyword = (
 ): boolean =>
   key === request.keyword ||
   isMetadataSiblingKeyword(key, context) ||
+  isAcceptedVendorExtensionKeyword(key, context) ||
   isSupportedUnevaluatedPropertiesSibling(key, request) ||
   isInertSiblingKeyword(key, request) ||
   (allowsTypeSibling(request, context) && key === jsonSchemaKeywords.type);
@@ -208,6 +222,7 @@ export const jsonSchemaSiblingAssertionSchema = (
     ([key]) =>
       key !== request.keyword &&
       !isMetadataSiblingKeyword(key, context) &&
+      !isAcceptedVendorExtensionKeyword(key, context) &&
       !isSupportedUnevaluatedPropertiesSibling(key, request) &&
       !isInertSiblingKeyword(key, request) &&
       !(omitRedundantType && key === jsonSchemaKeywords.type),

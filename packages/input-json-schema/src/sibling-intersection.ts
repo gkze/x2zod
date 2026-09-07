@@ -4,7 +4,11 @@ import type { JsonPointer, ZodExpression } from "@x2zod/core";
 import type { JsonSchemaDiagnosticSink } from "./diagnostics";
 import type { JsonObject, JsonSchemaValue } from "./document";
 import { jsonSchemaKeywords } from "./metadata";
-import type { JsonSchemaDialect, JsonSchemaSourceProfile } from "./options";
+import type {
+  JsonSchemaDialect,
+  JsonSchemaSourceProfile,
+  JsonSchemaUnknownKeywordPolicy,
+} from "./options";
 import type { ResolvedJsonSchemaReference } from "./reference";
 import {
   hasUnsupportedObjectSiblingIntersection,
@@ -27,6 +31,7 @@ type SiblingIntersectionContext = JsonSchemaDiagnosticSink &
     lowerSchema: (pointer: JsonPointer, schema: JsonSchemaValue) => ZodExpression;
     resolveReference: (ref: string) => ResolvedJsonSchemaReference | undefined;
     sourceProfile: JsonSchemaSourceProfile;
+    unknownKeywords: JsonSchemaUnknownKeywordPolicy;
   }>;
 
 export const lowerJsonSchemaSiblingIntersection = (

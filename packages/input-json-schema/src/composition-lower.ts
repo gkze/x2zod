@@ -11,7 +11,11 @@ import type { JsonSchemaDiagnosticInput, JsonSchemaDiagnosticSink } from "./diag
 import { isJsonArray, isJsonObject, isJsonSchemaValue } from "./document";
 import type { JsonObject, JsonSchemaValue, JsonValue } from "./document";
 import { jsonSchemaKeywords } from "./metadata";
-import type { JsonSchemaDialect, JsonSchemaSourceProfile } from "./options";
+import type {
+  JsonSchemaDialect,
+  JsonSchemaSourceProfile,
+  JsonSchemaUnknownKeywordPolicy,
+} from "./options";
 import { jsonSchemaPointerWithSegment } from "./pointer";
 import type { ResolvedJsonSchemaReference } from "./reference";
 import {
@@ -26,10 +30,15 @@ import {
 
 type CompositionSchemaLoweringContext = JsonSchemaDiagnosticSink &
   Readonly<{
-    lowerSchema: (pointer: JsonPointer, schema: JsonSchemaValue) => ZodExpression;
+    lowerSchema: (
+      pointer: JsonPointer,
+      schema: JsonSchemaValue,
+      sourceSchema?: JsonSchemaValue,
+    ) => ZodExpression;
     resolveReference: (ref: string) => ResolvedJsonSchemaReference | undefined;
     dialect: JsonSchemaDialect;
     sourceProfile: JsonSchemaSourceProfile;
+    unknownKeywords: JsonSchemaUnknownKeywordPolicy;
   }>;
 
 type SimpleCompositionKeyword =
@@ -73,11 +82,13 @@ const siblingAssertionContext = (
   dialect: JsonSchemaDialect;
   resolveReference: (ref: string) => ResolvedJsonSchemaReference | undefined;
   sourceProfile: JsonSchemaSourceProfile;
+  unknownKeywords: JsonSchemaUnknownKeywordPolicy;
 }> => ({
   addDiagnostic: context.addDiagnostic,
   dialect: context.dialect,
   resolveReference: context.resolveReference,
   sourceProfile: context.sourceProfile,
+  unknownKeywords: context.unknownKeywords,
 });
 
 const lowerObjectTypeSiblingComposition = ({
@@ -103,14 +114,21 @@ const lowerObjectTypeSiblingComposition = ({
   const values = schema[keyword];
   if (!isJsonArray(values) || values.length === 0) return undefined;
   const objectBranches: JsonObject[] = [];
+  const sourceBranches = new Map<JsonSchemaValue, JsonObject>();
   for (const branch of values) {
     if (!isJsonObject(branch)) return undefined;
     const branchType = branch[jsonSchemaKeywords.type];
     if (branchType !== undefined && branchType !== "object") return undefined;
-    objectBranches.push({ ...branch, type: "object" });
+    const objectBranch = { ...branch, type: "object" };
+    objectBranches.push(objectBranch);
+    sourceBranches.set(objectBranch, branch);
   }
 
-  return lower(objectBranches, jsonSchemaPointerWithSegment(pointer, keyword), context);
+  return lower(objectBranches, jsonSchemaPointerWithSegment(pointer, keyword), {
+    ...context,
+    lowerSchema: (branchPointer, branchSchema) =>
+      context.lowerSchema(branchPointer, branchSchema, sourceBranches.get(branchSchema)),
+  });
 };
 
 const simpleCompositionLowerer =

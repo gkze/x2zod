@@ -6,11 +6,14 @@ import type { CompileToZodSourceResult, ts } from "@x2zod/core";
 
 import { jsonSchemaInputPlugin, jsonSchemaInputPluginOptionsSchema } from "../src";
 import type { JsonSchemaInputPluginOptionsInput, JsonSchemaValue } from "../src";
+import { compileGeneratedSchema } from "./generated-schema-harness";
 
 const inertKeywords = {
+  xArrayMetadata: "array",
   xBooleanMetadata: "boolean",
   xNullMetadata: "null",
   xNumberMetadata: "number",
+  xObjectMetadata: "object",
   xStringMetadata: "string",
 } as const;
 
@@ -42,14 +45,14 @@ const diagnosticPointers = (
     .map((diagnostic) => diagnostic.location?.pointer)
     .toSorted((left, right) => (left ?? "").localeCompare(right ?? ""));
 
-void test("inert keywords default to an empty map and keep unknown keywords strict", async () => {
+void test("inert keywords default to an empty map and allow explicit strict rejection", async () => {
   assert.deepEqual(jsonSchemaInputPluginOptionsSchema.parse({}).inertKeywords, {});
 
   const results = await Promise.all(
     [{}, { validator: "none" as const }].map(async (pluginOptions) => {
       const result = await compileSchema(
         { type: "string", xStringMetadata: "documentation" },
-        pluginOptions,
+        { ...pluginOptions, unknownKeywords: "reject" },
       );
       return result;
     }),
@@ -61,18 +64,22 @@ void test("inert keywords default to an empty map and keep unknown keywords stri
   }
 });
 
-void test("inert keywords accept configured primitives and report each occurrence", async () => {
+void test("inert keywords accept configured JSON values and report each occurrence", async () => {
   const schema = {
     type: "object",
+    xArrayMetadata: ["alpha", "beta"],
     xBooleanMetadata: true,
     xNullMetadata: null,
     xNumberMetadata: 1.5,
+    xObjectMetadata: { docs: { enumValues: [] } },
     xStringMetadata: "documentation",
   } as const;
   const expectedPointers = [
+    "/xArrayMetadata",
     "/xBooleanMetadata",
     "/xNullMetadata",
     "/xNumberMetadata",
+    "/xObjectMetadata",
     "/xStringMetadata",
   ];
 
@@ -221,18 +228,16 @@ void test("inert keywords do not change generated source for composition sibling
 void test("inert keywords do not strip matching names inside instance values", async () => {
   const instance = { xStringMetadata: "instance data" } as const;
   const [baseline, annotated] = await Promise.all([
-    compileSchema(
-      { const: instance, propertyNames: {} },
-      { dialect: "draft-7", validator: "none" },
-    ),
-    compileSchema(
+    compileGeneratedSchema({ const: instance, propertyNames: {} }, { dialect: "draft-7" }),
+    compileGeneratedSchema(
       { const: instance, propertyNames: {}, xStringMetadata: "schema metadata" },
-      { dialect: "draft-7", inertKeywords, validator: "none" },
+      { dialect: "draft-7", inertKeywords },
     ),
   ]);
 
-  assert.deepEqual(expectSourceFile(annotated), expectSourceFile(baseline));
-  assert.deepEqual(diagnosticPointers(annotated, "json-schema/ignored-keyword"), [
-    "/xStringMetadata",
-  ]);
+  for (const { generatedSchema } of [baseline, annotated]) {
+    assert.deepEqual(generatedSchema.safeParse(instance), { data: instance, success: true });
+    assert.equal(generatedSchema.safeParse({}).success, false);
+    assert.equal(generatedSchema.safeParse({ xStringMetadata: "schema metadata" }).success, false);
+  }
 });

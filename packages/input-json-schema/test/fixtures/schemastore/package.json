@@ -1,36 +1,58 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "JSON schema for NPM package.json files",
+  "type": "object",
+  "$id": "https://json.schemastore.org/package.json",
   "definitions": {
     "person": {
       "description": "A person who has been involved in creating or maintaining this package.",
-      "type": ["object", "string"],
-      "required": ["name"],
+      "type": [
+        "object",
+        "string"
+      ],
+      "required": [
+        "name"
+      ],
       "properties": {
-        "name": { "type": "string" },
-        "url": { "type": "string", "format": "uri" },
-        "email": { "type": "string", "format": "email" }
+        "name": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "email": {
+          "type": "string",
+          "format": "email"
+        }
       }
     },
     "dependency": {
       "description": "Dependencies are specified with a simple hash of package name to version range. The version range is a string which has one or more space-separated descriptors. Dependencies can also be identified with a tarball or git URL.",
       "type": "object",
-      "additionalProperties": { "type": "string" }
+      "additionalProperties": {
+        "type": "string"
+      }
     },
     "devDependency": {
       "description": "Specifies dependencies that are required for the development and testing of the project. These dependencies are not needed in the production environment.",
       "type": "object",
-      "additionalProperties": { "type": "string" }
+      "additionalProperties": {
+        "type": "string"
+      }
     },
     "optionalDependency": {
       "description": "Specifies dependencies that are optional for your project. These dependencies are attempted to be installed during the npm install process, but if they fail to install, the installation process will not fail.",
       "type": "object",
-      "additionalProperties": { "type": "string" }
+      "additionalProperties": {
+        "type": "string"
+      }
     },
     "peerDependency": {
       "description": "Specifies dependencies that are required by the package but are expected to be provided by the consumer of the package.",
       "type": "object",
-      "additionalProperties": { "type": "string" }
+      "additionalProperties": {
+        "type": "string"
+      }
     },
     "peerDependencyMeta": {
       "description": "When a user installs your package, warnings are emitted if packages specified in \"peerDependencies\" are not already installed. The \"peerDependenciesMeta\" field serves to provide more information on how your peer dependencies are utilized. Most commonly, it allows peer dependencies to be marked as optional. Metadata for this field is specified with a simple hash of the package name to a metadata object.",
@@ -48,7 +70,9 @@
     },
     "license": {
       "anyOf": [
-        { "type": "string" },
+        {
+          "type": "string"
+        },
         {
           "enum": [
             "AGPL-3.0-only",
@@ -118,7 +142,10 @@
       "x-intellij-language-injection": "Shell Script"
     },
     "packageExportsEntryPath": {
-      "type": ["string", "null"],
+      "type": [
+        "string",
+        "null"
+      ],
       "description": "The module path that is resolved when this specifier is imported. Set to `null` to disallow importing this module.",
       "pattern": "^\\./"
     },
@@ -166,23 +193,36 @@
     },
     "packageExportsEntry": {
       "oneOf": [
-        { "$ref": "#/definitions/packageExportsEntryPath" },
-        { "$ref": "#/definitions/packageExportsEntryObject" }
+        {
+          "$ref": "#/definitions/packageExportsEntryPath"
+        },
+        {
+          "$ref": "#/definitions/packageExportsEntryObject"
+        }
       ]
     },
     "packageExportsFallback": {
       "type": "array",
       "description": "Used to allow fallbacks in case this environment doesn't support the preceding entries.",
-      "items": { "$ref": "#/definitions/packageExportsEntry" }
+      "items": {
+        "$ref": "#/definitions/packageExportsEntry"
+      }
     },
     "packageExportsEntryOrFallback": {
       "oneOf": [
-        { "$ref": "#/definitions/packageExportsEntry" },
-        { "$ref": "#/definitions/packageExportsFallback" }
+        {
+          "$ref": "#/definitions/packageExportsEntry"
+        },
+        {
+          "$ref": "#/definitions/packageExportsFallback"
+        }
       ]
     },
     "packageImportsEntryPath": {
-      "type": ["string", "null"],
+      "type": [
+        "string",
+        "null"
+      ],
       "description": "The module path that is resolved when this specifier is imported. Set to `null` to disallow importing this module."
     },
     "packageImportsEntryObject": {
@@ -224,19 +264,29 @@
     },
     "packageImportsEntry": {
       "oneOf": [
-        { "$ref": "#/definitions/packageImportsEntryPath" },
-        { "$ref": "#/definitions/packageImportsEntryObject" }
+        {
+          "$ref": "#/definitions/packageImportsEntryPath"
+        },
+        {
+          "$ref": "#/definitions/packageImportsEntryObject"
+        }
       ]
     },
     "packageImportsFallback": {
       "type": "array",
       "description": "Used to allow fallbacks in case this environment doesn't support the preceding entries.",
-      "items": { "$ref": "#/definitions/packageImportsEntry" }
+      "items": {
+        "$ref": "#/definitions/packageImportsEntry"
+      }
     },
     "packageImportsEntryOrFallback": {
       "oneOf": [
-        { "$ref": "#/definitions/packageImportsEntry" },
-        { "$ref": "#/definitions/packageImportsFallback" }
+        {
+          "$ref": "#/definitions/packageImportsEntry"
+        },
+        {
+          "$ref": "#/definitions/packageImportsFallback"
+        }
       ]
     },
     "fundingUrl": {
@@ -248,28 +298,42 @@
       "type": "object",
       "description": "Used to inform about ways to help fund development of the package.",
       "properties": {
-        "url": { "$ref": "#/definitions/fundingUrl" },
+        "url": {
+          "$ref": "#/definitions/fundingUrl"
+        },
         "type": {
           "type": "string",
           "description": "The type of funding or the platform through which funding can be provided, e.g. patreon, opencollective, tidelift or github."
         }
       },
       "additionalProperties": false,
-      "required": ["url"]
+      "required": [
+        "url"
+      ]
     },
     "devEngineDependency": {
       "description": "Specifies requirements for development environment components such as operating systems, runtimes, or package managers. Used to ensure consistent development environments across the team.",
       "type": "object",
-      "required": ["name"],
+      "required": [
+        "name"
+      ],
       "properties": {
         "name": {
           "type": "string",
           "description": "The name of the dependency, with allowed values depending on the parent field"
         },
-        "version": { "type": "string", "description": "The version range for the dependency" },
+        "version": {
+          "type": "string",
+          "description": "The version range for the dependency"
+        },
         "onFail": {
           "type": "string",
-          "enum": ["ignore", "warn", "error", "download"],
+          "enum": [
+            "ignore",
+            "warn",
+            "error",
+            "download"
+          ],
           "description": "What action to take if validation fails"
         }
       }
@@ -277,21 +341,36 @@
     "runtimeEngineDependency": {
       "description": "Specifies a supported JavaScript runtime.",
       "type": "object",
-      "required": ["name"],
+      "required": [
+        "name"
+      ],
       "properties": {
-        "name": { "type": "string", "description": "The runtime name" },
-        "version": { "type": "string", "description": "The version range for the runtime" },
+        "name": {
+          "type": "string",
+          "description": "The runtime name"
+        },
+        "version": {
+          "type": "string",
+          "description": "The version range for the runtime"
+        },
         "onFail": {
           "type": "string",
-          "enum": ["ignore", "warn", "error", "download"],
+          "enum": [
+            "ignore",
+            "warn",
+            "error",
+            "download"
+          ],
           "description": "What action to take if runtime validation fails"
         }
       }
     }
   },
-  "type": "object",
   "patternProperties": {
-    "^_": { "description": "Any property starting with _ is valid.", "tsType": "any" }
+    "^_": {
+      "description": "Any property starting with _ is valid.",
+      "tsType": "any"
+    }
   },
   "properties": {
     "name": {
@@ -311,12 +390,20 @@
     "keywords": {
       "description": "This helps people discover your package as it's listed in 'npm search'.",
       "type": "array",
-      "items": { "type": "string" }
+      "items": {
+        "type": "string"
+      }
     },
-    "homepage": { "description": "The url to the project homepage.", "type": "string" },
+    "homepage": {
+      "description": "The url to the project homepage.",
+      "type": "string"
+    },
     "bugs": {
       "description": "The url to your project's issue tracker and / or the email address to which issues should be reported. These are helpful for people who encounter issues with your package.",
-      "type": ["object", "string"],
+      "type": [
+        "object",
+        "string"
+      ],
       "properties": {
         "url": {
           "type": "string",
@@ -340,26 +427,39 @@
       "items": {
         "type": "object",
         "properties": {
-          "type": { "$ref": "#/definitions/license" },
-          "url": { "type": "string", "format": "uri" }
+          "type": {
+            "$ref": "#/definitions/license"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          }
         }
       }
     },
-    "author": { "$ref": "#/definitions/person" },
+    "author": {
+      "$ref": "#/definitions/person"
+    },
     "contributors": {
       "description": "A list of people who contributed to this package.",
       "type": "array",
-      "items": { "$ref": "#/definitions/person" }
+      "items": {
+        "$ref": "#/definitions/person"
+      }
     },
     "maintainers": {
       "description": "A list of people who maintains this package.",
       "type": "array",
-      "items": { "$ref": "#/definitions/person" }
+      "items": {
+        "$ref": "#/definitions/person"
+      }
     },
     "files": {
       "description": "The 'files' field is an array of files to include in your project. If you name a folder in the array, then it will also include the files inside that folder.",
       "type": "array",
-      "items": { "type": "string" }
+      "items": {
+        "type": "string"
+      }
     },
     "main": {
       "description": "The main field is a module ID that is the primary entry point to your program.",
@@ -409,11 +509,22 @@
       },
       "additionalProperties": false
     },
-    "bin": { "type": ["string", "object"], "additionalProperties": { "type": "string" } },
+    "bin": {
+      "type": [
+        "string",
+        "object"
+      ],
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
     "type": {
       "description": "When set to \"module\", the type field allows a package to specify all .js files within are ES modules. If the \"type\" field is omitted or set to \"commonjs\", all .js files are treated as CommonJS.",
       "type": "string",
-      "enum": ["commonjs", "module"],
+      "enum": [
+        "commonjs",
+        "module"
+      ],
       "default": "commonjs"
     },
     "types": {
@@ -434,28 +545,41 @@
           "*": {
             "description": "Maps all file paths to the file paths specified in the array.",
             "type": "array",
-            "items": { "type": "string", "pattern": "^[^*]*(?:\\*[^*]*)?$" }
+            "items": {
+              "type": "string",
+              "pattern": "^[^*]*(?:\\*[^*]*)?$"
+            }
           }
         },
         "patternProperties": {
           "^[^*]+$": {
             "description": "Maps the file path matching the property key to the file paths specified in the array.",
             "type": "array",
-            "items": { "type": "string" }
+            "items": {
+              "type": "string"
+            }
           },
           "^[^*]*\\*[^*]*$": {
             "description": "Maps file paths matching the pattern specified in property key to file paths specified in the array.",
             "type": "array",
-            "items": { "type": "string", "pattern": "^[^*]*(?:\\*[^*]*)?$" }
+            "items": {
+              "type": "string",
+              "pattern": "^[^*]*(?:\\*[^*]*)?$"
+            }
           }
         },
         "additionalProperties": false
       }
     },
     "man": {
-      "type": ["array", "string"],
+      "type": [
+        "array",
+        "string"
+      ],
       "description": "Specify either a single file or an array of filenames to put in place for the man program to find.",
-      "items": { "type": "string" }
+      "items": {
+        "type": "string"
+      }
     },
     "directories": {
       "type": "object",
@@ -480,28 +604,47 @@
           "description": "A folder that is full of man pages. Sugar to generate a 'man' array by walking the folder.",
           "type": "string"
         },
-        "test": { "type": "string" }
+        "test": {
+          "type": "string"
+        }
       }
     },
     "repository": {
       "description": "Specify the place where your code lives. This is helpful for people who want to contribute.",
-      "type": ["object", "string"],
+      "type": [
+        "object",
+        "string"
+      ],
       "properties": {
-        "type": { "type": "string" },
-        "url": { "type": "string" },
-        "directory": { "type": "string" }
+        "type": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "directory": {
+          "type": "string"
+        }
       }
     },
     "funding": {
       "oneOf": [
-        { "$ref": "#/definitions/fundingUrl" },
-        { "$ref": "#/definitions/fundingWay" },
+        {
+          "$ref": "#/definitions/fundingUrl"
+        },
+        {
+          "$ref": "#/definitions/fundingWay"
+        },
         {
           "type": "array",
           "items": {
             "oneOf": [
-              { "$ref": "#/definitions/fundingUrl" },
-              { "$ref": "#/definitions/fundingWay" }
+              {
+                "$ref": "#/definitions/fundingUrl"
+              },
+              {
+                "$ref": "#/definitions/fundingWay"
+              }
             ]
           },
           "minItems": 1,
@@ -541,32 +684,79 @@
           "type": "string",
           "description": "Publishes a package to the registry so that it can be installed by name. See https://docs.npmjs.com/cli/v8/commands/npm-publish"
         },
-        "postpublish": { "$ref": "#/definitions/scriptsPublishAfter" },
-        "preinstall": { "type": "string", "description": "Run BEFORE the package is installed." },
-        "install": { "$ref": "#/definitions/scriptsInstallAfter" },
-        "postinstall": { "$ref": "#/definitions/scriptsInstallAfter" },
-        "preuninstall": { "$ref": "#/definitions/scriptsUninstallBefore" },
-        "uninstall": { "$ref": "#/definitions/scriptsUninstallBefore" },
+        "postpublish": {
+          "$ref": "#/definitions/scriptsPublishAfter"
+        },
+        "preinstall": {
+          "type": "string",
+          "description": "Run BEFORE the package is installed."
+        },
+        "install": {
+          "$ref": "#/definitions/scriptsInstallAfter"
+        },
+        "postinstall": {
+          "$ref": "#/definitions/scriptsInstallAfter"
+        },
+        "preuninstall": {
+          "$ref": "#/definitions/scriptsUninstallBefore"
+        },
+        "uninstall": {
+          "$ref": "#/definitions/scriptsUninstallBefore"
+        },
         "postuninstall": {
           "type": "string",
           "description": "Run AFTER the package is uninstalled."
         },
-        "preversion": { "$ref": "#/definitions/scriptsVersionBefore" },
-        "version": { "$ref": "#/definitions/scriptsVersionBefore" },
-        "postversion": { "type": "string", "description": "Run AFTER bump the package version." },
-        "pretest": { "$ref": "#/definitions/scriptsTest" },
-        "test": { "$ref": "#/definitions/scriptsTest" },
-        "posttest": { "$ref": "#/definitions/scriptsTest" },
-        "prestop": { "$ref": "#/definitions/scriptsStop" },
-        "stop": { "$ref": "#/definitions/scriptsStop" },
-        "poststop": { "$ref": "#/definitions/scriptsStop" },
-        "prestart": { "$ref": "#/definitions/scriptsStart" },
-        "start": { "$ref": "#/definitions/scriptsStart" },
-        "poststart": { "$ref": "#/definitions/scriptsStart" },
-        "prerestart": { "$ref": "#/definitions/scriptsRestart" },
-        "restart": { "$ref": "#/definitions/scriptsRestart" },
-        "postrestart": { "$ref": "#/definitions/scriptsRestart" },
-        "serve": { "type": "string", "description": "Start dev server to serve application files" }
+        "preversion": {
+          "$ref": "#/definitions/scriptsVersionBefore"
+        },
+        "version": {
+          "$ref": "#/definitions/scriptsVersionBefore"
+        },
+        "postversion": {
+          "type": "string",
+          "description": "Run AFTER bump the package version."
+        },
+        "pretest": {
+          "$ref": "#/definitions/scriptsTest"
+        },
+        "test": {
+          "$ref": "#/definitions/scriptsTest"
+        },
+        "posttest": {
+          "$ref": "#/definitions/scriptsTest"
+        },
+        "prestop": {
+          "$ref": "#/definitions/scriptsStop"
+        },
+        "stop": {
+          "$ref": "#/definitions/scriptsStop"
+        },
+        "poststop": {
+          "$ref": "#/definitions/scriptsStop"
+        },
+        "prestart": {
+          "$ref": "#/definitions/scriptsStart"
+        },
+        "start": {
+          "$ref": "#/definitions/scriptsStart"
+        },
+        "poststart": {
+          "$ref": "#/definitions/scriptsStart"
+        },
+        "prerestart": {
+          "$ref": "#/definitions/scriptsRestart"
+        },
+        "restart": {
+          "$ref": "#/definitions/scriptsRestart"
+        },
+        "postrestart": {
+          "$ref": "#/definitions/scriptsRestart"
+        },
+        "serve": {
+          "type": "string",
+          "description": "Start dev server to serve application files"
+        }
       },
       "additionalProperties": {
         "type": "string",
@@ -579,18 +769,48 @@
       "type": "object",
       "additionalProperties": true
     },
-    "dependencies": { "$ref": "#/definitions/dependency" },
-    "devDependencies": { "$ref": "#/definitions/devDependency" },
-    "optionalDependencies": { "$ref": "#/definitions/optionalDependency" },
-    "peerDependencies": { "$ref": "#/definitions/peerDependency" },
-    "peerDependenciesMeta": { "$ref": "#/definitions/peerDependencyMeta" },
+    "dependencies": {
+      "$ref": "#/definitions/dependency"
+    },
+    "devDependencies": {
+      "$ref": "#/definitions/devDependency"
+    },
+    "optionalDependencies": {
+      "$ref": "#/definitions/optionalDependency"
+    },
+    "peerDependencies": {
+      "$ref": "#/definitions/peerDependency"
+    },
+    "peerDependenciesMeta": {
+      "$ref": "#/definitions/peerDependencyMeta"
+    },
     "bundleDependencies": {
       "description": "Array of package names that will be bundled when publishing the package.",
-      "oneOf": [{ "type": "array", "items": { "type": "string" } }, { "type": "boolean" }]
+      "oneOf": [
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        {
+          "type": "boolean"
+        }
+      ]
     },
     "bundledDependencies": {
       "description": "DEPRECATED: This field is honored, but \"bundleDependencies\" is the correct field name. Ignored if \"bundleDependencies\" is also present.",
-      "oneOf": [{ "type": "array", "items": { "type": "string" } }, { "type": "boolean" }]
+      "oneOf": [
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        {
+          "type": "boolean"
+        }
+      ]
     },
     "resolutions": {
       "description": "Resolutions is used to support selective version resolutions using yarn, which lets you define custom package versions or ranges inside your dependencies. For npm, use overrides instead. See: https://yarnpkg.com/configuration/manifest#resolutions",
@@ -604,23 +824,38 @@
       "description": "Defines which package manager is expected to be used when working on the current project. This field is currently experimental and needs to be opted-in; see https://nodejs.org/api/corepack.html",
       "type": "string",
       "oneOf": [
-        { "pattern": "(npm|pnpm|yarn|bun|aube|nub|utoo)@\\d+\\.\\d+\\.\\d+(-.+)?" },
-        { "const": "bun" }
+        {
+          "pattern": "(npm|pnpm|yarn|bun|aube|nub|utoo)@\\d+\\.\\d+\\.\\d+(-.+)?"
+        },
+        {
+          "const": "bun"
+        }
       ]
     },
     "engines": {
       "type": "object",
       "properties": {
-        "node": { "type": "string" },
+        "node": {
+          "type": "string"
+        },
         "runtime": {
           "oneOf": [
-            { "$ref": "#/definitions/runtimeEngineDependency" },
-            { "type": "array", "items": { "$ref": "#/definitions/runtimeEngineDependency" } }
+            {
+              "$ref": "#/definitions/runtimeEngineDependency"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/runtimeEngineDependency"
+              }
+            }
           ],
           "description": "Specifies which JavaScript runtimes (like Node.js, Deno, Bun) are supported. Values should use WinterCG Runtime Keys (see https://runtime-keys.proposal.wintercg.org/)."
         }
       },
-      "additionalProperties": { "type": "string" }
+      "additionalProperties": {
+        "type": "string"
+      }
     },
     "volta": {
       "description": "Defines which tools and versions are expected to be used when Volta is installed.",
@@ -631,18 +866,28 @@
           "type": "string"
         }
       },
-      "patternProperties": { "(node|npm|pnpm|yarn)": { "type": "string" } }
+      "patternProperties": {
+        "(node|npm|pnpm|yarn)": {
+          "type": "string"
+        }
+      }
     },
-    "engineStrict": { "type": "boolean" },
+    "engineStrict": {
+      "type": "boolean"
+    },
     "os": {
       "description": "Specify which operating systems your module will run on.",
       "type": "array",
-      "items": { "type": "string" }
+      "items": {
+        "type": "string"
+      }
     },
     "cpu": {
       "description": "Specify that your code only runs on certain cpu architectures.",
       "type": "array",
-      "items": { "type": "string" }
+      "items": {
+        "type": "string"
+      }
     },
     "devEngines": {
       "description": "Define the runtime and package manager for developing the current project.",
@@ -650,36 +895,71 @@
       "properties": {
         "os": {
           "oneOf": [
-            { "$ref": "#/definitions/devEngineDependency" },
-            { "type": "array", "items": { "$ref": "#/definitions/devEngineDependency" } }
+            {
+              "$ref": "#/definitions/devEngineDependency"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/devEngineDependency"
+              }
+            }
           ],
           "description": "Specifies which operating systems are supported for development"
         },
         "cpu": {
           "oneOf": [
-            { "$ref": "#/definitions/devEngineDependency" },
-            { "type": "array", "items": { "$ref": "#/definitions/devEngineDependency" } }
+            {
+              "$ref": "#/definitions/devEngineDependency"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/devEngineDependency"
+              }
+            }
           ],
           "description": "Specifies which CPU architectures are supported for development"
         },
         "libc": {
           "oneOf": [
-            { "$ref": "#/definitions/devEngineDependency" },
-            { "type": "array", "items": { "$ref": "#/definitions/devEngineDependency" } }
+            {
+              "$ref": "#/definitions/devEngineDependency"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/devEngineDependency"
+              }
+            }
           ],
           "description": "Specifies which C standard libraries are supported for development"
         },
         "runtime": {
           "oneOf": [
-            { "$ref": "#/definitions/devEngineDependency" },
-            { "type": "array", "items": { "$ref": "#/definitions/devEngineDependency" } }
+            {
+              "$ref": "#/definitions/devEngineDependency"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/devEngineDependency"
+              }
+            }
           ],
           "description": "Specifies which JavaScript runtimes (like Node.js, Deno, Bun) are supported for development. Values should use WinterCG Runtime Keys (see https://runtime-keys.proposal.wintercg.org/)"
         },
         "packageManager": {
           "oneOf": [
-            { "$ref": "#/definitions/devEngineDependency" },
-            { "type": "array", "items": { "$ref": "#/definitions/devEngineDependency" } }
+            {
+              "$ref": "#/definitions/devEngineDependency"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/devEngineDependency"
+              }
+            }
           ],
           "description": "Specifies which package managers are supported for development"
         }
@@ -691,7 +971,17 @@
     },
     "private": {
       "description": "If set to true, then npm will refuse to publish it.",
-      "oneOf": [{ "type": "boolean" }, { "enum": ["false", "true"] }]
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "enum": [
+            "false",
+            "true"
+          ]
+        }
+      ]
     },
     "publishConfig": {
       "description": "Values applied at publish time. npm: publish-time config values (tag, registry, access, provenance), see https://docs.npmjs.com/cli/v12/configuring-npm/package-json#publishconfig. pnpm: also overrides manifest fields (main, exports, types, etc.) before packing, plus pnpm-specific fields (directory, linkDirectory, executableFiles), see https://pnpm.io/package_json#publishconfig.",
@@ -700,7 +990,10 @@
         "access": {
           "description": "Access level for scoped packages at publish time (defaults to \"restricted\"). Supported by npm, honored by pnpm.",
           "type": "string",
-          "enum": ["public", "restricted"]
+          "enum": [
+            "public",
+            "restricted"
+          ]
         },
         "tag": {
           "description": "Distribution tag to publish under (defaults to \"latest\"). Supported by npm, honored by pnpm.",
@@ -726,25 +1019,48 @@
         "executableFiles": {
           "description": "pnpm only: additional files to mark executable (+x) in the package archive.",
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         }
       },
       "additionalProperties": true
     },
     "dist": {
       "type": "object",
-      "properties": { "shasum": { "type": "string" }, "tarball": { "type": "string" } }
+      "properties": {
+        "shasum": {
+          "type": "string"
+        },
+        "tarball": {
+          "type": "string"
+        }
+      }
     },
-    "readme": { "type": "string" },
+    "readme": {
+      "type": "string"
+    },
     "module": {
       "description": "An ECMAScript module ID that is the primary entry point to your program.",
       "type": "string"
     },
     "esnext": {
       "description": "A module ID with untranspiled code that is the primary entry point to your program.",
-      "type": ["string", "object"],
-      "properties": { "main": { "type": "string" }, "browser": { "type": "string" } },
-      "additionalProperties": { "type": "string" }
+      "type": [
+        "string",
+        "object"
+      ],
+      "properties": {
+        "main": {
+          "type": "string"
+        },
+        "browser": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {
+        "type": "string"
+      }
     },
     "workspaces": {
       "description": "Allows packages within a directory to depend on one another using direct linking of local files. Additionally, dependencies within a workspace are hoisted to the workspace root when possible to reduce duplication. Note: It's also a good idea to set \"private\" to true when using this feature.",
@@ -752,7 +1068,9 @@
         {
           "type": "array",
           "description": "Workspace package paths. Glob patterns are supported.",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
         {
           "type": "object",
@@ -760,27 +1078,51 @@
             "packages": {
               "type": "array",
               "description": "Workspace package paths. Glob patterns are supported.",
-              "items": { "type": "string" }
+              "items": {
+                "type": "string"
+              }
             },
             "nohoist": {
               "type": "array",
               "description": "Packages to block from hoisting to the workspace root. Currently only supported in Yarn only.",
-              "items": { "type": "string" }
+              "items": {
+                "type": "string"
+              }
             }
           }
         }
       ]
     },
-    "jspm": { "$ref": "#" },
-    "eslintConfig": { "$ref": "eslintrc.json" },
-    "prettier": { "$ref": "https://www.schemastore.org/prettierrc.json" },
-    "stylelint": { "$ref": "stylelintrc.json" },
-    "ava": { "$ref": "ava.json" },
-    "release": { "$ref": "semantic-release.json" },
-    "jscpd": { "$ref": "jscpd.json" },
-    "madge": { "$ref": "madge.json" },
-    "nodemonConfig": { "$ref": "nodemon.json" },
-    "quikrun": { "$ref": "https://www.schemastore.org/quikrun.json" },
+    "jspm": {
+      "$ref": "#"
+    },
+    "eslintConfig": {
+      "$ref": "eslintrc.json"
+    },
+    "prettier": {
+      "$ref": "https://www.schemastore.org/prettierrc.json"
+    },
+    "stylelint": {
+      "$ref": "stylelintrc.json"
+    },
+    "ava": {
+      "$ref": "ava.json"
+    },
+    "release": {
+      "$ref": "semantic-release.json"
+    },
+    "jscpd": {
+      "$ref": "jscpd.json"
+    },
+    "madge": {
+      "$ref": "madge.json"
+    },
+    "nodemonConfig": {
+      "$ref": "nodemon.json"
+    },
+    "quikrun": {
+      "$ref": "https://www.schemastore.org/quikrun.json"
+    },
     "pnpm": {
       "description": "Defines pnpm specific configuration.",
       "type": "object",
@@ -796,10 +1138,18 @@
             "^.+$": {
               "type": "object",
               "properties": {
-                "dependencies": { "$ref": "#/definitions/dependency" },
-                "optionalDependencies": { "$ref": "#/definitions/optionalDependency" },
-                "peerDependencies": { "$ref": "#/definitions/peerDependency" },
-                "peerDependenciesMeta": { "$ref": "#/definitions/peerDependencyMeta" }
+                "dependencies": {
+                  "$ref": "#/definitions/dependency"
+                },
+                "optionalDependencies": {
+                  "$ref": "#/definitions/optionalDependency"
+                },
+                "peerDependencies": {
+                  "$ref": "#/definitions/peerDependency"
+                },
+                "peerDependenciesMeta": {
+                  "$ref": "#/definitions/peerDependencyMeta"
+                }
               },
               "additionalProperties": false
             }
@@ -812,7 +1162,9 @@
             "ignoreMissing": {
               "description": "pnpm will not print warnings about missing peer dependencies from this list.",
               "type": "array",
-              "items": { "type": "string" }
+              "items": {
+                "type": "string"
+              }
             },
             "allowedVersions": {
               "description": "Unmet peer dependency warnings will not be printed for peer dependencies of the specified range.",
@@ -821,7 +1173,9 @@
             "allowAny": {
               "description": "Any peer dependency matching the pattern will be resolved from any version, regardless of the range specified in \"peerDependencies\".",
               "type": "array",
-              "items": { "type": "string" }
+              "items": {
+                "type": "string"
+              }
             }
           },
           "additionalProperties": false
@@ -829,12 +1183,16 @@
         "neverBuiltDependencies": {
           "description": "A list of dependencies to run builds for.",
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
         "onlyBuiltDependencies": {
           "description": "A list of package names that are allowed to be executed during installation.",
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
         "onlyBuiltDependenciesFile": {
           "description": "Specifies a JSON file that lists the only packages permitted to run installation scripts during the pnpm install process.",
@@ -843,7 +1201,9 @@
         "ignoredBuiltDependencies": {
           "description": "A list of package names that should not be built during installation.",
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
         "allowedDeprecatedVersions": {
           "description": "A list of deprecated versions that the warnings are suppressed.",
@@ -867,7 +1227,9 @@
             "ignoreDependencies": {
               "description": "A list of packages that should be ignored when running \"pnpm outdated\" or \"pnpm update --latest\".",
               "type": "array",
-              "items": { "type": "string" }
+              "items": {
+                "type": "string"
+              }
             }
           },
           "additionalProperties": false
@@ -882,12 +1244,18 @@
             "ignoreCves": {
               "description": "A list of CVE IDs that will be ignored by \"pnpm audit\".",
               "type": "array",
-              "items": { "type": "string", "pattern": "^CVE-\\d{4}-\\d{4,7}$" }
+              "items": {
+                "type": "string",
+                "pattern": "^CVE-\\d{4}-\\d{4,7}$"
+              }
             },
             "ignoreGhsas": {
               "description": "A list of GHSA Codes that will be ignored by \"pnpm audit\".",
               "type": "array",
-              "items": { "type": "string", "pattern": "^GHSA(-[23456789cfghjmpqrvwx]{4}){3}$" }
+              "items": {
+                "type": "string",
+                "pattern": "^GHSA(-[23456789cfghjmpqrvwx]{4}){3}$"
+              }
             }
           },
           "additionalProperties": false
@@ -895,22 +1263,41 @@
         "requiredScripts": {
           "description": "A list of scripts that must exist in each project.",
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
         "supportedArchitectures": {
           "description": "Specifies architectures for which you'd like to install optional dependencies, even if they don't match the architecture of the system running the install.",
           "type": "object",
           "properties": {
-            "os": { "type": "array", "items": { "type": "string" } },
-            "cpu": { "type": "array", "items": { "type": "string" } },
-            "libc": { "type": "array", "items": { "type": "string" } }
+            "os": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "cpu": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "libc": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
           },
           "additionalProperties": false
         },
         "ignoredOptionalDependencies": {
           "description": "A list of optional dependencies that the install should be skipped.",
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
         "executionEnv": {
           "type": "object",
@@ -935,11 +1322,23 @@
         },
         "startCommand": {
           "description": "A terminal command to be executed when opening the project, after installing npm dependencies.",
-          "type": ["string", "boolean"]
+          "type": [
+            "string",
+            "boolean"
+          ]
         },
         "compileTrigger": {
           "description": "The compileTrigger option controls how file changes in the editor are written to the WebContainers in-memory filesystem. ",
-          "oneOf": [{ "type": "string", "enum": ["auto", "keystroke", "save"] }]
+          "oneOf": [
+            {
+              "type": "string",
+              "enum": [
+                "auto",
+                "keystroke",
+                "save"
+              ]
+            }
+          ]
         },
         "env": {
           "description": "A map of default environment variables that will be set in each top-level shell process.",
@@ -951,15 +1350,25 @@
     "allowScripts": {
       "description": "Records which dependencies are permitted to run install scripts (preinstall, install, postinstall, and prepare for non-registry sources). Maintained via the \"npm approve-scripts\" command, which enforces a default-deny policy: install scripts for any dependency without a matching entry are silently skipped. Keys are package identifiers — either name-only (e.g. \"pkg\") or pinned with a version (e.g. \"pkg@1.2.3\"); by default entries are pinned so approval is version-specific. A value of true allows the dependency's install scripts to run, while false explicitly denies them (existing false entries are never silently overridden).",
       "type": "object",
-      "additionalProperties": { "type": "boolean" }
+      "additionalProperties": {
+        "type": "boolean"
+      }
     },
     "sideEffects": {
       "description": "Provides hints to the Webpack compiler, denoting which files in your project are \"pure\" and therefore safe to prune if unused.",
       "oneOf": [
-        { "type": "boolean" },
-        { "type": "array", "items": { "type": "string" }, "uniqueItems": true }
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        }
       ]
     }
   },
-  "$id": "https://json.schemastore.org/package.json"
+  "title": "JSON schema for NPM package.json files"
 }

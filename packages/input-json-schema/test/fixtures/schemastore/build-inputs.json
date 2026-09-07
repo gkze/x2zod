@@ -1,0 +1,86 @@
+{
+  "$schema": "../../../../build-inputs/schema/build-inputs.schema.json",
+  "version": 1,
+  "inputs": [
+    {
+      "id": "schemastore-ava",
+      "path": "ava.json",
+      "url": "https://raw.githubusercontent.com/SchemaStore/schemastore/d651805897ab2484548bcf3718624b459cb6cf21/src/schemas/json/ava.json"
+    },
+    {
+      "id": "schemastore-cargo-lints-cargo",
+      "path": "cargo-lints-cargo.json",
+      "url": "https://raw.githubusercontent.com/SchemaStore/schemastore/d651805897ab2484548bcf3718624b459cb6cf21/src/schemas/json/cargo-lints-cargo.json"
+    },
+    {
+      "id": "schemastore-cargo-lints-clippy",
+      "path": "cargo-lints-clippy.json",
+      "url": "https://raw.githubusercontent.com/SchemaStore/schemastore/d651805897ab2484548bcf3718624b459cb6cf21/src/schemas/json/cargo-lints-clippy.json"
+    },
+    {
+      "id": "schemastore-cargo-lints-rust",
+      "path": "cargo-lints-rust.json",
+      "url": "https://raw.githubusercontent.com/SchemaStore/schemastore/d651805897ab2484548bcf3718624b459cb6cf21/src/schemas/json/cargo-lints-rust.json"
+    },
+    {
+      "id": "schemastore-cargo-lints-rustdoc",
+      "path": "cargo-lints-rustdoc.json",
+      "url": "https://raw.githubusercontent.com/SchemaStore/schemastore/d651805897ab2484548bcf3718624b459cb6cf21/src/schemas/json/cargo-lints-rustdoc.json"
+    },
+    {
+      "id": "schemastore-cargo",
+      "path": "cargo.json",
+      "url": "https://raw.githubusercontent.com/SchemaStore/schemastore/d651805897ab2484548bcf3718624b459cb6cf21/src/schemas/json/cargo.json"
+    },
+    {
+      "id": "schemastore-eslintrc",
+      "path": "eslintrc.json",
+      "url": "https://raw.githubusercontent.com/SchemaStore/schemastore/d651805897ab2484548bcf3718624b459cb6cf21/src/schemas/json/eslintrc.json"
+    },
+    {
+      "id": "schemastore-jscpd",
+      "path": "jscpd.json",
+      "url": "https://raw.githubusercontent.com/SchemaStore/schemastore/d651805897ab2484548bcf3718624b459cb6cf21/src/schemas/json/jscpd.json"
+    },
+    {
+      "id": "schemastore-madge",
+      "path": "madge.json",
+      "url": "https://raw.githubusercontent.com/SchemaStore/schemastore/d651805897ab2484548bcf3718624b459cb6cf21/src/schemas/json/madge.json"
+    },
+    {
+      "id": "schemastore-nodemon",
+      "path": "nodemon.json",
+      "url": "https://raw.githubusercontent.com/SchemaStore/schemastore/d651805897ab2484548bcf3718624b459cb6cf21/src/schemas/json/nodemon.json"
+    },
+    {
+      "id": "schemastore-package",
+      "path": "package.json",
+      "url": "https://raw.githubusercontent.com/SchemaStore/schemastore/d651805897ab2484548bcf3718624b459cb6cf21/src/schemas/json/package.json"
+    },
+    {
+      "id": "schemastore-partial-eslint-plugins",
+      "path": "partial-eslint-plugins.json",
+      "url": "https://raw.githubusercontent.com/SchemaStore/schemastore/d651805897ab2484548bcf3718624b459cb6cf21/src/schemas/json/partial-eslint-plugins.json"
+    },
+    {
+      "id": "schemastore-prettierrc",
+      "path": "prettierrc.json",
+      "url": "https://raw.githubusercontent.com/SchemaStore/schemastore/d651805897ab2484548bcf3718624b459cb6cf21/src/schemas/json/prettierrc.json"
+    },
+    {
+      "id": "schemastore-quikrun",
+      "path": "quikrun.json",
+      "url": "https://raw.githubusercontent.com/SchemaStore/schemastore/d651805897ab2484548bcf3718624b459cb6cf21/src/schemas/json/quikrun.json"
+    },
+    {
+      "id": "schemastore-semantic-release",
+      "path": "semantic-release.json",
+      "url": "https://raw.githubusercontent.com/SchemaStore/schemastore/d651805897ab2484548bcf3718624b459cb6cf21/src/schemas/json/semantic-release.json"
+    },
+    {
+      "id": "schemastore-stylelintrc",
+      "path": "stylelintrc.json",
+      "url": "https://raw.githubusercontent.com/SchemaStore/schemastore/d651805897ab2484548bcf3718624b459cb6cf21/src/schemas/json/stylelintrc.json"
+    }
+  ]
+}

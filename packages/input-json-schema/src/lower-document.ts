@@ -8,6 +8,8 @@ import type {
   ZodRuntimeProgram,
 } from "@x2zod/core";
 
+import { collectJsonSchemaAnnotations, applyJsonSchemaAnnotationProjection } from "./annotations";
+import type { JsonSchemaAnnotationProjector } from "./annotations";
 import { resultFromJsonSchemaDiagnostics } from "./diagnostics";
 import { defaultJsonSchemaDialectPolicy } from "./dialect";
 import type { JsonSchemaDialectPolicy } from "./dialect";
@@ -17,7 +19,6 @@ import {
   jsonSchemaDocumentResource,
   normalizeUserExternalSchemaRegistry,
 } from "./external-schema-registry";
-import { withoutConfiguredInertKeywords } from "./inert-keywords";
 import { collectKeywordDiagnostics } from "./keyword-diagnostics";
 import { declareSchema } from "./lower";
 import { loweringDiagnosticSink as diagnosticSink } from "./lower-diagnostics";
@@ -41,14 +42,13 @@ const rootSymbol = "root";
 const schemaWithoutValidationKeywords = (
   schema: JsonSchemaValue,
   policy: JsonSchemaDialectPolicy,
-  inertKeywords: ResolvedJsonSchemaInputPluginOptions["inertKeywords"],
 ): JsonSchemaValue => {
   if (!isJsonObject(schema)) return schema;
 
-  const semanticSchema = withoutConfiguredInertKeywords(schema, inertKeywords);
-  if (policy.validation) return semanticSchema;
+  // Preserve opaque containers for explicit pointer targets; runtime atoms exclude unknown keys.
+  if (policy.validation) return schema;
   return Object.fromEntries(
-    Object.entries(semanticSchema).filter(([key]) => !jsonSchemaValidationKeywords.has(key)),
+    Object.entries(schema).filter(([key]) => !jsonSchemaValidationKeywords.has(key)),
   );
 };
 
@@ -120,8 +120,7 @@ const createRuntimeRequest = (
           fallbackPolicy: policyForExternal(uri),
           retrievalUri: uri,
           schema,
-          stripSchema: (candidate, policy) =>
-            schemaWithoutValidationKeywords(candidate, policy, context.options.inertKeywords),
+          stripSchema: (candidate, policy) => schemaWithoutValidationKeywords(candidate, policy),
         }),
       ]),
     ),
@@ -133,8 +132,7 @@ const createRuntimeRequest = (
       retrievalUri:
         context.references.graph.location(context.references.graph.root)?.retrievalUri ?? "",
       schema: normalizedSchema,
-      stripSchema: (candidate, policy) =>
-        schemaWithoutValidationKeywords(candidate, policy, context.options.inertKeywords),
+      stripSchema: (candidate, policy) => schemaWithoutValidationKeywords(candidate, policy),
     }),
   };
 };
@@ -176,7 +174,13 @@ const guardRuntimeDeclarations = async (
         program.id,
         "encoded-input",
       );
-      declarations.push({ ...structural, exportExpression: guarded });
+      declarations.push({
+        ...structural,
+        exportExpression: applyJsonSchemaAnnotationProjection(
+          guarded,
+          context.annotationProjections.get(location),
+        ),
+      });
     }
   }
   return ok({ declarations, root: rootSymbol, runtimePrograms }, diagnostics);
@@ -191,6 +195,7 @@ export const lowerJsonSchemaDocument = async (
     locations?: SourceLocationMap | undefined;
     unevaluatedVocabulary?: boolean | undefined;
     validationVocabulary?: boolean | undefined;
+    projectAnnotations?: JsonSchemaAnnotationProjector | undefined;
   }> = {},
 ): Promise<Result<ZodEmissionModuleInput>> => {
   const {
@@ -221,6 +226,9 @@ export const lowerJsonSchemaDocument = async (
   });
   if (!resolvedResourcePolicies.ok) return resolvedResourcePolicies;
   const context: LoweringContext = {
+    annotations: new Map(),
+    annotationProjections: new Map(),
+    projectAnnotations: request.projectAnnotations,
     declarationLocations: new Map(),
     declarations: new Map(),
     diagnostics: [],
@@ -239,6 +247,10 @@ export const lowerJsonSchemaDocument = async (
       context.diagnostics,
     );
 
+  for (const id of context.references.graph.reachableLocations) {
+    const location = context.references.graph.location(id);
+    if (location !== undefined) context.annotations.set(id, collectJsonSchemaAnnotations(location));
+  }
   declareSchema(context.references.root, context);
   const structuralModule = resultFromJsonSchemaDiagnostics(
     { declarations: [...context.declarations.values()], root: rootSymbol },

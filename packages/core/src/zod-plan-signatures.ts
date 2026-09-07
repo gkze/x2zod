@@ -26,6 +26,7 @@ export type ZodFactoryArgumentsByName = Readonly<{
 
 export type ZodMethodArgumentsByName = Readonly<{
   catchall: readonly [ZodExpressionArgument];
+  describe: readonly [ZodLiteralArgument<string>];
   gt: readonly [ZodLiteralArgument<number>];
   gte: readonly [ZodLiteralArgument<number>];
   int: readonly [];

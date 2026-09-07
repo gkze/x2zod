@@ -1,12 +1,13 @@
 import { createDiagnostic, err, ok } from "@x2zod/core";
 import type { Result } from "@x2zod/core";
 
-import { isJsonObject } from "./document";
-import type { JsonSchemaValue } from "./document";
+import { isJsonArray, isJsonObject } from "./document";
+import type { JsonSchemaValue, JsonValue } from "./document";
 import { jsonSchemaDocumentResource } from "./external-schema-registry";
 import {
   isSupportedJsonSchemaMetaSchemaResource,
   jsonSchemaDialectForSchemaUri,
+  supportedJsonSchemaMetaSchemas,
 } from "./meta-schemas";
 import { jsonSchemaKeywords } from "./metadata";
 import type {
@@ -80,12 +81,35 @@ export const createJsonSchemaGraphMetaSchemaResolver =
     return resolved.ok ? ok(resolved.value?.schema) : resolved;
   };
 
+// Normalized JSON has data members only; numeric equality also treats -0 and 0 alike.
+const equalJsonValues = (left: JsonValue | undefined, right: JsonValue | undefined): boolean => {
+  if (left === right) return true;
+  if (isJsonArray(left))
+    return (
+      isJsonArray(right) &&
+      left.length === right.length &&
+      left.every((value, index) => equalJsonValues(value, right[index]))
+    );
+  if (!isJsonObject(left) || !isJsonObject(right)) return false;
+  const keys = Object.keys(left);
+  return (
+    keys.length === Object.keys(right).length &&
+    keys.every((key) => Object.hasOwn(right, key) && equalJsonValues(left[key], right[key]))
+  );
+};
+
 export const validateJsonSchemaMetaSchemaIdentifierOwnership = (
   resources: readonly JsonSchemaResource[],
+  graph: Pick<JsonSchemaResourceGraph, "location">,
 ): Result<true> => {
   const conflict = resources.find(
-    ({ canonicalUri, retrievalUri }) =>
-      canonicalUri !== retrievalUri && isSupportedJsonSchemaMetaSchemaResource(canonicalUri),
+    ({ canonicalUri, location, retrievalUri }) =>
+      canonicalUri !== retrievalUri &&
+      isSupportedJsonSchemaMetaSchemaResource(canonicalUri) &&
+      !equalJsonValues(
+        graph.location(location)?.schema,
+        supportedJsonSchemaMetaSchemas()[canonicalUri],
+      ),
   );
   return conflict === undefined
     ? ok(true)

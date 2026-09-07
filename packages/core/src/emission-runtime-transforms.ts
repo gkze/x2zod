@@ -3,6 +3,7 @@ import type { Result } from "./result";
 import { sourceRuntimeGuardExpression } from "./source-model";
 import type { SourceExpression, SourceMethodCall } from "./source-model";
 import type { ZodExpression, ZodMethodCall } from "./zod-plan";
+import { zodMethodMetadataFor } from "./zod-plan-metadata";
 
 export type ExpressionProjection = Readonly<{
   changed: boolean;
@@ -45,4 +46,14 @@ export const projectZodRuntimeGuardExpression = (
       program: expression.program,
     }),
   });
+};
+
+// A new codec has its own metadata registry entry. Keep annotations on the same outer receiver.
+export const outerDescriptionCalls = (
+  calls: readonly SourceMethodCall[],
+): readonly SourceMethodCall[] => {
+  const lastWrapper = calls.findLastIndex(
+    (call) => zodMethodMetadataFor(call.method)?.wrapsReceiver === true,
+  );
+  return calls.slice(lastWrapper + 1).filter((call) => call.method === "describe");
 };
