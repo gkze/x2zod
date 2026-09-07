@@ -26,7 +26,7 @@ export type StandaloneRuntimeRequest = Readonly<{
 }>;
 
 type ReachableSchema = Pick<ResolvedJsonSchemaReference, "location" | "pointer" | "schema">;
-export type JsonSchemaRuntimeProjection = "conservative" | "none" | "structural";
+export type JsonSchemaRuntimeProjection = "none" | "structural";
 
 const standaloneRuntimeKeywords: ReadonlySet<string> = new Set([
   jsonSchemaKeywords.contains,
@@ -40,6 +40,7 @@ const standaloneRuntimeKeywords: ReadonlySet<string> = new Set([
   jsonSchemaKeywords.maxProperties,
   jsonSchemaKeywords.minProperties,
   jsonSchemaKeywords.patternProperties,
+  jsonSchemaKeywords.propertyNames,
   jsonSchemaKeywords.recursiveAnchor,
   jsonSchemaKeywords.recursiveRef,
   jsonSchemaKeywords.thenKeyword,
@@ -56,7 +57,8 @@ const schemaRequiresStandaloneRuntime = (
     Object.keys(schema).some(
       (keyword) =>
         standaloneRuntimeKeywords.has(keyword) &&
-        (keyword !== jsonSchemaKeywords.dependencies || dialect === "draft-7"),
+        (keyword !== jsonSchemaKeywords.dependencies || dialect === "draft-7") &&
+        (keyword !== jsonSchemaKeywords.propertyNames || schema[keyword] !== true),
     ));
 
 const policyForLocation = (
@@ -153,11 +155,6 @@ export const reachableRuntimeLocationIds = (
 ): ReadonlySet<ResolvedJsonSchemaReference["location"]> =>
   new Set(reachableSchemas(request).map(({ location }) => location));
 
-const schemaNeedsConservativeRuntimeProjection = (schema: JsonSchemaValue): boolean =>
-  isJsonObject(schema) &&
-  schema[jsonSchemaKeywords.propertyNames] !== undefined &&
-  schema[jsonSchemaKeywords.propertyNames] !== true;
-
 export const jsonSchemaRuntimeProjection = (
   request: StandaloneRuntimeRequest,
 ): JsonSchemaRuntimeProjection => {
@@ -168,12 +165,13 @@ export const jsonSchemaRuntimeProjection = (
       resourceLocation !== undefined &&
       isSupportedJsonSchemaMetaSchemaResource(resourceLocation.resourceUri)
     )
-      return "conservative";
+      projection = "structural";
     const { dialect } = policyForLocation(request, location);
-    if (!isDraft7ReferenceSchema(schema, dialect)) {
-      if (schemaNeedsConservativeRuntimeProjection(schema)) return "conservative";
-      if (schemaRequiresStandaloneRuntime(schema, dialect)) projection = "structural";
-    }
+    if (
+      !isDraft7ReferenceSchema(schema, dialect) &&
+      schemaRequiresStandaloneRuntime(schema, dialect)
+    )
+      projection = "structural";
   }
   return projection;
 };

@@ -140,7 +140,7 @@ const createRuntimeRequest = (
 const guardRuntimeDeclarations = async (
   context: LoweringContext,
   runtimeRequest: ReturnType<typeof createRuntimeRequest>,
-  fallback: boolean,
+  requireRuntime: boolean,
 ): Promise<Result<ZodEmissionModuleInput>> => {
   const declarations: ZodDeclaration[] = [];
   const runtimePrograms: ZodRuntimeProgram[] = [];
@@ -153,12 +153,8 @@ const guardRuntimeDeclarations = async (
       references: createJsonSchemaReferenceResolverFromGraph(context.references.graph, location),
     };
     const projection = jsonSchemaRuntimeProjection(declarationRequest);
-    const structural =
-      fallback || projection === "conservative"
-        ? { ...declaration, expression: zodPlan.unknown() }
-        : declaration;
     const isRoot = declaration.symbol === rootSymbol;
-    if (projection === "none" && !fallback) declarations.push(declaration);
+    if (projection === "none" && !requireRuntime) declarations.push(declaration);
     else {
       // Serialize compiler/native-parser state instead of spawning one process per declaration.
       const compiled = await createStandaloneRuntimeProgram(declarationRequest);
@@ -170,12 +166,12 @@ const guardRuntimeDeclarations = async (
       runtimePrograms.push(program);
       diagnostics.push(...(compiled.diagnostics ?? []));
       const guarded = zodPlan.runtimeGuard(
-        zodPlan.reference(structural.symbol),
+        zodPlan.reference(declaration.symbol),
         program.id,
         "encoded-input",
       );
       declarations.push({
-        ...structural,
+        ...declaration,
         exportExpression: applyJsonSchemaAnnotationProjection(
           guarded,
           context.annotationProjections.get(location),
@@ -238,6 +234,7 @@ export const lowerJsonSchemaDocument = async (
     validationVocabulary,
     references: references.value,
     visiting: new Set<JsonSchemaAddress>(),
+    sameValueReferences: new Set<JsonSchemaAddress>(),
     ...(locations === undefined ? {} : { locations }),
   };
   collectDocumentDiagnostics(context);
@@ -251,15 +248,18 @@ export const lowerJsonSchemaDocument = async (
     const location = context.references.graph.location(id);
     if (location !== undefined) context.annotations.set(id, collectJsonSchemaAnnotations(location));
   }
-  declareSchema(context.references.root, context);
-  const structuralModule = resultFromJsonSchemaDiagnostics(
-    { declarations: [...context.declarations.values()], root: rootSymbol },
-    context.diagnostics,
-  );
   const runtimeRequest = createRuntimeRequest(
     document.schema,
     normalizedOptions.externalSchemas,
     context,
+  );
+  declareSchema(context.references.root, {
+    ...context,
+    allowSameValueCycles: jsonSchemaRuntimeProjection(runtimeRequest) === "structural",
+  });
+  const structuralModule = resultFromJsonSchemaDiagnostics(
+    { declarations: [...context.declarations.values()], root: rootSymbol },
+    context.diagnostics,
   );
   if (!structuralModule.ok && !hasOnlyExactRuntimeRecoverableErrors(context.diagnostics))
     return structuralModule;

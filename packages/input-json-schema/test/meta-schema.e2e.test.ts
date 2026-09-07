@@ -38,7 +38,20 @@ void test("generates the unmodified Draft 7 meta-schema from a local file and va
     rootDirectory: nodePath.join(import.meta.dirname, "../node_modules/.cache"),
   });
   try {
-    const generated = await generateSchemaFixture(directory, metaSchema);
+    const generated = await generateSchemaFixture(directory, metaSchema, {
+      consumerSource: `
+import { fixtureSchema } from "./generated";
+import type { Fixture } from "./generated";
+import { fixtureSchema as parser } from "./generated";
+export const parse = (value: unknown) => parser.parse(value);
+type Assert<T extends true> = T;
+export type NotUnknown = Assert<unknown extends Fixture ? false : true>;
+const schema = fixtureSchema.parse({});
+export const description: string | undefined = typeof schema === "boolean" ? undefined : schema.description;
+export const nested: Fixture | undefined = typeof schema === "boolean" ? undefined : schema.properties?.["child"];
+export const valid: Fixture = { type: "object", properties: { child: { type: "string" } }, additionalProperties: false };
+`,
+    });
     const ajv = new Ajv({ strict: false, logger: false, validateFormats: false });
     const validate = ajv.getSchema(metaSchemaUri);
     assert.ok(validate !== undefined);
@@ -162,7 +175,12 @@ for (const dialect of ["draft-7", "draft-2020-12"] as const)
       const generated = await generateSchemaFixture(
         directory,
         { $ref: "https://example.test/local-meta" },
-        { dialect, externalSchemas: { "https://example.test/local-meta": schema } },
+        {
+          pluginOptions: {
+            dialect,
+            externalSchemas: { "https://example.test/local-meta": schema },
+          },
+        },
       );
       assert.equal(
         generated.safeParse({ properties: { child: { type: "string" } } }).success,

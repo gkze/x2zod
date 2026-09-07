@@ -27,6 +27,8 @@ export type LoweringContext = Readonly<{
   validationVocabulary: boolean;
   references: JsonSchemaReferenceResolver;
   visiting: Set<JsonSchemaAddress>;
+  allowSameValueCycles?: boolean;
+  sameValueReferences: ReadonlySet<JsonSchemaAddress>;
 }>;
 
 export type LocatedSchemaRequest<TSchema extends JsonSchemaValue = JsonSchemaValue> = Readonly<{

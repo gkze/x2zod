@@ -6,21 +6,30 @@ import { isJsonArray, isJsonObject, isJsonSchemaValue, jsonStringValues } from "
 import type { JsonObject, JsonSchemaValue, JsonValue } from "./document";
 import { jsonSchemaKeywords, jsonSchemaMetadataKeywords } from "./metadata";
 import { applyJsonSchemaRequiredKeys } from "./object";
+import type { JsonSchemaDialect } from "./options";
 import { jsonSchemaPointerWithSegment } from "./pointer";
 import type { ResolvedJsonSchemaReference } from "./reference";
 import { jsonSchemaHasUnsafeObjectBoundary } from "./sibling-assertions";
 import { oneOrIntersection, oneOrUnion } from "./zod-expressions";
 
-type MergedObjectProperty = Readonly<{ pointer: JsonPointer; schema: JsonSchemaValue }>;
+type MergedObjectProperty = Readonly<{
+  pointer: JsonPointer;
+  schema: JsonSchemaValue;
+  context: UnevaluatedPropertiesLoweringContext;
+}>;
 
 type MergedObject = Readonly<{
   properties: Map<string, MergedObjectProperty[]>;
   required: Set<string>;
 }>;
 
-type UnevaluatedPropertiesLoweringContext = JsonSchemaDiagnosticSink &
+export type UnevaluatedPropertiesLoweringContext = JsonSchemaDiagnosticSink &
   Readonly<{
     lowerSchema: (pointer: JsonPointer, schema: JsonSchemaValue) => ZodExpression;
+    atReference: (reference: ResolvedJsonSchemaReference) => UnevaluatedPropertiesLoweringContext;
+    atPointer: (pointer: JsonPointer) => UnevaluatedPropertiesLoweringContext;
+    effectiveSchema: (schema: JsonObject) => JsonObject;
+    dialect: JsonSchemaDialect;
     resolveReference: (ref: string) => ResolvedJsonSchemaReference | undefined;
   }>;
 
@@ -55,7 +64,6 @@ type LowerMergedObjectRequest = Readonly<{
 }>;
 
 type AddMergedPropertyRequest = Readonly<{
-  context: UnevaluatedPropertiesLoweringContext;
   key: string;
   merged: MergedObject;
   property: MergedObjectProperty;
@@ -141,12 +149,7 @@ const oneOrXor = (expressions: readonly ZodExpression[]): ZodExpression => {
   return second === undefined ? first : zodPlan.xor([first, second, ...remaining]);
 };
 
-const addMergedProperty = ({
-  context,
-  key,
-  merged,
-  property,
-}: AddMergedPropertyRequest): boolean => {
+const addMergedProperty = ({ key, merged, property }: AddMergedPropertyRequest): boolean => {
   const existing = merged.properties.get(key);
   if (existing === undefined) {
     merged.properties.set(key, [property]);
@@ -154,7 +157,10 @@ const addMergedProperty = ({
   }
   if (
     [...existing, property].some((candidate) =>
-      jsonSchemaHasUnsafeObjectBoundary(candidate.schema, context.resolveReference),
+      jsonSchemaHasUnsafeObjectBoundary(
+        candidate.schema,
+        candidate.context.atPointer(candidate.pointer).resolveReference,
+      ),
     )
   )
     return false;
@@ -177,10 +183,10 @@ const addMergedProperties = ({
     if (typeof propertySchema !== "boolean" && !isJsonObject(propertySchema)) return false;
     if (
       !addMergedProperty({
-        context,
         key,
         merged,
         property: {
+          context,
           pointer: jsonSchemaPointerWithSegment(
             jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.properties),
             key,
@@ -221,29 +227,47 @@ const schemaAllowsObjectsOnly = (schema: JsonObject): boolean => {
   );
 };
 
-const schemaRequiresObjectsOnly = (schema: JsonSchemaValue, state: ObjectMergeState): boolean => {
-  if (!isJsonObject(schema)) return false;
+const schemaRequiresObjectsOnly = (
+  value: JsonSchemaValue,
+  pointer: JsonPointer,
+  state: ObjectMergeState,
+): boolean => {
+  if (!isJsonObject(value)) return false;
+  const schema = state.context.effectiveSchema(value);
+  const ref = schema[jsonSchemaKeywords.ref];
+  if (typeof ref === "string") {
+    const target = state.context.resolveReference(ref);
+    let requiresObjects = false;
+    if (target !== undefined && !state.visiting.has(target.address)) {
+      state.visiting.add(target.address);
+      requiresObjects = schemaRequiresObjectsOnly(target.schema, target.pointer, {
+        ...state,
+        context: state.context.atReference(target),
+      });
+      state.visiting.delete(target.address);
+    }
+    if (requiresObjects || state.context.dialect === "draft-7") return requiresObjects;
+  }
   const type = schema[jsonSchemaKeywords.type];
   if (type === "object" || (isJsonArray(type) && type.length === 1 && type[0] === "object"))
     return true;
 
-  const ref = schema[jsonSchemaKeywords.ref];
-  if (typeof ref === "string") {
-    const target = state.context.resolveReference(ref);
-    if (target !== undefined && !state.visiting.has(target.address)) {
-      state.visiting.add(target.address);
-      const requiresObjects = schemaRequiresObjectsOnly(target.schema, state);
-      state.visiting.delete(target.address);
-      if (requiresObjects) return true;
-    }
-  }
-
   const allOf = schema[jsonSchemaKeywords.allOf];
   if (!isJsonArray(allOf)) return false;
 
-  return allOf.some(
-    (branch) => isJsonSchemaValue(branch) && schemaRequiresObjectsOnly(branch, state),
-  );
+  return allOf.some((branch, index) => {
+    const childPointer = jsonSchemaPointerWithSegment(
+      jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.allOf),
+      index,
+    );
+    return (
+      isJsonSchemaValue(branch) &&
+      schemaRequiresObjectsOnly(branch, childPointer, {
+        ...state,
+        context: state.context.atPointer(childPointer),
+      })
+    );
+  });
 };
 
 const mergeReferenceSchema = (schema: JsonObject, state: ObjectMergeState): boolean => {
@@ -253,7 +277,10 @@ const mergeReferenceSchema = (schema: JsonObject, state: ObjectMergeState): bool
   const target = state.context.resolveReference(ref);
   if (target === undefined || state.visiting.has(target.address)) return false;
   state.visiting.add(target.address);
-  const merged = mergeObjectSchema(target.schema, target.pointer, state);
+  const merged = mergeObjectSchema(target.schema, target.pointer, {
+    ...state,
+    context: state.context.atReference(target),
+  });
   state.visiting.delete(target.address);
   return merged;
 };
@@ -267,19 +294,28 @@ const mergeAllOfObjectSchemas = (
   for (const [index, schema] of values.entries()) {
     const schemaPointer = jsonSchemaPointerWithSegment(pointer, index);
     if (typeof schema !== "boolean" && !isJsonObject(schema)) return false;
-    if (!mergeObjectSchema(schema, schemaPointer, state)) return false;
+    if (
+      !mergeObjectSchema(schema, schemaPointer, {
+        ...state,
+        context: state.context.atPointer(schemaPointer),
+      })
+    )
+      return false;
   }
   return true;
 };
 
 const mergeObjectSchema = (
-  schema: JsonSchemaValue,
+  value: JsonSchemaValue,
   pointer: JsonPointer,
   state: ObjectMergeState,
 ): boolean => {
-  if (schema === false || schema === true) return false;
-  if (typeof schema[jsonSchemaKeywords.ref] === "string" && !mergeReferenceSchema(schema, state))
-    return false;
+  if (value === false || value === true) return false;
+  const schema = state.context.effectiveSchema(value);
+  if (typeof schema[jsonSchemaKeywords.ref] === "string") {
+    if (!mergeReferenceSchema(schema, state)) return false;
+    if (state.context.dialect === "draft-7") return true;
+  }
   if (!schemaAllowsObjectsOnly(schema) || !hasOnlyMergeableObjectKeywords(schema)) return false;
   if (!addMergedProperties({ context: state.context, merged: state.merged, pointer, schema }))
     return false;
@@ -296,12 +332,9 @@ const mergeObjectSchema = (
   );
 };
 
-const mergedPropertyExpression = (
-  properties: readonly MergedObjectProperty[],
-  context: UnevaluatedPropertiesLoweringContext,
-): ZodExpression =>
+const mergedPropertyExpression = (properties: readonly MergedObjectProperty[]): ZodExpression =>
   oneOrIntersection(
-    properties.map((property) => context.lowerSchema(property.pointer, property.schema)),
+    properties.map((property) => property.context.lowerSchema(property.pointer, property.schema)),
   );
 
 const undeclaredRequiredPropertyExpression = (
@@ -316,24 +349,53 @@ const undeclaredRequiredPropertyExpression = (
 
 const lowerMergedObject = (request: LowerMergedObjectRequest): ZodExpression => {
   const { context, merged, unevaluatedProperties, unevaluatedPropertiesPointer } = request;
-  const shape: Record<string, ZodExpression> = {};
+  const shape = new Map<string, ZodExpression>();
   for (const [key, properties] of merged.properties) {
-    const expression = mergedPropertyExpression(properties, context);
-    shape[key] = merged.required.has(key) ? expression : zodPlan.optional(expression);
+    const expression = mergedPropertyExpression(properties);
+    shape.set(key, merged.required.has(key) ? expression : zodPlan.optional(expression));
   }
   for (const key of merged.required)
-    shape[key] ??= undeclaredRequiredPropertyExpression(
-      unevaluatedProperties,
-      unevaluatedPropertiesPointer,
-      context,
-    );
+    if (!shape.has(key))
+      shape.set(
+        key,
+        undeclaredRequiredPropertyExpression(
+          unevaluatedProperties,
+          unevaluatedPropertiesPointer,
+          context,
+        ),
+      );
 
-  const object = applyJsonSchemaRequiredKeys(zodPlan.object(shape), [...merged.required]);
+  const object = applyJsonSchemaRequiredKeys(zodPlan.object(Object.fromEntries(shape)), [
+    ...merged.required,
+  ]);
   if (unevaluatedProperties === false) return zodPlan.strict(object);
   if (unevaluatedProperties === true) return zodPlan.passthrough(object);
   return zodPlan.catchall(
     object,
     context.lowerSchema(unevaluatedPropertiesPointer, unevaluatedProperties),
+  );
+};
+
+export const tryLowerJsonSchemaAllOfObject = (
+  schema: JsonObject,
+  pointer: JsonPointer,
+  context: UnevaluatedPropertiesLoweringContext,
+): ZodExpression | undefined => {
+  const merged: MergedObject = { properties: new Map(), required: new Set() };
+  const state: ObjectMergeState = { context, merged, visiting: new Set() };
+  if (
+    !schemaRequiresObjectsOnly(schema, pointer, state) ||
+    !mergeObjectSchema(schema, pointer, state)
+  )
+    return undefined;
+  return zodPlan.preserveObjectInput(
+    lowerMergedObject({
+      context,
+      merged,
+      unevaluatedProperties: true,
+      unevaluatedPropertiesPointer: pointer,
+    }),
+    [...merged.required],
   );
 };
 
@@ -348,7 +410,7 @@ export const lowerJsonSchemaUnevaluatedAllOfObject = (
     jsonSchemaKeywords.unevaluatedProperties,
   );
   if (
-    schemaRequiresObjectsOnly(request.schema, state) &&
+    schemaRequiresObjectsOnly(request.schema, request.schemaPointer, state) &&
     mergeObjectSchema(
       withoutKeywords(request.schema, new Set([jsonSchemaKeywords.unevaluatedProperties])),
       request.schemaPointer,
@@ -370,7 +432,12 @@ export const lowerJsonSchemaUnevaluatedAllOfObject = (
     ].join(" "),
     pointer: unevaluatedPropertiesPointer,
   });
-  return zodPlan.unknown();
+  // Preserve applicator and sibling types independently of evaluated-key bookkeeping.
+  // The exact predicate retains the omitted boundary.
+  return context.lowerSchema(
+    request.schemaPointer,
+    withoutKeywords(request.schema, new Set([jsonSchemaKeywords.unevaluatedProperties])),
+  );
 };
 
 export const lowerJsonSchemaUnevaluatedRequiredCompositionObject = (
@@ -393,7 +460,7 @@ export const lowerJsonSchemaUnevaluatedRequiredCompositionObject = (
     new Set([request.keyword, jsonSchemaKeywords.unevaluatedProperties]),
   );
   if (
-    !schemaRequiresObjectsOnly(request.schema, state) ||
+    !schemaRequiresObjectsOnly(request.schema, request.schemaPointer, state) ||
     !mergeObjectSchema(rootSchema, request.schemaPointer, state) ||
     !allRequiredPropertiesAreDeclared(merged)
   )

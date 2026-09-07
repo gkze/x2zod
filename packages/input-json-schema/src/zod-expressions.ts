@@ -8,10 +8,13 @@ export const oneOrUnion = (expressions: readonly ZodExpression[]): ZodExpression
 };
 
 export const oneOrIntersection = (expressions: readonly ZodExpression[]): ZodExpression => {
-  const [first, second, ...remaining] = expressions;
+  const [first] = expressions;
   if (first === undefined) return zodPlan.unknown();
-  let intersection = second === undefined ? first : zodPlan.intersection(first, second);
-  for (const expression of remaining) intersection = zodPlan.intersection(intersection, expression);
-
-  return intersection;
+  if (expressions.length === 1) return first;
+  // Balanced composition keeps TypeScript instantiation depth logarithmic in branch count.
+  const middle = Math.floor(expressions.length / 2);
+  return zodPlan.intersection(
+    oneOrIntersection(expressions.slice(0, middle)),
+    oneOrIntersection(expressions.slice(middle)),
+  );
 };

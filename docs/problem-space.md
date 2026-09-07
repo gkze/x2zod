@@ -463,9 +463,11 @@ The unmodified bundled Draft 7 meta-schema can also be compiled as a document fr
 used to validate JSON Schema documents, including the Cargo and package.json fixtures. A document
 claiming a reserved meta-schema identifier from another retrieval location must equal the bundled
 schema. An explicitly supplied root at that same URI retains its existing authority; built-ins never
-replace it. Local external copies are registered once by resource identity. Conservative runtime
-projections still have conservative inferred types; compiling a meta-schema does not add a schema
-transformation API or make every generated validator an extendable Zod object.
+replace it. Local external copies are registered once by resource identity. Runtime predicates
+retain the structural projection, including recursive meta-schema references. Constraints such as
+property-name patterns and negation remain runtime checks without erasing unrelated fields.
+Compiling a meta-schema does not add a schema transformation API or make every generated validator
+an extendable Zod object.
 
 ## Product Boundary
 

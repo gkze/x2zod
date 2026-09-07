@@ -1,4 +1,3 @@
-import { zodPlan } from "@x2zod/core";
 import type { JsonPointer, ZodExpression } from "@x2zod/core";
 
 import {
@@ -25,17 +24,21 @@ import {
 import { lowerJsonSchemaSiblingIntersection } from "./sibling-intersection";
 import {
   lowerJsonSchemaUnevaluatedAllOfObject,
+  tryLowerJsonSchemaAllOfObject,
   lowerJsonSchemaUnevaluatedRequiredCompositionObject,
 } from "./unevaluated-properties";
 
-type CompositionSchemaLoweringContext = JsonSchemaDiagnosticSink &
+export type CompositionSchemaLoweringContext = JsonSchemaDiagnosticSink &
   Readonly<{
+    atReference: (reference: ResolvedJsonSchemaReference) => CompositionSchemaLoweringContext;
+    atPointer: (pointer: JsonPointer) => CompositionSchemaLoweringContext;
     lowerSchema: (
       pointer: JsonPointer,
       schema: JsonSchemaValue,
       sourceSchema?: JsonSchemaValue,
     ) => ZodExpression;
     resolveReference: (ref: string) => ResolvedJsonSchemaReference | undefined;
+    effectiveSchema: (schema: JsonObject) => JsonObject;
     dialect: JsonSchemaDialect;
     sourceProfile: JsonSchemaSourceProfile;
     unknownKeywords: JsonSchemaUnknownKeywordPolicy;
@@ -195,7 +198,9 @@ export const lowerJsonSchemaComposition = (
         { schema, schemaPointer: pointer, unevaluatedProperties },
         context,
       );
-    if (hasUnsafeAllOfIntersection(allOfValues, context)) {
+    const mergedObject = tryLowerJsonSchemaAllOfObject(schema, pointer, context);
+    if (mergedObject !== undefined) return mergedObject;
+    if (hasUnsafeAllOfIntersection(allOfValues, context))
       context.addDiagnostic({
         code: "unrepresentable_schema_combination",
         message: [
@@ -204,8 +209,6 @@ export const lowerJsonSchemaComposition = (
         ].join(" "),
         pointer: allOfPointer,
       });
-      return zodPlan.unknown();
-    }
     return lowerJsonSchemaSiblingIntersection(
       {
         expression: lowerJsonSchemaAllOf(allOfValues, allOfPointer, context),
