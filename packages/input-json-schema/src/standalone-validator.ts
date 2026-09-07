@@ -78,7 +78,7 @@ const addDialectMetaSchemas = (
     if (!providedResourceUris.has(uri)) ajv.addSchema(schema, uri);
 };
 
-const standaloneExpressionSource = (source: string): Result<string> => {
+const standaloneExpressionSource = (source: string, shared = false): Result<string> => {
   const validateIdentifier = defaultExportPattern.exec(source)?.groups?.["identifier"];
   if (validateIdentifier === undefined)
     return err(
@@ -93,7 +93,7 @@ const standaloneExpressionSource = (source: string): Result<string> => {
   return ok(
     [
       "(() => {",
-      standaloneRuntimePreamble,
+      shared ? "const require = x2zodRuntime.x2zodRequire;" : standaloneRuntimePreamble,
       chunkOversizedAjvValidator(executableSource.value),
       `return (value: unknown): boolean => ${validateIdentifier}(value);`,
       "})()",
@@ -168,10 +168,16 @@ export const createStandaloneRuntimeProgram = async (
     const source = standaloneCode(ajv, validate);
     const expressionSource = standaloneExpressionSource(source);
     if (!expressionSource.ok) return expressionSource;
+    const sharedSource = standaloneExpressionSource(source, true);
+    if (!sharedSource.ok) return sharedSource;
     return ok(
       zodRuntimeProgram(
         jsonSchemaRuntimeProgramId,
         await parseGeneratedTypeScriptExpression(expressionSource.value),
+        {
+          expression: await parseGeneratedTypeScriptExpression(sharedSource.value),
+          imports: { x2zodRuntime: "@x2zod/runtime/json-schema" },
+        },
       ),
     );
   } catch (error) {

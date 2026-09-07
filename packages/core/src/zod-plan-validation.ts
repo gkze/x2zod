@@ -70,7 +70,10 @@ const runtimeProgramAnalysis = (
   }
 };
 
-const validateRuntimeProgram = (program: ZodRuntimeProgram): Result<ZodRuntimeProgram> => {
+const validateRuntimeExpression = (
+  program: ZodRuntimeProgram,
+  imports: readonly string[] = [],
+): Result<ZodRuntimeProgram> => {
   const analysisResult = runtimeProgramAnalysis(program);
   if (!analysisResult.ok) return analysisResult;
   const analysis = analysisResult.value;
@@ -97,7 +100,7 @@ const validateRuntimeProgram = (program: ZodRuntimeProgram): Result<ZodRuntimePr
         )}.`,
       }),
     );
-  if (analysis.freeIdentifiers.length > 0)
+  if (analysis.freeIdentifiers.some((name) => !imports.includes(name)))
     return err(
       createDiagnostic({
         code: "invalid_zod_emission_module",
@@ -107,6 +110,16 @@ const validateRuntimeProgram = (program: ZodRuntimeProgram): Result<ZodRuntimePr
       }),
     );
   return ok(program);
+};
+
+const validateRuntimeProgram = (program: ZodRuntimeProgram): Result<ZodRuntimeProgram> => {
+  const inline = validateRuntimeExpression(program);
+  if (!inline.ok || program.shared === undefined) return inline;
+  const shared = validateRuntimeExpression(
+    { ...program, expression: program.shared.expression },
+    Object.keys(program.shared.imports),
+  );
+  return shared.ok ? ok(program) : shared;
 };
 
 const invalidFactoryArgs = (factory: ZodFactoryName, expected: string): Result<never> =>

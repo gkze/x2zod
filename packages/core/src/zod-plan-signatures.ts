@@ -1,46 +1,61 @@
 import type {
+  ZodArgument,
   ZodArrayArgument,
   ZodExpressionArgument,
   ZodHelperArgument,
   ZodLiteralArgument,
   ZodObjectShapeArgument,
 } from "./zod-plan";
+import type {
+  ZodArgumentMetadata,
+  ZodFactoryArgumentMetadata,
+  ZodFactoryName,
+  ZodKnownMethodName,
+  ZodMethodArgumentMetadata,
+} from "./zod-plan-metadata";
 
-export type ZodFactoryArgumentsByName = Readonly<{
-  array: readonly [ZodExpressionArgument];
-  boolean: readonly [];
-  enum: readonly [ZodArrayArgument<ZodLiteralArgument<string>>];
-  literal: readonly [ZodLiteralArgument];
-  never: readonly [];
-  null: readonly [];
-  number: readonly [];
-  object: readonly [ZodObjectShapeArgument];
-  intersection: readonly [ZodExpressionArgument, ZodExpressionArgument];
-  record: readonly [ZodExpressionArgument, ZodExpressionArgument];
-  string: readonly [];
-  tuple: readonly [ZodArrayArgument<ZodExpressionArgument>];
-  union: readonly [ZodArrayArgument<ZodExpressionArgument>];
-  unknown: readonly [];
-  xor: readonly [ZodArrayArgument<ZodExpressionArgument>];
-}>;
+interface ArgumentByKind {
+  array: ZodArrayArgument;
+  expression: ZodExpressionArgument;
+  helper: ZodHelperArgument;
+  literal: ZodLiteralArgument;
+  object: ZodObjectShapeArgument;
+}
+type ArgumentSequence<TKinds extends readonly ZodArgument["kind"][]> = {
+  readonly [TIndex in keyof TKinds]: ArgumentByKind[TKinds[TIndex]];
+};
+type ArgumentsFor<TMetadata extends ZodArgumentMetadata> =
+  TMetadata extends Readonly<{ kind: "none" }>
+    ? readonly []
+    : TMetadata extends Readonly<{
+          kind: "single";
+          argumentKind: infer TKind extends ZodArgument["kind"];
+        }>
+      ? readonly [ArgumentByKind[TKind]]
+      : TMetadata extends Readonly<{ kind: "literal"; valueType: infer TValueType }>
+        ? readonly [ZodLiteralArgument<TValueType extends "number" ? number : string>]
+        : TMetadata extends Readonly<{ kind: "regex" }>
+          ?
+              | readonly [pattern: ZodLiteralArgument<string>]
+              | readonly [pattern: ZodLiteralArgument<string>, flags: ZodLiteralArgument<string>]
+          : TMetadata extends Readonly<{
+                kind: "sequence";
+                argumentKinds: infer TKinds extends readonly ZodArgument["kind"][];
+              }>
+            ? ArgumentSequence<TKinds>
+            : TMetadata extends Readonly<{ kind: "array"; elementKind: infer TElementKind }>
+              ? readonly [
+                  ZodArrayArgument<
+                    TElementKind extends "expression"
+                      ? ZodExpressionArgument
+                      : ZodLiteralArgument<string>
+                  >,
+                ]
+              : never;
 
-export type ZodMethodArgumentsByName = Readonly<{
-  catchall: readonly [ZodExpressionArgument];
-  describe: readonly [ZodLiteralArgument<string>];
-  gt: readonly [ZodLiteralArgument<number>];
-  gte: readonly [ZodLiteralArgument<number>];
-  int: readonly [];
-  lt: readonly [ZodLiteralArgument<number>];
-  lte: readonly [ZodLiteralArgument<number>];
-  max: readonly [ZodLiteralArgument<number>];
-  min: readonly [ZodLiteralArgument<number>];
-  nullable: readonly [];
-  optional: readonly [];
-  passthrough: readonly [];
-  refine: readonly [ZodHelperArgument];
-  regex:
-    | readonly [pattern: ZodLiteralArgument<string>]
-    | readonly [pattern: ZodLiteralArgument<string>, flags: ZodLiteralArgument<string>];
-  required: readonly [ZodArrayArgument<ZodLiteralArgument<string>>];
-  strict: readonly [];
-}>;
+export type ZodFactoryArgumentsByName = {
+  readonly [TName in ZodFactoryName]: ArgumentsFor<ZodFactoryArgumentMetadata<TName>>;
+};
+export type ZodMethodArgumentsByName = {
+  readonly [TName in ZodKnownMethodName]: ArgumentsFor<ZodMethodArgumentMetadata<TName>>;
+};

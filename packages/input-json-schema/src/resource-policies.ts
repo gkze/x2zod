@@ -63,6 +63,11 @@ type ResourcePolicyRequest = Readonly<{
   resources?: readonly JsonSchemaResource[] | undefined;
   rootPolicy: JsonSchemaDialectPolicy;
   validateUsage?: ((location: JsonSchemaResourceLocation) => boolean) | undefined;
+  prepared?: PreparedResourcePolicies | undefined;
+}>;
+type PreparedResourcePolicies = Readonly<{
+  policies: ReadonlyMap<JsonSchemaLocationId, JsonSchemaDialectPolicy>;
+  resources: readonly JsonSchemaResource[];
 }>;
 type ResourceDiagnosticContext = Pick<ResourcePolicyRequest, "locations"> &
   Readonly<{ rootRetrievalUri?: string | undefined }>;
@@ -114,6 +119,7 @@ type SelectedResourcePolicyRequest = Readonly<{
   rootPolicy: JsonSchemaDialectPolicy;
   rootRetrievalUri?: string | undefined;
   selectedResources: readonly JsonSchemaResource[];
+  prepared?: PreparedResourcePolicies | undefined;
 }>;
 
 const resolveSelectedResourcePolicies = ({
@@ -124,15 +130,21 @@ const resolveSelectedResourcePolicies = ({
   rootPolicy,
   rootRetrievalUri,
   selectedResources,
+  prepared,
 }: SelectedResourcePolicyRequest): Readonly<{
   diagnostics: readonly Diagnostic[];
   policies: ReadonlyMap<JsonSchemaLocationId, JsonSchemaDialectPolicy>;
 }> => {
   const diagnostics: Diagnostic[] = [];
   const policies = new Map<JsonSchemaLocationId, JsonSchemaDialectPolicy>();
+  const preparedResources = new Set(prepared?.resources.map((resource) => resource.location));
   for (const resource of selectedResources) {
     const location = graph.location(resource.location);
-    if (location !== undefined)
+    const preparedPolicy = preparedResources.has(resource.location)
+      ? prepared?.policies.get(resource.location)
+      : undefined;
+    if (preparedPolicy !== undefined) policies.set(resource.location, preparedPolicy);
+    else if (location !== undefined)
       if (location.id === graph.root) policies.set(resource.location, rootPolicy);
       else {
         const parent = enclosingResource(graph.resources, resource);
@@ -226,6 +238,29 @@ const resourceUsageDiagnostics = ({
   return diagnostics;
 };
 
+export const validateJsonSchemaResourcePolicyUsage = (
+  request: Readonly<{
+    graph: JsonSchemaResourceGraph;
+    locations?: SourceLocationMap | undefined;
+    policies: ReadonlyMap<JsonSchemaLocationId, JsonSchemaDialectPolicy>;
+    resources?: readonly JsonSchemaResource[] | undefined;
+    validateUsage?: ((location: JsonSchemaResourceLocation) => boolean) | undefined;
+  }>,
+): Result<true> => {
+  const diagnostics = resourceUsageDiagnostics({
+    diagnosticContext: {
+      locations: request.locations,
+      rootRetrievalUri: request.graph.location(request.graph.root)?.retrievalUri,
+    },
+    graph: request.graph,
+    policies: request.policies,
+    selectedResources: request.resources ?? reachableJsonSchemaResources(request.graph),
+    validateUsage: request.validateUsage ?? ((): boolean => true),
+  });
+  const [first, ...remaining] = diagnostics;
+  return first === undefined ? ok(true) : err(first, ...remaining);
+};
+
 export const resolveJsonSchemaResourcePolicies = ({
   dialect,
   externalSchemas,
@@ -234,6 +269,7 @@ export const resolveJsonSchemaResourcePolicies = ({
   resources,
   rootPolicy,
   validateUsage = () => true,
+  prepared,
 }: ResourcePolicyRequest): Result<ReadonlyMap<JsonSchemaLocationId, JsonSchemaDialectPolicy>> => {
   const rootRetrievalUri = graph.location(graph.root)?.retrievalUri;
   const externalRootPolicy = defaultJsonSchemaDialectPolicy(dialect);
@@ -250,6 +286,7 @@ export const resolveJsonSchemaResourcePolicies = ({
     rootPolicy,
     rootRetrievalUri,
     selectedResources,
+    prepared,
   });
   const policies = policiesForGraphLocations({
     externalRootPolicy,

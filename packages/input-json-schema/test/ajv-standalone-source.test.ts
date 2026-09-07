@@ -18,3 +18,19 @@ void test("normalizes Ajv source lexically without rewriting literals", () => {
   assert.match(analysis.normalizedSource, /const validate0 =/u);
   assert.match(analysis.normalizedSource, /validate0;/u);
 });
+
+void test("resumes scanning after nested template interpolations without interpreting literal tails", () => {
+  const source = [
+    `const message = \`prefix \${\`nested \${{ key: "value" }.key}\`} require("literal") \${require("inside")} tail.errors\`;`,
+    'const equal = require("ajv/dist/runtime/equal");',
+    `const division = \`value \${1}\` / 2; const length = require("ajv/dist/runtime/ucs2length");`,
+  ].join("\n");
+  const analysis = analyzeAjvStandaloneSource(source);
+  assert.deepEqual(analysis.runtimeDependencies, [
+    "ajv/dist/runtime/equal",
+    "ajv/dist/runtime/ucs2length",
+    "inside",
+  ]);
+  assert.match(analysis.normalizedSource, /tail\.errors/u);
+  assert.match(analysis.normalizedSource, /require\("literal"\)/u);
+});

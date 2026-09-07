@@ -2,16 +2,24 @@ import type { Expression, Node } from "@typescript/native-preview/unstable/ast";
 import { isExpression } from "@typescript/native-preview/unstable/ast";
 import { z } from "zod/v4";
 
+import { typeScriptIdentifierSchema } from "./typescript-identifiers";
+
 const nonEmptyStringLength = 1;
 
 export type ZodRuntimeProgramId = string;
+export type ZodSharedRuntimeProgram = Readonly<{
+  expression: Expression;
+  imports: Readonly<Record<string, string>>;
+}>;
 export type ZodRuntimeProgram = Readonly<{
   expression: Expression;
+  shared?: ZodSharedRuntimeProgram | undefined;
   id: ZodRuntimeProgramId;
   kind: "predicate";
 }>;
 export type ZodRuntimeProgramInput = Readonly<{
   expression: Expression;
+  shared?: ZodSharedRuntimeProgram | undefined;
   id: string;
   kind?: "predicate" | undefined;
 }>;
@@ -48,6 +56,15 @@ const runtimeProgramExpressionSchema = z.custom<Expression>(isRuntimeProgramExpr
 const zodRuntimeProgramSchemaValue: z.ZodType<ZodRuntimeProgram, ZodRuntimeProgramInput> = z
   .strictObject({
     expression: runtimeProgramExpressionSchema,
+    shared: z
+      .strictObject({
+        expression: runtimeProgramExpressionSchema,
+        imports: z
+          .record(typeScriptIdentifierSchema, z.string().min(nonEmptyStringLength))
+          .readonly(),
+      })
+      .readonly()
+      .optional(),
     id: zodRuntimeProgramIdSchemaValue,
     kind: z.literal("predicate").default("predicate"),
   })
@@ -55,5 +72,8 @@ const zodRuntimeProgramSchemaValue: z.ZodType<ZodRuntimeProgram, ZodRuntimeProgr
 export const zodRuntimeProgramSchema: z.ZodType<ZodRuntimeProgram, ZodRuntimeProgramInput> =
   zodRuntimeProgramSchemaValue;
 
-export const zodRuntimeProgram = (id: string, expression: Expression): ZodRuntimeProgram =>
-  zodRuntimeProgramSchemaValue.parse({ expression, id });
+export const zodRuntimeProgram = (
+  id: string,
+  expression: Expression,
+  shared?: ZodSharedRuntimeProgram,
+): ZodRuntimeProgram => zodRuntimeProgramSchemaValue.parse({ expression, id, shared });

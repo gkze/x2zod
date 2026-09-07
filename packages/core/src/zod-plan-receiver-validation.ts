@@ -34,10 +34,8 @@ const missingRequiredObjectKeys = (keys: readonly string[]): Result<never> =>
 const receiverDescription = (kind: ReceiverKind): string =>
   kind === "wrapped" ? "an unwrapped Zod schema" : `a Zod ${kind} schema`;
 
-const receiverRequirementDescription = (receiver: ZodReceiverRequirement): string => {
-  if (receiver === "arrayOrString") return "a Zod array or string schema receiver";
-  return `a Zod ${receiver} schema receiver`;
-};
+const receiverRequirementDescription = (receiver: ZodReceiverRequirement): string =>
+  `a Zod ${typeof receiver === "string" ? receiver : receiver.join(" or ")} schema receiver`;
 
 const callReceiverRequirement = (call: ZodMethodCall): ZodReceiverRequirement | undefined => {
   const [argument] = call.args;
@@ -58,8 +56,9 @@ const callAllowsReceiverKind = (call: ZodMethodCall, kind: ReceiverKind): boolea
   return (
     receiver === undefined ||
     receiver === "any" ||
-    receiver === kind ||
-    (receiver === "arrayOrString" && (kind === "array" || kind === "string"))
+    (typeof receiver === "string"
+      ? receiver === kind
+      : kind !== "wrapped" && receiver.includes(kind))
   );
 };
 

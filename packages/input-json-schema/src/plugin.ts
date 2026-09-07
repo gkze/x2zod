@@ -14,7 +14,7 @@ import {
   resolveJsonSchemaDialect,
   resolveJsonSchemaVocabulary,
 } from "./dialect";
-import type { JsonSchemaMetaSchemaResolver } from "./dialect";
+import type { JsonSchemaDialectPolicy, JsonSchemaMetaSchemaResolver } from "./dialect";
 import { parseJsonSchemaDocument } from "./document";
 import type { ParsedJsonSchemaDocument } from "./document";
 import { normalizeUserExternalSchemaRegistry } from "./external-schema-registry";
@@ -26,10 +26,32 @@ import type {
   JsonSchemaInputPluginKind,
   JsonSchemaInputPluginOptions,
   JsonSchemaInputPluginOptionsInput,
+  ResolvedJsonSchemaInputPluginOptions,
 } from "./options";
 import { preflightJsonSchema, validateJsonSchemaCustomMetaKeywords } from "./preflight";
+import type { PreparedJsonSchemaContext } from "./preflight";
 import { jsonSchemaDocumentRetrievalUri } from "./reference";
 import { buildJsonSchemaResourceGraph } from "./resource-graph";
+
+const preparedContext: unique symbol = Symbol("preparedJsonSchemaContext");
+type BoundPreparedContext = Readonly<{ context: PreparedJsonSchemaContext; key: string }>;
+
+// Nested schema values remain mutable. Reuse only the graph/policy inputs captured at preparation.
+const preparationKey = (
+  document: ParsedJsonSchemaDocument,
+  options: ResolvedJsonSchemaInputPluginOptions,
+  policy: JsonSchemaDialectPolicy,
+): string =>
+  JSON.stringify([
+    document.schema,
+    jsonSchemaDocumentRetrievalUri(document),
+    options.externalSchemas,
+    policy.dialect,
+    policy.applicator,
+    policy.formatAssertion,
+    policy.unevaluated,
+    policy.validation,
+  ]);
 
 export type JsonSchemaPreparedInput = ParsedJsonSchemaDocument &
   Readonly<{
@@ -38,6 +60,7 @@ export type JsonSchemaPreparedInput = ParsedJsonSchemaDocument &
     formatAssertionVocabulary: boolean;
     unevaluatedVocabulary: boolean;
     validationVocabulary: boolean;
+    [preparedContext]?: BoundPreparedContext | undefined;
   }>;
 
 export type JsonSchemaInputPlugin = InputPlugin<
@@ -55,6 +78,7 @@ const mergePreparedDiagnostics = (
     prepared: PreparedInput<ParsedJsonSchemaDocument>;
     unevaluatedVocabulary: boolean;
     validationVocabulary: boolean;
+    context?: BoundPreparedContext | undefined;
   }>,
   ...results: readonly Result<unknown>[]
 ): Result<PreparedInput<JsonSchemaPreparedInput>> =>
@@ -68,6 +92,7 @@ const mergePreparedDiagnostics = (
         formatAssertionVocabulary: input.formatAssertionVocabulary,
         unevaluatedVocabulary: input.unevaluatedVocabulary,
         validationVocabulary: input.validationVocabulary,
+        ...(input.context === undefined ? {} : { [preparedContext]: input.context }),
       },
     },
     results.flatMap((result) => result.diagnostics ?? []),
@@ -130,13 +155,16 @@ const prepareJsonSchemaDocument = (
   const resolvedOptions = { ...options, dialect: dialect.value, externalSchemas };
   const rootPolicy = { dialect: dialect.value, ...vocabulary.value };
 
-  const preflight = preflightJsonSchema({
-    locations: parsed.value.locations,
-    options: resolvedOptions,
-    rootPolicy,
-    rootRetrievalUri,
-    schema: parsed.value.value.schema,
-  });
+  const preflight =
+    options.validator === "none"
+      ? ok(null)
+      : preflightJsonSchema({
+          locations: parsed.value.locations,
+          options: resolvedOptions,
+          rootPolicy,
+          rootRetrievalUri,
+          schema: parsed.value.value.schema,
+        });
   if (!preflight.ok) return preflight;
 
   return mergePreparedDiagnostics(
@@ -147,6 +175,17 @@ const prepareJsonSchemaDocument = (
       prepared: parsed.value,
       unevaluatedVocabulary: vocabulary.value.unevaluated,
       validationVocabulary: vocabulary.value.validation,
+      context:
+        preflight.value === null
+          ? undefined
+          : {
+              context: preflight.value,
+              key: preparationKey(
+                parsed.value.value,
+                { ...options, dialect: dialect.value },
+                rootPolicy,
+              ),
+            },
     },
     parsed,
     dialect,
@@ -162,22 +201,31 @@ export const createJsonSchemaInputPlugin = (
   lower: async (input, options): Promise<Result<ZodEmissionModuleInput>> => {
     await Promise.resolve();
     const resolvedOptions = { ...options, dialect: input.value.dialect };
+    const rootPolicy = {
+      applicator: input.value.applicatorVocabulary,
+      dialect: input.value.dialect,
+      formatAssertion: input.value.formatAssertionVocabulary,
+      unevaluated: input.value.unevaluatedVocabulary,
+      validation: input.value.validationVocabulary,
+    };
+    const bound = input.value[preparedContext];
+    const context =
+      bound !== undefined && bound.key === preparationKey(input.value, resolvedOptions, rootPolicy)
+        ? bound.context
+        : undefined;
     const customMetaKeywords =
       options.validator === "none"
-        ? validateJsonSchemaCustomMetaKeywords({
-            locations: input.locations,
-            options: resolvedOptions,
-            rootPolicy: {
-              applicator: input.value.applicatorVocabulary,
-              dialect: input.value.dialect,
-              formatAssertion: input.value.formatAssertionVocabulary,
-              unevaluated: input.value.unevaluatedVocabulary,
-              validation: input.value.validationVocabulary,
+        ? validateJsonSchemaCustomMetaKeywords(
+            {
+              locations: input.locations,
+              options: resolvedOptions,
+              rootPolicy,
+              rootRetrievalUri: jsonSchemaDocumentRetrievalUri(input.value),
+              schema: input.value.schema,
             },
-            rootRetrievalUri: jsonSchemaDocumentRetrievalUri(input.value),
-            schema: input.value.schema,
-          })
-        : ok(true);
+            context,
+          )
+        : ok(context);
     if (!customMetaKeywords.ok) return customMetaKeywords;
     const lowered = await lowerJsonSchemaDocument(input.value, resolvedOptions, {
       projectAnnotations: extensions.projectAnnotations,
@@ -186,6 +234,7 @@ export const createJsonSchemaInputPlugin = (
       locations: input.locations,
       unevaluatedVocabulary: input.value.unevaluatedVocabulary,
       validationVocabulary: input.value.validationVocabulary,
+      preparedContext: customMetaKeywords.value,
     });
     return appendDiagnostics(lowered, customMetaKeywords.diagnostics ?? []);
   },

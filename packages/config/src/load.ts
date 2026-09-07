@@ -5,6 +5,7 @@ import { z as zod } from "zod/v4";
 
 import {
   declarationExportModeSchema,
+  runtimeModeSchema,
   resolveZodSourceOutputOptions,
   typeScriptIdentifierSchema,
   zodEmissionTransformsSchema,
@@ -85,6 +86,7 @@ const outputConfigSchema: z.ZodType<
     processors: outputProcessorPipelineConfigSchema.optional(),
     typeName: nonEmptyStringSchema,
     zodImportPath: nonEmptyStringSchema.optional(),
+    runtimeMode: runtimeModeSchema.optional(),
   })
   .readonly();
 

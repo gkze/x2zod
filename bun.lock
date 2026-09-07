@@ -35,7 +35,7 @@
     },
     "apps/cli": {
       "name": "@x2zod/cli",
-      "version": "0.4.1",
+      "version": "0.5.1",
       "bin": {
         "x2zod": "bin/x2zod.ts",
       },
@@ -74,7 +74,7 @@
     },
     "packages/config": {
       "name": "@x2zod/config",
-      "version": "0.5.1",
+      "version": "0.6.1",
       "dependencies": {
         "@optique/core": "1.0.2",
         "@x2zod/core": "workspace:*",
@@ -92,7 +92,7 @@
     },
     "packages/core": {
       "name": "@x2zod/core",
-      "version": "0.6.1",
+      "version": "0.7.1",
       "dependencies": {
         "@typescript/native-preview": "7.0.0-dev.20260707.2",
         "zod": "4.4.3",
@@ -114,10 +114,11 @@
     },
     "packages/input-json-schema": {
       "name": "@x2zod/input-json-schema",
-      "version": "0.6.1",
+      "version": "0.7.1",
       "dependencies": {
         "@typescript/native-preview": "7.0.0-dev.20260707.2",
         "@x2zod/core": "workspace:*",
+        "@x2zod/runtime": "workspace:*",
         "ajv": "8.20.0",
         "jsonc-parser": "3.3.1",
         "type-fest": "5.7.0",
@@ -131,7 +132,7 @@
     },
     "packages/output-oxfmt": {
       "name": "@x2zod/output-oxfmt",
-      "version": "0.1.12",
+      "version": "0.1.14",
       "dependencies": {
         "@x2zod/config": "workspace:*",
         "oxfmt": "0.54.0",
@@ -143,7 +144,7 @@
     },
     "packages/output-oxlint": {
       "name": "@x2zod/output-oxlint",
-      "version": "0.1.12",
+      "version": "0.1.14",
       "dependencies": {
         "@x2zod/config": "workspace:*",
         "oxlint": "1.69.0",
@@ -151,6 +152,18 @@
       },
       "devDependencies": {
         "@x2zod/tsconfig": "workspace:*",
+      },
+    },
+    "packages/runtime": {
+      "name": "@x2zod/runtime",
+      "version": "0.1.0",
+      "devDependencies": {
+        "@x2zod/core": "workspace:*",
+        "@x2zod/tsconfig": "workspace:*",
+        "zod": "4.4.3",
+      },
+      "peerDependencies": {
+        "zod": "^4.4.3",
       },
     },
     "packages/tsconfig": {
@@ -444,6 +457,8 @@
     "@x2zod/output-oxfmt": ["@x2zod/output-oxfmt@workspace:packages/output-oxfmt"],
 
     "@x2zod/output-oxlint": ["@x2zod/output-oxlint@workspace:packages/output-oxlint"],
+
+    "@x2zod/runtime": ["@x2zod/runtime@workspace:packages/runtime"],
 
     "@x2zod/tsconfig": ["@x2zod/tsconfig@workspace:packages/tsconfig"],
 

@@ -141,6 +141,11 @@ const createCompileParser = (
             description: message`Input schema URI.`,
           }),
         ),
+        runtimeMode: optional(
+          option("--runtime-mode", choice(["inline", "shared"]), {
+            description: message`Inline helpers (default) or import shared @x2zod/runtime machinery.`,
+          }),
+        ),
         zodImportPath: optional(
           option("-z", "--zod-import-path", string({ metavar: "SPECIFIER" }), {
             description: message`Zod import specifier for generated source.`,

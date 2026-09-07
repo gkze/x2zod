@@ -72,6 +72,8 @@ import {
   createRuntimePredicateHelperStatements,
   createRuntimeProgramStatement,
   resolveRuntimeProgramEmission,
+  sharedHelperStatements,
+  sharedRuntimePrograms,
 } from "./source-runtime";
 import { isTypeScriptIdentifier } from "./typescript-identifiers";
 import type { TypeScriptIdentifier as TypeScriptIdentifierValue } from "./typescript-identifiers";
@@ -424,16 +426,24 @@ export const buildZodSourceFile = (
       throw new Error(`Missing transformed source declaration for symbol: ${symbol}`);
     return declaration.expression;
   };
+  const sharedPrograms =
+    output.value.runtimeMode === "shared"
+      ? sharedRuntimePrograms(runtimeProgramEmission.programs, identifierAllocation.allocator)
+      : { imports: [], programs: runtimeProgramEmission.programs };
+  const inlineHelpers = [
+    ...createZodHelperStatements(identifierAllocation.helperNames),
+    ...(identifierAllocation.needsPreservedObjectCodec ? [createPreservedObjectCodecHelper()] : []),
+    ...createRuntimePredicateHelperStatements(identifierAllocation.runtimeGuardParseModes),
+    ...(identifierAllocation.needsRemapHelper ? [createRemapPropertiesHelper()] : []),
+  ];
+  const helperStatements =
+    output.value.runtimeMode === "shared" ? sharedHelperStatements(inlineHelpers) : inlineHelpers;
   return ok({
     sourceFile: createSourceFile([
       createZodImport(output.value.zodImportPath),
-      ...createZodHelperStatements(identifierAllocation.helperNames),
-      ...(identifierAllocation.needsPreservedObjectCodec
-        ? [createPreservedObjectCodecHelper()]
-        : []),
-      ...createRuntimePredicateHelperStatements(identifierAllocation.runtimeGuardParseModes),
-      ...(identifierAllocation.needsRemapHelper ? [createRemapPropertiesHelper()] : []),
-      ...runtimeProgramEmission.programs.map((program) =>
+      ...helperStatements,
+      ...sharedPrograms.imports,
+      ...sharedPrograms.programs.map((program) =>
         createRuntimeProgramStatement(
           requiredRuntimeProgramName(runtimeProgramEmission.names, program.id),
           program,

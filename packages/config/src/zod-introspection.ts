@@ -43,6 +43,9 @@ export const schemaType = (schema: ZodSchema, path: readonly string[]): string =
   return type;
 };
 
+export const schemaAllowsOmission = (schema: ZodSchema): boolean =>
+  schema[ZOD_INTERNALS_KEY].optin === "optional";
+
 export const innerSchema = (schema: ZodSchema, path: readonly string[]): ZodSchema => {
   const { innerType } = schemaDef(schema, path);
   if (!isZodSchema(innerType))

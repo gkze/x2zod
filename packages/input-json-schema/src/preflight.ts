@@ -36,6 +36,7 @@ import type {
 import {
   resolveJsonSchemaResourcePolicies,
   sourceLocationsForJsonSchemaResource,
+  validateJsonSchemaResourcePolicyUsage,
 } from "./resource-policies";
 import { normalizeJsonSchemaRetrievalUri } from "./retrieval-uri";
 import { compareCodeUnits } from "./string-order";
@@ -247,7 +248,7 @@ const createAjvProvider = (): ((dialect: JsonSchemaDialect) => JsonSchemaAjv) =>
   };
 };
 
-type PreparedPreflight = Readonly<{
+export type PreparedJsonSchemaContext = Readonly<{
   customMetaSchemas: readonly JsonSchemaCustomMetaSchemaTarget[];
   dialect: JsonSchemaDialect;
   graph: JsonSchemaResourceGraph;
@@ -255,13 +256,14 @@ type PreparedPreflight = Readonly<{
   normalizedRootRetrievalUri?: string | undefined;
   options: ResolvedJsonSchemaInputPluginOptions;
   policies: ReadonlyMap<JsonSchemaLocationId, JsonSchemaDialectPolicy>;
+  policyResources: readonly JsonSchemaResource[];
   resources: readonly JsonSchemaResource[];
 }>;
 
 const preparePreflight = (
   { locations, options, rootPolicy, rootRetrievalUri, schema }: PreflightJsonSchemaRequest,
   validateDocuments: boolean,
-): Result<PreparedPreflight> => {
+): Result<PreparedJsonSchemaContext> => {
   const { dialect, externalSchemas } = options;
   const normalizedExternalSchemas = normalizeUserExternalSchemaRegistry(externalSchemas);
   if (!normalizedExternalSchemas.ok) return normalizedExternalSchemas;
@@ -308,12 +310,17 @@ const preparePreflight = (
     resources,
   );
   if (!customMetaSchemas.ok) return customMetaSchemas;
+  const policyResources = jsonSchemaCustomMetaPolicyResources(
+    graph.value,
+    resources,
+    customMetaSchemas.value,
+  );
   const policies = resolveJsonSchemaResourcePolicies({
     dialect,
     externalSchemas: normalizedExternalSchemas.value,
     graph: graph.value,
     locations,
-    resources: jsonSchemaCustomMetaPolicyResources(graph.value, resources, customMetaSchemas.value),
+    resources: policyResources,
     rootPolicy,
     validateUsage: validateDocuments
       ? (location): boolean => location.retrievalUri !== normalizedRootRetrievalUri
@@ -326,14 +333,15 @@ const preparePreflight = (
         graph: graph.value,
         locations,
         normalizedRootRetrievalUri,
-        options,
+        options: { ...options, externalSchemas: normalizedExternalSchemas.value },
         policies: policies.value,
+        policyResources,
         resources,
       })
     : policies;
 };
 
-const customMetaKeywordDiagnostics = (context: PreparedPreflight): readonly Diagnostic[] =>
+const customMetaKeywordDiagnostics = (context: PreparedJsonSchemaContext): readonly Diagnostic[] =>
   collectJsonSchemaCustomMetaKeywordDiagnostics({
     graph: context.graph,
     options: context.options,
@@ -344,14 +352,30 @@ const customMetaKeywordDiagnostics = (context: PreparedPreflight): readonly Diag
 
 export const validateJsonSchemaCustomMetaKeywords = (
   request: PreflightJsonSchemaRequest,
-): Result<true> => {
-  const context = preparePreflight(request, false);
-  return context.ok
-    ? resultFromJsonSchemaDiagnostics(true, customMetaKeywordDiagnostics(context.value))
-    : context;
+  prepared?: PreparedJsonSchemaContext,
+): Result<PreparedJsonSchemaContext> => {
+  const context = prepared === undefined ? preparePreflight(request, false) : ok(prepared);
+  if (!context.ok) return context;
+  const current = {
+    ...context.value,
+    locations: request.locations,
+    options: { ...request.options, externalSchemas: context.value.options.externalSchemas },
+  };
+  if (prepared !== undefined) {
+    const usage = validateJsonSchemaResourcePolicyUsage({
+      graph: current.graph,
+      locations: current.locations,
+      policies: current.policies,
+      resources: current.policyResources,
+    });
+    if (!usage.ok) return usage;
+  }
+  return resultFromJsonSchemaDiagnostics(current, customMetaKeywordDiagnostics(current));
 };
 
-const customMetaDiagnostics = (context: PreparedPreflight): Result<readonly Diagnostic[]> => {
+const customMetaDiagnostics = (
+  context: PreparedJsonSchemaContext,
+): Result<readonly Diagnostic[]> => {
   const validation = invalidJsonSchemaCustomMetaResources({
     graph: context.graph,
     policies: context.policies,
@@ -390,7 +414,7 @@ const customMetaDiagnostics = (context: PreparedPreflight): Result<readonly Diag
   );
 };
 
-const stockMetaDiagnostics = (context: PreparedPreflight): readonly Diagnostic[] => {
+const stockMetaDiagnostics = (context: PreparedJsonSchemaContext): readonly Diagnostic[] => {
   const customResources = new Set(
     context.customMetaSchemas.map(({ resource }) => resource.location),
   );
@@ -419,9 +443,7 @@ const stockMetaDiagnostics = (context: PreparedPreflight): readonly Diagnostic[]
 
 export const preflightJsonSchema = (
   request: PreflightJsonSchemaRequest,
-): Result<JsonSchemaValue> => {
-  if (request.options.validator === "none") return ok(request.schema);
-
+): Result<PreparedJsonSchemaContext> => {
   try {
     const context = preparePreflight(request, true);
     if (!context.ok) return context;
@@ -430,7 +452,7 @@ export const preflightJsonSchema = (
     if (!keywordResult.ok) return keywordResult;
     const customDiagnostics = customMetaDiagnostics(context.value);
     if (!customDiagnostics.ok) return customDiagnostics;
-    return resultFromJsonSchemaDiagnostics(request.schema, [
+    return resultFromJsonSchemaDiagnostics(context.value, [
       ...keywordDiagnostics,
       ...customDiagnostics.value,
       ...stockMetaDiagnostics(context.value),

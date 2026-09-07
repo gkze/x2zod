@@ -239,7 +239,9 @@ export const createRuntimeDescriptorValidator = (
   }
 };
 
-const runtimeExpressionSource = (request: ResourceGraphRuntimeRequest): Result<string> => {
+const runtimeExpressionSource = (
+  request: ResourceGraphRuntimeRequest,
+): Result<Readonly<{ inline: string; shared: string }>> => {
   const { descriptors, locations, resources, root } = buildRuntimeDescriptors({
     dialect: request.dialect,
     dialectForLocation: (location) => dialectForLocation(request, location),
@@ -251,12 +253,12 @@ const runtimeExpressionSource = (request: ResourceGraphRuntimeRequest): Result<s
     prepareNodeValidators(locations, (location) => dialectForLocation(request, location)),
   );
   if (!compiled.ok) return compiled;
-  return ok(
+  const source = (shared: boolean): string =>
     [
       "(() => {",
-      standaloneRuntimePreamble,
+      shared ? "const require = x2zodRuntime.x2zodRequire;" : standaloneRuntimePreamble,
       ...compiled.value.sources,
-      runtimeEvaluatorSource,
+      shared ? "const x2zodEvaluate = x2zodRuntime.x2zodEvaluate;" : runtimeEvaluatorSource,
       // A tuple literal avoids TypeScript constructing a union of thousands of distinct node shapes.
       `const x2zodNodes: readonly unknown[] = ${JSON.stringify(descriptors)} as const;`,
       `const x2zodResources = ${JSON.stringify(resources)};`,
@@ -264,8 +266,8 @@ const runtimeExpressionSource = (request: ResourceGraphRuntimeRequest): Result<s
       `const x2zodMachine = { nodes: x2zodNodes, patterns: new Map(), resources: x2zodResources, root: ${root.toString()}, validators: x2zodValidators };`,
       "return (value: unknown): boolean => x2zodEvaluate(x2zodMachine, value);",
       "})()",
-    ].join("\n"),
-  );
+    ].join("\n");
+  return ok({ inline: source(false), shared: source(true) });
 };
 
 export const createResourceGraphRuntimeProgram = async (
@@ -277,7 +279,11 @@ export const createResourceGraphRuntimeProgram = async (
     return ok(
       zodRuntimeProgram(
         jsonSchemaRuntimeProgramId,
-        await parseGeneratedTypeScriptExpression(source.value),
+        await parseGeneratedTypeScriptExpression(source.value.inline),
+        {
+          expression: await parseGeneratedTypeScriptExpression(source.value.shared),
+          imports: { x2zodRuntime: "@x2zod/runtime/json-schema" },
+        },
       ),
     );
   } catch (error) {
