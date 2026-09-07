@@ -113,7 +113,7 @@ void test("lowers a reference to the recognized Draft 7 HTTPS metaschema alias",
   assert.equal(lowered.ok, true);
   assert.equal(
     lowered.value.declarations.some(({ symbol }) => symbol.includes("json-schema.org")),
-    false,
+    true,
   );
 });
 

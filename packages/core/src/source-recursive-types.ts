@@ -438,19 +438,19 @@ export const createRecursiveDeclarationTypes = (input: {
     if (expression !== undefined && declarationNames !== undefined)
       statements.push(
         createTypeAliasDeclaration(
-          undefined,
+          [createToken(SyntaxKind.ExportKeyword)],
           createIdentifier(declarationNames.input),
           undefined,
           valueType({ context, expression, projection: "input" }),
         ),
         createTypeAliasDeclaration(
-          undefined,
+          [createToken(SyntaxKind.ExportKeyword)],
           createIdentifier(declarationNames.output),
           undefined,
           valueType({ context, expression, projection: "output" }),
         ),
         createTypeAliasDeclaration(
-          undefined,
+          [createToken(SyntaxKind.ExportKeyword)],
           createIdentifier(declarationNames.schema),
           undefined,
           recursiveSchemaType(expression, declarationNames, context),

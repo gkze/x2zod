@@ -1,7 +1,6 @@
 import { zodPlan } from "@x2zod/core";
 import type { JsonPointer, ZodExpression } from "@x2zod/core";
 
-import { applyJsonSchemaStringConstraints, hasJsonSchemaStringConstraints } from "./constraints";
 import type { JsonSchemaDiagnosticSink } from "./diagnostics";
 import { isJsonArray, isJsonObject, isJsonSchemaValue } from "./document";
 import type { JsonObject, JsonSchemaValue } from "./document";
@@ -15,13 +14,6 @@ type ObjectShapeRequest = Readonly<{
   context: ObjectLoweringContext;
   pointer: JsonPointer;
   required: ReadonlySet<string>;
-  schema: JsonObject;
-}>;
-
-type PropertyNamesRequest = Readonly<{
-  context: ObjectLoweringContext;
-  expression: ZodExpression;
-  pointer: JsonPointer;
   schema: JsonObject;
 }>;
 
@@ -92,9 +84,6 @@ const propertyPointer = (pointer: JsonPointer, key: string): JsonPointer =>
 
 const additionalPropertiesPointer = (pointer: JsonPointer): JsonPointer =>
   jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.additionalProperties);
-
-const propertyNamesPointer = (pointer: JsonPointer): JsonPointer =>
-  jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.propertyNames);
 
 const unevaluatedPropertiesPointer = (pointer: JsonPointer): JsonPointer =>
   jsonSchemaPointerWithSegment(pointer, jsonSchemaKeywords.unevaluatedProperties);
@@ -214,47 +203,6 @@ export const applyJsonSchemaRequiredKeys = (
     : zodPlan.required(expression, [firstKey, ...remainingKeys]);
 };
 
-const lowerPropertyNameSchema = (
-  propertyNames: JsonSchemaValue,
-  pointer: JsonPointer,
-  context: ObjectLoweringContext,
-): ZodExpression => {
-  if (propertyNames === true) return zodPlan.string();
-  if (propertyNames === false) return zodPlan.never();
-  if (hasJsonSchemaStringConstraints(propertyNames))
-    return applyJsonSchemaStringConstraints(
-      { expression: zodPlan.string(), pointer, schema: propertyNames },
-      context,
-    );
-  return context.lowerSchema(pointer, propertyNames);
-};
-
-const applyPropertyNames = ({
-  context,
-  expression,
-  pointer,
-  schema,
-}: PropertyNamesRequest): ZodExpression => {
-  const propertyNames = schema[jsonSchemaKeywords.propertyNames];
-  if (propertyNames === undefined || propertyNames === true) return expression;
-  const pointerToPropertyNames = propertyNamesPointer(pointer);
-  if (isJsonSchemaValue(propertyNames))
-    return zodPlan.intersection(
-      zodPlan.record(
-        lowerPropertyNameSchema(propertyNames, pointerToPropertyNames, context),
-        zodPlan.unknown(),
-      ),
-      expression,
-    );
-
-  addInvalidSchemaDiagnostic(
-    context,
-    pointerToPropertyNames,
-    "JSON Schema propertyNames must be a boolean or schema object.",
-  );
-  return expression;
-};
-
 const applyUnevaluatedProperties = (request: UnevaluatedPropertiesRequest): ZodExpression => {
   const { context, object, pointer, schema } = request;
   const unevaluatedProperties = schema[jsonSchemaKeywords.unevaluatedProperties];
@@ -276,51 +224,21 @@ const applyUnevaluatedProperties = (request: UnevaluatedPropertiesRequest): ZodE
   return object;
 };
 
-const hasUnsupportedPropertyNamesStrictBoundary = (
-  schema: JsonObject,
-  pointer: JsonPointer,
-  context: ObjectLoweringContext,
-): boolean => {
-  const propertyNames = schema[jsonSchemaKeywords.propertyNames];
-  if (propertyNames !== false && !isJsonObject(propertyNames)) return false;
-
-  const additionalProperties = schema[jsonSchemaKeywords.additionalProperties];
-  const hasStrictBoundary =
-    additionalProperties === false ||
-    (additionalProperties === undefined &&
-      schema[jsonSchemaKeywords.unevaluatedProperties] === false);
-  if (!hasStrictBoundary) return false;
-
-  context.addDiagnostic({
-    code: "unrepresentable_schema_combination",
-    message: [
-      "JSON Schema propertyNames with a strict object boundary",
-      "cannot be preserved by a plain Zod intersection.",
-    ].join(" "),
-    pointer: propertyNamesPointer(pointer),
-  });
-  return true;
-};
-
 export const lowerJsonSchemaObject = (
   schema: JsonObject,
   pointer: JsonPointer,
   context: ObjectLoweringContext,
 ): ZodExpression => {
-  if (hasUnsupportedPropertyNamesStrictBoundary(schema, pointer, context)) return zodPlan.unknown();
-
   const requiredKeys = requiredProperties(schema, pointer, context);
   const object = applyJsonSchemaRequiredKeys(
     zodPlan.object(objectShape({ context, pointer, required: new Set(requiredKeys), schema })),
     requiredKeys,
   );
   const additionalProperties = schema[jsonSchemaKeywords.additionalProperties];
-  const withPropertyNames = (expression: ZodExpression): ZodExpression =>
-    applyPropertyNames({ context, expression, pointer, schema });
-  const withOwnPropertySemantics = (expression: ZodExpression): ZodExpression =>
-    zodPlan.preserveObjectInput(expression, requiredKeys);
+  // The propertyNames keyword constrains present keys, not required keys or value types.
+  // The exact runtime predicate enforces it without Zod record exhaustiveness.
   const finalize = (expression: ZodExpression): ZodExpression =>
-    withPropertyNames(withOwnPropertySemantics(expression));
+    zodPlan.preserveObjectInput(expression, requiredKeys);
 
   if (additionalProperties === false) return finalize(applyStrictObjectBoundary(schema, object));
   if (additionalProperties === undefined)

@@ -26,8 +26,12 @@ const isFixtureValidator = (value: unknown): value is FixtureValidator =>
 export const generateSchemaFixture = async (
   directory: string,
   schema: JsonSchemaValue,
-  pluginOptions: JsonSchemaInputPluginOptionsInput = {},
+  request: Readonly<{
+    pluginOptions?: JsonSchemaInputPluginOptionsInput | undefined;
+    consumerSource?: string;
+  }> = {},
 ): Promise<FixtureValidator> => {
+  const { pluginOptions = {}, consumerSource } = request;
   const schemaFile = nodePath.join(directory, "schema.json");
   const optionsFile = nodePath.join(directory, "options.json");
   const bundleFile = nodePath.join(directory, "printer.mjs");
@@ -49,6 +53,8 @@ export const generateSchemaFixture = async (
     timeoutMs: compilerDeadlineMs,
   });
   await writeFile(generatedFile, source);
+  const consumerFile = nodePath.join(directory, "consumer.ts");
+  if (consumerSource !== undefined) await writeFile(consumerFile, consumerSource);
   const declarations = spawnSync(
     typeScriptBinary,
     [
@@ -56,9 +62,9 @@ export const generateSchemaFixture = async (
       "--emitDeclarationOnly",
       "--ignoreConfig",
       "--module",
-      "nodenext",
+      "esnext",
       "--moduleResolution",
-      "nodenext",
+      "bundler",
       "--outDir",
       nodePath.join(directory, "declarations"),
       "--skipLibCheck",
@@ -66,6 +72,7 @@ export const generateSchemaFixture = async (
       "--target",
       "es2022",
       generatedFile,
+      ...(consumerSource === undefined ? [] : [consumerFile]),
     ],
     { cwd: packageDirectory, encoding: "utf8", timeout: declarationDeadlineMs },
   );

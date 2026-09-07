@@ -1024,3 +1024,22 @@ Acceptance corpus:
 11. Add golden, runtime, adapter, and acceptance tests.
 12. Add `CONTEXT.md` and an ADR once the core contract is concrete enough to avoid documenting
     churn.
+
+### Structural inference with exact runtime validation
+
+The exact runtime predicate and structural type projection have separate responsibilities. Runtime
+requirements do not replace declarations with `unknown`. Property-name constraints validate present
+keys without implying that every allowed key is required. Unsupported native intersections retain
+sound branch and sibling projections; evaluation-dependent boundaries remain in the exact predicate.
+A constraint such as general negation can have an `unknown` structural projection at its own node,
+but must not erase the containing object's fields or other declarations.
+
+Meta-schema references use the same recursive declaration machinery as other references. Mergeable
+object-only `allOf` compositions combine properties before emission, preserving each property's
+resource scope. This avoids multiplying the non-object alternatives of untyped branches. Remaining
+intersections use balanced trees to bound instantiation depth. Consumer tests compile field access
+and declaration output in addition to checking runtime parity and unchanged parsed values.
+
+For schemas already requiring exact runtime validation, same-value reference backedges use a local
+unknown projection to terminate structural lowering; exact runtime validation owns the cycle, while
+adjacent fields and ordinary value-descending recursive declarations retain their types.

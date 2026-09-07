@@ -39,6 +39,22 @@ const packageManifest = {
   prettier: { tabWidth: 2 },
 } as const satisfies JsonValue;
 
+const packageConsumerSource = `
+import type { Fixture } from "./generated";
+import { fixtureSchema as parser } from "./generated";
+export const parse = (value: unknown) => parser.parse(value);
+type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false;
+type Assert<T extends true> = T;
+declare const manifest: Fixture;
+export type Name = Assert<Equal<typeof manifest.name, string | undefined>>;
+export type Dependencies = Assert<Equal<NonNullable<Fixture["dependencies"]>[string], string>>;
+export type Catalogs = Assert<Equal<NonNullable<NonNullable<Fixture["catalogs"]>[string]>[string], string>>;
+export const readCatalog = (): string | undefined => {
+  const workspaces = manifest.workspaces;
+  return workspaces !== undefined && !Array.isArray(workspaces) ? workspaces.catalog?.["dep"] : undefined;
+};
+`;
+
 const parseUnchanged = (validator: FixtureValidator, value: JsonValue): unknown => {
   const input = structuredClone(value);
   const result = validator.safeParse(input);
@@ -111,7 +127,8 @@ void test(
     try {
       const externalSchemas = schemaStoreExternalSchemas("");
       const generated = await generateSchemaFixture(directory, bunPackageSchema, {
-        externalSchemas,
+        pluginOptions: { externalSchemas },
+        consumerSource: packageConsumerSource,
       });
       assertSchemaParity({
         schema: bunPackageSchema,
@@ -207,8 +224,7 @@ void test(
       const schema = readSchemaStoreFixture("cargo.json");
       const externalSchemas = schemaStoreExternalSchemas("cargo.json");
       const generated = await generateSchemaFixture(directory, schema, {
-        externalSchemas,
-        annotationKeywords: { description: true },
+        pluginOptions: { externalSchemas, annotationKeywords: { description: true } },
       });
       assertSchemaParity({
         schema,

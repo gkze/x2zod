@@ -4,6 +4,7 @@ import type { JsonPointer, ZodExpression } from "@x2zod/core";
 import { applyJsonSchemaAnnotationProjection, projectJsonSchemaAnnotations } from "./annotations";
 import { lowerJsonSchemaArray } from "./array";
 import { lowerJsonSchemaComposition } from "./composition-lower";
+import type { CompositionSchemaLoweringContext } from "./composition-lower";
 import {
   applyJsonSchemaNumberConstraints,
   applyJsonSchemaStringConstraints,
@@ -19,6 +20,7 @@ import {
   addLoweringDiagnostic as addDiagnostic,
   loweringDiagnosticSink as diagnosticSink,
 } from "./lower-diagnostics";
+import { childInstanceContext } from "./lower-instance";
 import type {
   DeclareSchemaRequest,
   LocatedSchemaRequest,
@@ -28,7 +30,6 @@ import type {
   LoweringContext,
   JsonSchemaLocationId,
 } from "./lower-types";
-import { isSupportedJsonSchemaMetaSchemaResource } from "./meta-schemas";
 import { jsonSchemaKeywords, jsonSchemaValidationKeywords } from "./metadata";
 import { jsonSchemaDeclarationNameHints } from "./name-hints";
 import { lowerJsonSchemaObject } from "./object";
@@ -185,11 +186,14 @@ const childLocation = (
   context: LoweringContext,
 ): JsonSchemaLocationId => context.references.location(pointer, parent)?.id ?? parent;
 
-const lowerChildSchema = (request: LowerChildSchemaRequest): ZodExpression =>
-  lowerJsonSchema({
+const lowerChildSchema = (request: LowerChildSchemaRequest): ZodExpression => {
+  const context = childInstanceContext(request);
+  return lowerJsonSchema({
     ...request,
-    location: childLocation(request.pointer, request.parent, request.context),
+    context,
+    location: childLocation(request.pointer, request.parent, context),
   });
+};
 
 const childSchemaLowerer =
   (context: LoweringContext, parent: JsonSchemaLocationId) =>
@@ -281,12 +285,14 @@ const lowerReference = ({
     return zodPlan.unknown();
   }
 
-  const targetLocation = context.references.graph.location(target.location);
-  if (
-    targetLocation !== undefined &&
-    isSupportedJsonSchemaMetaSchemaResource(targetLocation.resourceUri)
-  )
+  if (context.allowSameValueCycles === true && context.sameValueReferences.has(target.address)) {
+    addDiagnostic(context, {
+      code: "unrepresentable_schema_combination",
+      message: "Same-value reference cycles require exact runtime validation.",
+      pointer,
+    });
     return zodPlan.unknown();
+  }
   declareSchema(target, context);
   return zodPlan.reference(zodSymbol(symbolForAddress(target.address)));
 };
@@ -299,6 +305,37 @@ type LowerCompositionRequest = Readonly<{
   schema: JsonObject;
 }>;
 
+const effectiveSemanticSchema = (
+  context: LoweringContext,
+  location: JsonSchemaLocationId,
+  schema: JsonObject,
+): JsonObject => {
+  const semanticSchema = withoutConfiguredInertKeywords(schema, context.options.inertKeywords);
+  return policyForLocation(context, location).validation
+    ? semanticSchema
+    : Object.fromEntries(
+        Object.entries(semanticSchema).filter(([key]) => !jsonSchemaValidationKeywords.has(key)),
+      );
+};
+
+const compositionContext = (
+  context: LoweringContext,
+  location: JsonSchemaLocationId,
+): CompositionSchemaLoweringContext => ({
+  ...diagnosticSink(context),
+  atPointer: (pointer): CompositionSchemaLoweringContext =>
+    compositionContext(context, childLocation(pointer, location, context)),
+  atReference: (reference): CompositionSchemaLoweringContext =>
+    compositionContext(context, reference.location),
+  effectiveSchema: (schema): JsonObject => effectiveSemanticSchema(context, location, schema),
+  lowerSchema: childSchemaLowerer(context, location),
+  resolveReference: (reference): ReturnType<JsonSchemaReferenceResolver["resolve"]> =>
+    context.references.resolve(reference, location),
+  dialect: policyForLocation(context, location).dialect,
+  sourceProfile: context.options.sourceProfile,
+  unknownKeywords: context.options.unknownKeywords,
+});
+
 const lowerComposition = ({
   context,
   dialect,
@@ -307,12 +344,8 @@ const lowerComposition = ({
   schema,
 }: LowerCompositionRequest): ZodExpression | undefined =>
   lowerJsonSchemaComposition(schema, pointer, {
-    ...diagnosticSink(context),
-    lowerSchema: childSchemaLowerer(context, location),
-    resolveReference: (reference) => context.references.resolve(reference, location),
+    ...compositionContext(context, location),
     dialect,
-    sourceProfile: context.options.sourceProfile,
-    unknownKeywords: context.options.unknownKeywords,
   });
 
 const lowerSemanticSchema = ({
@@ -325,12 +358,7 @@ const lowerSemanticSchema = ({
   if (schema === false) return zodPlan.never();
 
   const policy = policyForLocation(context, location);
-  const semanticSchema = withoutConfiguredInertKeywords(schema, context.options.inertKeywords);
-  const effectiveSchema = policy.validation
-    ? semanticSchema
-    : Object.fromEntries(
-        Object.entries(semanticSchema).filter(([key]) => !jsonSchemaValidationKeywords.has(key)),
-      );
+  const effectiveSchema = effectiveSemanticSchema(context, location, schema);
 
   const withSiblingAssertions = (keyword: string, expression: ZodExpression): ZodExpression =>
     lowerJsonSchemaSiblingIntersection(
@@ -439,7 +467,15 @@ export const declareSchema = (request: DeclareSchemaRequest, context: LoweringCo
   if (context.visiting.has(address)) return;
 
   context.visiting.add(address);
-  const expression = lowerJsonSchema({ context, location, pointer, schema });
+  const expression = lowerJsonSchema({
+    context: {
+      ...context,
+      sameValueReferences: new Set([...context.sameValueReferences, address]),
+    },
+    location,
+    pointer,
+    schema,
+  });
   context.visiting.delete(address);
   context.declarationLocations.set(address, location);
   context.declarations.set(

@@ -39,31 +39,34 @@ export const lowerJsonSchemaSiblingIntersection = (
   context: SiblingIntersectionContext,
 ): ZodExpression => {
   const { expression, keyword, pointer, schema } = request;
-  if (hasUnsupportedUnevaluatedPropertiesSibling({ keyword, pointer, schema }, context))
-    return zodPlan.unknown();
-
+  const runtimeUnevaluated = hasUnsupportedUnevaluatedPropertiesSibling(
+    { keyword, pointer, schema },
+    context,
+  );
   const siblingSchema = jsonSchemaSiblingAssertionSchema({ keyword, pointer, schema }, context);
   if (siblingSchema === undefined) return expression;
-  if (
-    hasUnsupportedUntypedObjectSiblingIntersection(
-      { keyword, pointer, schema },
-      siblingSchema,
-      context,
-    )
-  )
-    return zodPlan.unknown();
-  if (
-    hasUnsupportedUntypedArraySiblingIntersection(
-      { keyword, pointer, schema },
-      siblingSchema,
-      context,
-    )
-  )
-    return zodPlan.unknown();
+  hasUnsupportedUntypedObjectSiblingIntersection(
+    { keyword, pointer, schema },
+    siblingSchema,
+    context,
+  );
+  hasUnsupportedUntypedArraySiblingIntersection(
+    { keyword, pointer, schema },
+    siblingSchema,
+    context,
+  );
+  // Applicators may evaluate keys outside this sibling.
+  // The runtime predicate owns that boundary; isolated lowering must not infer never.
+  const structuralSibling = runtimeUnevaluated
+    ? Object.fromEntries(
+        Object.entries(siblingSchema).filter(
+          ([key]) => key !== jsonSchemaKeywords.unevaluatedProperties,
+        ),
+      )
+    : siblingSchema;
   if (keyword === jsonSchemaKeywords.not && schema[jsonSchemaKeywords.not] === false)
-    return context.lowerSchema(pointer, siblingSchema);
-  if (hasUnsupportedObjectSiblingIntersection({ keyword, pointer, schema }, context))
-    return zodPlan.unknown();
+    return context.lowerSchema(pointer, structuralSibling);
+  hasUnsupportedObjectSiblingIntersection({ keyword, pointer, schema }, context);
 
-  return zodPlan.intersection(context.lowerSchema(pointer, siblingSchema), expression);
+  return zodPlan.intersection(context.lowerSchema(pointer, structuralSibling), expression);
 };
