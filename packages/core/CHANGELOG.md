@@ -1,5 +1,13 @@
 # @x2zod/core
 
+## 0.7.0
+
+### Minor Changes
+
+- 7b25c88: Add `.describe(...)` support to the Zod emission plan. Plugins can now project
+  string-valued annotations onto generated schema declarations through the existing planned-call
+  pipeline, preserving method validation, receiver checks, and transform composition.
+
 ## 0.6.1
 
 ### Patch Changes
