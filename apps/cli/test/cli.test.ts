@@ -120,6 +120,8 @@ void test("runCLI compile help routes through the requested plugin option parser
     assert.ok(result.stdoutText.includes("--external-schema"));
     assert.ok(result.stdoutText.includes("--inert-keyword"));
     assert.ok(result.stdoutText.includes("--source-profile"));
+    assert.ok(result.stdoutText.includes("--annotation-keywords"));
+    assert.ok(result.stdoutText.includes("--unknown-keywords"));
     assert.ok(result.stdoutText.includes("JSON Schema dialect override;"));
   }, cliWorkspaceTemp);
 });
@@ -403,5 +405,43 @@ void test("x2zod bin runs from a consumer working directory", async () => {
     assert.equal(childProcess.stderr, "");
     const generated = await readGeneratedText(directory);
     assert.ok(generated.includes("export const userSchema"));
+  }, cliWorkspaceTemp);
+});
+
+void test("runCLI applies boolean annotation flags and explicit unknown-keyword policy", async () => {
+  await withTempDirectory(async (directory) => {
+    await writeConfiguredUserTarget(directory);
+    await writeJsonFile(path.join(directory, "schema.json"), {
+      description: "CLI documentation.",
+      type: "string",
+      vendor: { anyOf: ["opaque"] },
+    });
+    const args = [
+      "compile",
+      "--kind",
+      "json-schema",
+      "-i",
+      "schema.json",
+      "-o",
+      "generated/user.ts",
+      "-n",
+      "User",
+    ];
+    assertCLISuccess(
+      await runCLITest([...args, "--annotation-keywords", "description=true"], { cwd: directory }),
+    );
+    const described = await readGeneratedText(directory);
+    assert.ok(described.includes('.describe("CLI documentation.")'));
+    assertCLISuccess(
+      await runCLITest([...args, "--annotation-keywords", "description=false"], { cwd: directory }),
+    );
+    const undescribed = await readGeneratedText(directory);
+    assert.ok(!undescribed.includes('.describe("CLI documentation.")'));
+    const invalid = await runCLITest([...args, "--annotation-keywords", "description=maybe"], {
+      cwd: directory,
+    });
+    assert.notEqual(invalid.exitCode, 0);
+    const strict = await runCLITest([...args, "--unknown-keywords", "reject"], { cwd: directory });
+    assert.notEqual(strict.exitCode, 0);
   }, cliWorkspaceTemp);
 });

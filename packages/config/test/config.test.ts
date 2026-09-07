@@ -245,6 +245,8 @@ void test("resolveX2ZodConfig validates and resolves plugin options and output d
   assert.equal(userTarget.kind, "json-schema");
   assert.equal(userTarget.name, "user");
   assert.deepEqual(userTarget.options, {
+    annotationKeywords: {},
+    unknownKeywords: "warn",
     externalSchemas: {},
     inertKeywords: { xStringMetadata: "string" },
     sourceProfile: "opencode",
@@ -358,6 +360,8 @@ void test("loadX2ZodConfig loads x2zod.config.ts through c12 and validates it", 
     assert.equal(resolved.configFile, path.join(tempDirectory, "x2zod.config.ts"));
     assert.equal(userTarget.kind, "json-schema");
     assert.deepEqual(userTarget.options, {
+      annotationKeywords: {},
+      unknownKeywords: "warn",
       dialect: "draft-7",
       externalSchemas: {},
       inertKeywords: {},

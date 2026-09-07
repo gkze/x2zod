@@ -5,7 +5,11 @@ import { isJsonObject } from "./document";
 import type { JsonSchemaValue } from "./document";
 import { jsonSchemaDocumentResource } from "./external-schema-registry";
 import { isSupportedJsonSchemaMetaSchemaResource } from "./meta-schemas";
-import { jsonSchemaKeywords, jsonSchemaReferenceKeywordsForDialect } from "./metadata";
+import {
+  jsonSchemaKeywordPolicy,
+  jsonSchemaKeywords,
+  jsonSchemaReferenceKeywordsForDialect,
+} from "./metadata";
 import type { JsonSchemaDialect, JsonSchemaInputPluginOptions } from "./options";
 import type { JsonSchemaReferenceResolver, ResolvedJsonSchemaReference } from "./reference";
 import { dialectRuntimeSchemaChildren } from "./resource-graph-children";
@@ -201,6 +205,9 @@ export const requestNeedsResourceGraphRuntime = (request: StandaloneRuntimeReque
     reachable.some(
       ({ location, schema }) =>
         policyForLocation(request, location).dialect !== request.dialect ||
+        // Ajv has nonstandard semantics (for example nullable). Only graph atoms may see these nodes.
+        (isJsonObject(schema) &&
+          Object.keys(schema).some((keyword) => jsonSchemaKeywordPolicy(keyword) === "unknown")) ||
         (policyForLocation(request, location).dialect !== "draft-7" &&
           isJsonObject(schema) &&
           (schema[jsonSchemaKeywords.unevaluatedItems] !== undefined ||

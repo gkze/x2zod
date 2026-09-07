@@ -14,7 +14,7 @@ import {
 import { isJsonObject } from "./document";
 import type { JsonSchemaValue } from "./document";
 import { jsonSchemaDocumentResource } from "./external-schema-registry";
-import { jsonSchemaKeywords } from "./metadata";
+import { jsonSchemaKeywordPolicy, jsonSchemaKeywords } from "./metadata";
 import type { JsonSchemaDialect } from "./options";
 import { jsonSchemaAtPointer } from "./pointer";
 import type { JsonSchemaLocationId, JsonSchemaResourceLocation } from "./resource-graph";
@@ -103,7 +103,10 @@ const ownValidationSchema = (
           ? []
           : [[keyword, requiredDependencies]];
       }
-      return annotationApplicatorKeywords.has(keyword) ? [] : [[keyword, value]];
+      return annotationApplicatorKeywords.has(keyword) ||
+        jsonSchemaKeywordPolicy(keyword) === "unknown"
+        ? []
+        : [[keyword, value]];
     }),
   );
 };
@@ -254,7 +257,8 @@ const runtimeExpressionSource = (request: ResourceGraphRuntimeRequest): Result<s
       standaloneRuntimePreamble,
       ...compiled.value.sources,
       runtimeEvaluatorSource,
-      `const x2zodNodes = ${JSON.stringify(descriptors)};`,
+      // A tuple literal avoids TypeScript constructing a union of thousands of distinct node shapes.
+      `const x2zodNodes: readonly unknown[] = ${JSON.stringify(descriptors)} as const;`,
       `const x2zodResources = ${JSON.stringify(resources)};`,
       `const x2zodValidators = [${compiled.value.validators.join(", ")}];`,
       `const x2zodMachine = { nodes: x2zodNodes, patterns: new Map(), resources: x2zodResources, root: ${root.toString()}, validators: x2zodValidators };`,

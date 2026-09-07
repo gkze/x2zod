@@ -182,8 +182,8 @@ const assertValueModeSchemaType = (
   type: unknown,
   path: readonly string[],
 ): void => {
-  if (valueMode === "string-map" && type !== "record")
-    throw schemaError(path, "string-map CLI option value mode requires a Zod record");
+  if ((valueMode === "string-map" || valueMode === "boolean-map") && type !== "record")
+    throw schemaError(path, `${valueMode} CLI option value mode requires a Zod record`);
 };
 
 const createValueOption = (

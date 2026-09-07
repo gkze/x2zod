@@ -25,7 +25,7 @@ void test("treats OpenCode ref metadata as inert profile data", async () => {
   const result = await compileSchema(
     "opencode-ref",
     { ref: "Config", type: "object" },
-    { sourceProfile: "opencode", validator: "none" },
+    { sourceProfile: "opencode", unknownKeywords: "reject", validator: "none" },
   );
 
   assert.equal(result.ok, true);
@@ -48,9 +48,13 @@ void test("keeps compatibility metadata behind its source profile", async () => 
         return {
           profiled: await compileSchema(`${keyword}-${sourceProfile}`, schema, {
             sourceProfile,
+            unknownKeywords: "reject",
             validator: "none",
           }),
-          strict: await compileSchema(`${keyword}-strict`, schema, { validator: "none" }),
+          strict: await compileSchema(`${keyword}-strict`, schema, {
+            unknownKeywords: "reject",
+            validator: "none",
+          }),
         };
       }),
     ),
@@ -72,7 +76,7 @@ void test("keeps unknown keywords strict in the SchemaStore profile", async () =
   const result = await compileSchema(
     "schemastore-unknown",
     { unsupportedVendorKeyword: true, type: "object" },
-    { sourceProfile: "schemastore", validator: "none" },
+    { sourceProfile: "schemastore", unknownKeywords: "reject", validator: "none" },
   );
 
   assert.equal(result.ok, false);
@@ -90,7 +94,7 @@ void test("rejects declaration containers from a different dialect", async () =>
       result: await compileSchema(
         `${dialect}-${keyword}`,
         { [keyword]: { value: { type: "string" } }, type: "object" },
-        { dialect, validator: "none" },
+        { dialect, unknownKeywords: "reject", validator: "none" },
       ),
     })),
   );
@@ -117,7 +121,7 @@ void test("keeps cross-dialect declaration addresses behind the OpenCode profile
       const result = await compileSchema(
         `${dialect}-${keyword}-opencode`,
         { $ref: `#/${keyword}/value`, [keyword]: { value: { type: "string" } } },
-        { dialect, sourceProfile: "opencode", validator: "none" },
+        { dialect, sourceProfile: "opencode", unknownKeywords: "reject", validator: "none" },
       );
       return result;
     }),

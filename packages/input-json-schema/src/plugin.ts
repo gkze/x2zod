@@ -1,6 +1,14 @@
 import { err, ok } from "@x2zod/core";
-import type { Diagnostic, InputDocument, InputPlugin, PreparedInput, Result } from "@x2zod/core";
+import type {
+  Diagnostic,
+  InputDocument,
+  InputPlugin,
+  PreparedInput,
+  Result,
+  ZodEmissionModuleInput,
+} from "@x2zod/core";
 
+import type { JsonSchemaAnnotationProjector } from "./annotations";
 import {
   declaredJsonSchemaDialect,
   resolveJsonSchemaDialect,
@@ -147,9 +155,11 @@ const prepareJsonSchemaDocument = (
   );
 };
 
-export const jsonSchemaInputPlugin: JsonSchemaInputPlugin = {
+export const createJsonSchemaInputPlugin = (
+  extensions: Readonly<{ projectAnnotations?: JsonSchemaAnnotationProjector }> = {},
+): JsonSchemaInputPlugin => ({
   kind: jsonSchemaInputPluginKind,
-  lower: async (input, options) => {
+  lower: async (input, options): Promise<Result<ZodEmissionModuleInput>> => {
     await Promise.resolve();
     const resolvedOptions = { ...options, dialect: input.value.dialect };
     const customMetaKeywords =
@@ -170,6 +180,7 @@ export const jsonSchemaInputPlugin: JsonSchemaInputPlugin = {
         : ok(true);
     if (!customMetaKeywords.ok) return customMetaKeywords;
     const lowered = await lowerJsonSchemaDocument(input.value, resolvedOptions, {
+      projectAnnotations: extensions.projectAnnotations,
       applicatorVocabulary: input.value.applicatorVocabulary,
       formatAssertionVocabulary: input.value.formatAssertionVocabulary,
       locations: input.locations,
@@ -179,8 +190,10 @@ export const jsonSchemaInputPlugin: JsonSchemaInputPlugin = {
     return appendDiagnostics(lowered, customMetaKeywords.diagnostics ?? []);
   },
   optionsSchema: jsonSchemaInputPluginOptionsSchema,
-  prepare: async (document, options) => {
+  prepare: async (document, options): Promise<Result<PreparedInput<JsonSchemaPreparedInput>>> => {
     await Promise.resolve();
     return prepareJsonSchemaDocument(document, options);
   },
-};
+});
+
+export const jsonSchemaInputPlugin: JsonSchemaInputPlugin = createJsonSchemaInputPlugin();

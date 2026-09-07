@@ -173,22 +173,28 @@ void describe("jsonSchemaInputPlugin lower", () => {
     const runtimeBacked = expectOk(
       await jsonSchemaInputPlugin.prepare(
         fileDocument('{ "contains": { "type": "string" }, "type": "array" }'),
-        options({ validator: "none" }),
+        options({ unknownKeywords: "reject", validator: "none" }),
       ),
     );
     const lowered = expectOk(
-      await jsonSchemaInputPlugin.lower(runtimeBacked, options({ validator: "none" })),
+      await jsonSchemaInputPlugin.lower(
+        runtimeBacked,
+        options({ unknownKeywords: "reject", validator: "none" }),
+      ),
     );
     assertRuntimeEntrypointPrograms(lowered, ["root"]);
 
     const unknown = expectOk(
       await jsonSchemaInputPlugin.prepare(
         fileDocument('{ "type": "object", "ref": "Config" }'),
-        options({ validator: "none" }),
+        options({ unknownKeywords: "reject", validator: "none" }),
       ),
     );
     expectErrCode(
-      await jsonSchemaInputPlugin.lower(unknown, options({ validator: "none" })),
+      await jsonSchemaInputPlugin.lower(
+        unknown,
+        options({ unknownKeywords: "reject", validator: "none" }),
+      ),
       "unknown_keyword",
     );
   });

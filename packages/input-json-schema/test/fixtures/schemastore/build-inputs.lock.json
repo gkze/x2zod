@@ -1,0 +1,69 @@
+{
+  "urls": {
+    "https://raw.githubusercontent.com/SchemaStore/schemastore/d651805897ab2484548bcf3718624b459cb6cf21/src/schemas/json/ava.json": {
+      "sha256": "5ee5565222c087eed3279e197f3cedc043b4ab4b32d6b5660ba9ec2bd31a22fc",
+      "sizeBytes": 6344
+    },
+    "https://raw.githubusercontent.com/SchemaStore/schemastore/d651805897ab2484548bcf3718624b459cb6cf21/src/schemas/json/cargo-lints-cargo.json": {
+      "sha256": "1af588482c410ee62bb8766b7d22b19fd345fee90d888df0335ecec2c753a728",
+      "sizeBytes": 3549
+    },
+    "https://raw.githubusercontent.com/SchemaStore/schemastore/d651805897ab2484548bcf3718624b459cb6cf21/src/schemas/json/cargo-lints-clippy.json": {
+      "sha256": "2bcdb93f28634493427daf483ef53ff30dbde809803e0d63a3e8b14762adc168",
+      "sizeBytes": 210230
+    },
+    "https://raw.githubusercontent.com/SchemaStore/schemastore/d651805897ab2484548bcf3718624b459cb6cf21/src/schemas/json/cargo-lints-rust.json": {
+      "sha256": "2919e93d4efbb4f361c67a13cda1f9aa52651aea7b1d8ecb40673f395559b604",
+      "sizeBytes": 68882
+    },
+    "https://raw.githubusercontent.com/SchemaStore/schemastore/d651805897ab2484548bcf3718624b459cb6cf21/src/schemas/json/cargo-lints-rustdoc.json": {
+      "sha256": "ef142ba29a3e51b339e0e5b0e7ccac445fa7468bcfd348424d0146161d64009a",
+      "sizeBytes": 3962
+    },
+    "https://raw.githubusercontent.com/SchemaStore/schemastore/d651805897ab2484548bcf3718624b459cb6cf21/src/schemas/json/cargo.json": {
+      "sha256": "321e93eb217695672f0c9412fd78f68be6f724abb4e7bcdccf3fbcbe5497d200",
+      "sizeBytes": 160421
+    },
+    "https://raw.githubusercontent.com/SchemaStore/schemastore/d651805897ab2484548bcf3718624b459cb6cf21/src/schemas/json/eslintrc.json": {
+      "sha256": "2a8455694007ed3eba64ab08bfcd27dda9aa508b0f1a24cb223d9480d885a171",
+      "sizeBytes": 53025
+    },
+    "https://raw.githubusercontent.com/SchemaStore/schemastore/d651805897ab2484548bcf3718624b459cb6cf21/src/schemas/json/jscpd.json": {
+      "sha256": "908b6507dbd2ecae8758057448cdd0a606dbf47b2ae4e2eab92de8e2cf945821",
+      "sizeBytes": 18498
+    },
+    "https://raw.githubusercontent.com/SchemaStore/schemastore/d651805897ab2484548bcf3718624b459cb6cf21/src/schemas/json/madge.json": {
+      "sha256": "bd5be01c20d9ff743da14880ccbeaa1734c8fbb8071460865ae0de1e3b46673a",
+      "sizeBytes": 8462
+    },
+    "https://raw.githubusercontent.com/SchemaStore/schemastore/d651805897ab2484548bcf3718624b459cb6cf21/src/schemas/json/nodemon.json": {
+      "sha256": "4dabf3ba8d00f9ce4745853492b9436f632622508996e0f5620b834a15987d1a",
+      "sizeBytes": 5024
+    },
+    "https://raw.githubusercontent.com/SchemaStore/schemastore/d651805897ab2484548bcf3718624b459cb6cf21/src/schemas/json/package.json": {
+      "sha256": "9d18e12e56f741f72430295ebc28ef5f059ec1a12622e5e2ad777930dd3f5662",
+      "sizeBytes": 47756
+    },
+    "https://raw.githubusercontent.com/SchemaStore/schemastore/d651805897ab2484548bcf3718624b459cb6cf21/src/schemas/json/partial-eslint-plugins.json": {
+      "sha256": "73cdc01d9af018f7bb88bb0c4fd12449f9a287c4f3a80f7c77d5f8bd1d6e670c",
+      "sizeBytes": 399946
+    },
+    "https://raw.githubusercontent.com/SchemaStore/schemastore/d651805897ab2484548bcf3718624b459cb6cf21/src/schemas/json/prettierrc.json": {
+      "sha256": "11314a2c1c3345b86508137553d954fec0834d6bbadcd4a8781b5a1f740c7037",
+      "sizeBytes": 11443
+    },
+    "https://raw.githubusercontent.com/SchemaStore/schemastore/d651805897ab2484548bcf3718624b459cb6cf21/src/schemas/json/quikrun.json": {
+      "sha256": "2fdac5c22dfc8e8792db5cf428b4a4d7ed7438548c58aafcece33d6f512fdba4",
+      "sizeBytes": 5344
+    },
+    "https://raw.githubusercontent.com/SchemaStore/schemastore/d651805897ab2484548bcf3718624b459cb6cf21/src/schemas/json/semantic-release.json": {
+      "sha256": "556d5244e3e91162b2c20499a4700c2c5f1fb1e31cba4403a51b32bbdb967b08",
+      "sizeBytes": 3068
+    },
+    "https://raw.githubusercontent.com/SchemaStore/schemastore/d651805897ab2484548bcf3718624b459cb6cf21/src/schemas/json/stylelintrc.json": {
+      "sha256": "9ec59c2c6311772fcb522270c902116a5b7a6df14a44d9d5e8f1637457df078a",
+      "sizeBytes": 100476
+    }
+  },
+  "version": 1
+}

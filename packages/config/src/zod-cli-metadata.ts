@@ -6,7 +6,7 @@ import { schemaError } from "./zod-cli-errors";
 import { innerSchema, isSupportedWrapperType, schemaType } from "./zod-introspection";
 import type { ZodSchema } from "./zod-introspection";
 
-export type ZodCLIOptionValueMode = "json-file-map" | "string-array" | "string-map";
+export type ZodCLIOptionValueMode = "boolean-map" | "json-file-map" | "string-array" | "string-map";
 
 export type ZodCLIOptionMetadata = Readonly<{
   description?: string | undefined;
@@ -68,6 +68,7 @@ const parseCLIMetadata = (value: unknown, path: readonly string[]): ZodCLIOption
     throw schemaError(path, "CLI long option must be a string");
   if (
     valueMode !== undefined &&
+    valueMode !== "boolean-map" &&
     valueMode !== "string-array" &&
     valueMode !== "string-map" &&
     valueMode !== "json-file-map"

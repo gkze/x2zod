@@ -384,7 +384,7 @@ void describe("JSON Schema public target E2E matrix", () => {
         { name: "Claude Code settings", roundTripLevel: "generated-zod" },
         { name: "Mise config", roundTripLevel: "generated-zod" },
         { name: "Cursor environment", roundTripLevel: "generated-zod" },
-        { name: "SchemaStore package.json", roundTripLevel: "generated-zod" },
+        { name: "SchemaStore package.json", roundTripLevel: "dedicated-product-e2e" },
         { name: "Visual Studio Code settings", roundTripLevel: "schema-unavailable" },
         { name: "Zed settings", roundTripLevel: "schema-unavailable" },
       ],

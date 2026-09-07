@@ -1,5 +1,7 @@
 export {
+  jsonSchemaAnnotationKeywordsSchema,
   jsonSchemaDialectSchema,
+  jsonSchemaUnknownKeywordPolicySchema,
   jsonSchemaInputPluginKind,
   jsonSchemaInputPluginOptionsSchema,
   jsonSchemaSourceProfileSchema,
@@ -14,6 +16,8 @@ export type {
 } from "./document";
 export { jsonSchemaValueSchema } from "./document";
 export type {
+  JsonSchemaAnnotationKeywords,
+  JsonSchemaAnnotationKeywordsInput,
   JsonSchemaDialect,
   JsonSchemaInertKeywords,
   JsonSchemaInertKeywordValueType,
@@ -21,9 +25,16 @@ export type {
   JsonSchemaInputPluginOptions,
   JsonSchemaInputPluginOptionsInput,
   JsonSchemaSourceProfile,
+  JsonSchemaUnknownKeywordPolicy,
   JsonSchemaValidator,
 } from "./options";
-export { jsonSchemaInputPlugin } from "./plugin";
+export type {
+  JsonSchemaAnnotation,
+  JsonSchemaAnnotationContext,
+  JsonSchemaAnnotationProjection,
+  JsonSchemaAnnotationProjector,
+} from "./annotations";
+export { createJsonSchemaInputPlugin, jsonSchemaInputPlugin } from "./plugin";
 export type { JsonSchemaInputPlugin, JsonSchemaPreparedInput } from "./plugin";
 export { createFileSystemResourceLoader } from "./resource-loader";
 export type {

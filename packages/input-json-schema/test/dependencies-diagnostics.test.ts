@@ -16,7 +16,7 @@ const compileDraft7 = async (
     },
     output: { typeName: "DependenciesDiagnostic" },
     plugin: jsonSchemaInputPlugin,
-    pluginOptions: { dialect: "draft-7", validator: "none" },
+    pluginOptions: { dialect: "draft-7", unknownKeywords: "reject", validator: "none" },
   });
   return result;
 };

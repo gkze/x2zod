@@ -219,6 +219,7 @@ for (const validator of ["ajv", "none"] as const)
         },
         [metaUri]: { $id: metaUri, $schema: baseUri, type: "object", xMustBeString: true },
       },
+      unknownKeywords: "reject",
       validator,
     });
     const prepared = await jsonSchemaInputPlugin.prepare(

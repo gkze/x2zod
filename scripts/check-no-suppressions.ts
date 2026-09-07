@@ -46,12 +46,27 @@ export const isScannableFile = (fileName: string): boolean =>
   !fileName.endsWith(".log") &&
   !fileName.endsWith(".tsbuildinfo");
 
-export const findSuppressionDirectives = (source: string): readonly SuppressionDirective[] =>
-  [...source.matchAll(suppressionPattern)].map((match) => {
-    const { index } = match;
+const isJsonDocument = (source: string): boolean => {
+  try {
+    JSON.parse(source);
+    return true;
+  } catch (error) {
+    if (error instanceof SyntaxError) return false;
+    throw error;
+  }
+};
 
+export const findSuppressionDirectives = (
+  source: string,
+  fileName?: string,
+): readonly SuppressionDirective[] => {
+  // JSON string values are data, not tool directives. Comment-bearing files still use the scanner.
+  if (fileName?.endsWith(".json") === true && isJsonDocument(source)) return [];
+  return [...source.matchAll(suppressionPattern)].map((match) => {
+    const { index } = match;
     return { line: source.slice(0, index).split("\n").length, value: match.at(0) ?? "" };
   });
+};
 
 const findFilesRecursively = async (directory: string): Promise<readonly string[]> => {
   const entries = await readdir(directory, { withFileTypes: true });
@@ -75,7 +90,7 @@ const findFilesRecursively = async (directory: string): Promise<readonly string[
 const scanFile = async (filePath: string): Promise<readonly FileSuppressionDirective[]> => {
   const source = await readFile(filePath, "utf8");
 
-  return findSuppressionDirectives(source).map((directive) => ({
+  return findSuppressionDirectives(source, filePath).map((directive) => ({
     filePath,
     line: directive.line,
     value: directive.value,

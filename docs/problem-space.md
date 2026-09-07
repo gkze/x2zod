@@ -209,7 +209,7 @@ Implication:
 - Known safe mappings such as `email`, `uuid`, `uri`, `date-time`, `date`, `duration`, `ipv4`, and
   `ipv6` can emit Zod helpers in an assertion mode.
 - Default balanced mode should keep format validation-inert unless a caller asks for assertion
-  behavior; emitting format metadata requires the annotation IR.
+  behavior; format metadata is available to the source-annotation projector.
 
 ### Metadata and comments
 
@@ -303,7 +303,7 @@ This implies five lowering classes:
    simplifying, branch-counting, or building runtime evaluation bookkeeping.
 4. Validation-inert: the construct is an annotation and should not change parse behavior unless the
    input plugin exposes an explicit opt-in option. The current slice recognizes these annotations
-   but does not emit them until the annotation IR exists.
+   and projects descriptions through plugin-owned source metadata when enabled.
 5. Unsupported: the construct cannot be lowered honestly yet and must produce a diagnostic.
 
 ## Resolved V1 Direction
@@ -363,11 +363,12 @@ The design discussion after this landscape pass resolved the initial open questi
 - Absent or `true` `additionalProperties` emits loose object behavior; `additionalProperties: false`
   emits strict object behavior.
 - `format`, `default`, `deprecated`, `readOnly`, and `writeOnly` are recognized as validation-inert
-  by default and are not emitted until the annotation IR exists.
+  by default and are not emitted until their projection is implemented. `description` projects to
+  `.describe(...)` through the planned-call annotation path when explicitly enabled.
 - Unknown non-ref keywords fail unless the selected source profile marks them as inert producer
-  metadata or an exact caller-supplied inert-keyword rule accepts their primitive value. The default
-  profile and empty caller map are strict; named profiles cover exact OpenCode and SchemaStore
-  annotations.
+  metadata, an exact caller-supplied inert-keyword rule accepts their value, or the generic
+  `unknownKeywords` policy accepts them as cross-dialect vendor extensions. The default policy is
+  `warn`; named profiles cover exact OpenCode and SchemaStore annotations.
 - Refs emit named schema declarations and use those declarations at reference sites; plugins supply
   ordered name hints, while core owns final TypeScript identifier selection.
 - External registry resources receive the same recursive unsupported- and unknown-keyword
@@ -401,30 +402,32 @@ JSON Schema plugin needs a policy for nonstandard metadata emitted by upstream t
 unknown key as fatal would reject this useful corpus; treating every unknown key as inert would hide
 mistakes. The selected policy combines source profiles with a strictly typed caller escape hatch:
 
-- default to the strict `none` profile;
+- default to the `none` profile and warn on accepted unknown keywords;
 - ship an explicit `opencode` profile that treats nonstandard `ref` as inert producer metadata;
 - ship an explicit `schemastore` profile that treats `tsType` and `x-intellij-language-injection` as
   inert producer metadata;
-- expose `inertKeywords` as an exact-name map whose values are the required primitive kinds
-  `boolean`, `null`, `number`, or `string`, defaulting to `{}`;
+- expose `inertKeywords` as an exact-name map whose values are the required JSON kinds `array`,
+  `boolean`, `null`, `number`, `object`, or `string`, defaulting to `{}`;
 - reject empty names, `$`-prefixed names, and names reserved by standard JSON Schema dialects and
   vocabularies, so configuration cannot suppress or redefine standard semantics;
-- require every reachable configured occurrence to match its declared primitive kind and fail at
-  that occurrence on a mismatch; objects and arrays cannot be declared inert through this option,
-  while unused external resources remain outside compilation diagnostics;
+- require every reachable configured occurrence to match its declared JSON kind and fail at that
+  occurrence on a mismatch; unused external resources remain outside compilation diagnostics;
 - compose configuration additively with profiles: an explicit configured rule is checked first and
   remains type-enforced, while an unmatched keyword may fall back to the selected profile's exact
   built-in policy;
-- reject unknown keys that appear to contain subschemas or alter evaluation unless the active
-  profile or caller map has an exact documented compatibility rule;
+- treat accepted unknown-key values as opaque regardless of their shape, while rejecting unknown
+  required vocabularies and preserving explicit declaration-container compatibility rules;
 - report every reachable profile- or configuration-ignored occurrence with an ignored-keyword
   warning.
 
 Library and config callers provide the map directly. The CLI maps repeatable
-`--inert-keyword NAME=TYPE` arguments to the same option, with `TYPE` limited to the four primitive
-kinds above. Tests for this generic mechanism use synthetic keyword names. Consumer-specific names
-and pinned schema fixtures stay in the downstream repository that owns the compatibility decision;
-they do not become new `x2zod` profiles or acceptance corpora merely because a consumer needs them.
+`--inert-keyword NAME=TYPE` arguments to the same option, with `TYPE` covering all six JSON kinds
+above. A second generic tier, `--unknown-keywords reject|warn|ignore`, accepts keywords that are
+unknown in every supported dialect as validation-inert vendor extensions: `warn` reports each
+occurrence while `ignore` stays silent. It never accepts cross-dialect keywords or the `$`-reserved
+namespace. Tests for this generic mechanism use synthetic keyword names. Consumer-specific names and
+pinned schema fixtures stay in the downstream repository that owns the compatibility decision; they
+do not become new `x2zod` profiles or acceptance corpora merely because a consumer needs them.
 
 The Mise config schema pinned to `v2026.7.5` is a second real-world acceptance corpus:
 
@@ -440,12 +443,29 @@ The Mise config schema pinned to `v2026.7.5` is a second real-world acceptance c
 - Any Mise construct outside the explicit safe composition and evaluated-property slices remains a
   diagnostic boundary rather than being silently weakened.
 
-The SchemaStore package.json schema at commit `d651805897ab2484548bcf3718624b459cb6cf21` is a third
-real-world acceptance corpus. The target matrix compiles that exact document to importable,
-declaration-emittable Zod and compares package samples with Ajv. Its nine remote references are
-explicitly registered as boolean-schema test resources so this regression measures the package
-document itself; production callers must register the real referenced resources when they need those
-fields' validation semantics.
+The SchemaStore package.json and Cargo schemas at commit `d651805897ab2484548bcf3718624b459cb6cf21`
+are pinned acceptance corpora. Their full reference closure is locked with build-inputs; no external
+document is replaced with a permissive placeholder. Tests compile through the public API, emit
+strict TypeScript declarations, and compare generated validators with Ajv on valid and invalid
+manifests, including referenced configuration and Cargo lint fields. Cargo vendor metadata is
+accepted without stripping or rewriting its schema.
+
+The package.json consumer test composes the documented Bun catalog field shapes with SchemaStore
+before compilation. This is a test-owned extension, not a new compiler source profile. It writes the
+unchanged Zod-validated root and workspace manifests, runs the provisioned Bun 1.3.14 with lifecycle
+scripts disabled, and imports a local workspace dependency resolved through a named catalog. No
+registry packages are needed. Bun validates its consumed package-manager fields, not the complete
+SchemaStore contract: it rejects malformed dependencies/workspaces but accepts a numeric
+description, which SchemaStore rejects. Ajv supplies schema parity; Bun supplies actual consumer
+acceptance.
+
+The unmodified bundled Draft 7 meta-schema can also be compiled as a document from a local file and
+used to validate JSON Schema documents, including the Cargo and package.json fixtures. A document
+claiming a reserved meta-schema identifier from another retrieval location must equal the bundled
+schema. An explicitly supplied root at that same URI retains its existing authority; built-ins never
+replace it. Local external copies are registered once by resource identity. Conservative runtime
+projections still have conservative inferred types; compiling a meta-schema does not add a schema
+transformation API or make every generated validator an extendable Zod object.
 
 ## Product Boundary
 

@@ -1,6 +1,7 @@
 import { zodDeclaration, zodHelper, zodPlan, zodSymbol } from "@x2zod/core";
 import type { JsonPointer, ZodExpression } from "@x2zod/core";
 
+import { applyJsonSchemaAnnotationProjection, projectJsonSchemaAnnotations } from "./annotations";
 import { lowerJsonSchemaArray } from "./array";
 import { lowerJsonSchemaComposition } from "./composition-lower";
 import {
@@ -31,10 +32,9 @@ import { isSupportedJsonSchemaMetaSchemaResource } from "./meta-schemas";
 import { jsonSchemaKeywords, jsonSchemaValidationKeywords } from "./metadata";
 import { jsonSchemaDeclarationNameHints } from "./name-hints";
 import { lowerJsonSchemaObject } from "./object";
-import type { ResolvedJsonSchemaInputPluginOptions } from "./options";
 import { emptyPointer, jsonSchemaPointerWithSegment } from "./pointer";
 import type { JsonSchemaAddress, JsonSchemaReferenceResolver } from "./reference";
-import { jsonSchemaUntypedAssertionKind } from "./schema-applicability";
+import { isDraft7ReferenceSchema, jsonSchemaUntypedAssertionKind } from "./schema-applicability";
 import { lowerJsonSchemaSiblingIntersection } from "./sibling-intersection";
 import { oneOrUnion } from "./zod-expressions";
 
@@ -62,15 +62,17 @@ const siblingAssertionContext = (
   location: JsonSchemaLocationId,
 ): Readonly<{
   addDiagnostic: (input: JsonSchemaDiagnosticInput) => void;
-  dialect: ResolvedJsonSchemaInputPluginOptions["dialect"];
+  dialect: LoweringContext["options"]["dialect"];
   resolveReference: (ref: string) => ReturnType<JsonSchemaReferenceResolver["resolve"]>;
-  sourceProfile: ResolvedJsonSchemaInputPluginOptions["sourceProfile"];
+  sourceProfile: LoweringContext["options"]["sourceProfile"];
+  unknownKeywords: LoweringContext["options"]["unknownKeywords"];
 }> => ({
   ...diagnosticSink(context),
   dialect: policyForLocation(context, location).dialect,
   resolveReference: (reference): ReturnType<JsonSchemaReferenceResolver["resolve"]> =>
     context.references.resolve(reference, location),
   sourceProfile: context.options.sourceProfile,
+  unknownKeywords: context.options.unknownKeywords,
 });
 
 export const symbolForAddress = (address: JsonSchemaAddress): string =>
@@ -191,8 +193,12 @@ const lowerChildSchema = (request: LowerChildSchemaRequest): ZodExpression =>
 
 const childSchemaLowerer =
   (context: LoweringContext, parent: JsonSchemaLocationId) =>
-  (pointer: JsonPointer, schema: LowerChildSchemaRequest["schema"]): ZodExpression =>
-    lowerChildSchema({ context, parent, pointer, schema });
+  (
+    pointer: JsonPointer,
+    schema: LowerChildSchemaRequest["schema"],
+    sourceSchema?: LowerChildSchemaRequest["sourceSchema"],
+  ): ZodExpression =>
+    lowerChildSchema({ context, parent, pointer, schema, sourceSchema });
 
 const lowerArraySchema = ({
   context,
@@ -287,7 +293,7 @@ const lowerReference = ({
 
 type LowerCompositionRequest = Readonly<{
   context: LoweringContext;
-  dialect: ResolvedJsonSchemaInputPluginOptions["dialect"];
+  dialect: LoweringContext["options"]["dialect"];
   location: JsonSchemaLocationId;
   pointer: JsonPointer;
   schema: JsonObject;
@@ -306,9 +312,10 @@ const lowerComposition = ({
     resolveReference: (reference) => context.references.resolve(reference, location),
     dialect,
     sourceProfile: context.options.sourceProfile,
+    unknownKeywords: context.options.unknownKeywords,
   });
 
-export const lowerJsonSchema = ({
+const lowerSemanticSchema = ({
   context,
   location,
   pointer,
@@ -401,6 +408,29 @@ export const lowerJsonSchema = ({
   if (untypedTypeSpecific !== undefined) return untypedTypeSpecific;
 
   return zodPlan.unknown();
+};
+
+export const lowerJsonSchema = (request: LocatedSchemaRequest): ZodExpression => {
+  const expression = lowerSemanticSchema(request);
+  // Normalized source nodes retain ownership; synthetic sibling schemas have no source identity.
+  const sourceSchema = request.sourceSchema ?? request.schema;
+  if (sourceSchema !== request.context.references.graph.location(request.location)?.schema)
+    return expression;
+  if (
+    isDraft7ReferenceSchema(
+      sourceSchema,
+      policyForLocation(request.context, request.location).dialect,
+    )
+  )
+    return expression;
+  const annotations = request.context.annotations.get(request.location);
+  if (annotations === undefined || annotations.annotations.length === 0) return expression;
+  let projection = request.context.annotationProjections.get(request.location);
+  if (projection === undefined) {
+    projection = projectJsonSchemaAnnotations(annotations, request.context);
+    request.context.annotationProjections.set(request.location, projection);
+  }
+  return applyJsonSchemaAnnotationProjection(expression, projection);
 };
 
 export const declareSchema = (request: DeclareSchemaRequest, context: LoweringContext): void => {

@@ -200,7 +200,7 @@ export const jsonSchemaOptionsSchema = z.strictObject({
   externalSchemas: withCLI(jsonSchemaRegistrySchema.default({}), { valueMode: "json-file-map" }),
   inertKeywords: withCLI(
     z
-      .record(z.string(), z.enum(["boolean", "null", "number", "string"]))
+      .record(z.string(), z.enum(["array", "boolean", "null", "number", "object", "string"]))
       .default({})
       .superRefine(rejectReservedOrStandardKeywordNames)
       .describe("Exact custom keywords to accept as typed, validation-inert metadata."),
@@ -217,18 +217,18 @@ export type JsonSchemaOptions = z.infer<typeof jsonSchemaOptionsSchema>;
 ```
 
 `inertKeywords` is a JSON-serializable map from an exact custom keyword name to its required JSON
-primitive kind: `boolean`, `null`, `number`, or `string`. It defaults to `{}`. Names are literal;
-there are no glob, prefix, path, or regular-expression forms. Option validation rejects empty names,
-every `$`-prefixed name, and every standard keyword known to the plugin's supported JSON Schema
-dialects and vocabularies. A standard keyword cannot be relabeled as inert merely because it is not
-active in the selected dialect.
+kind: `array`, `boolean`, `null`, `number`, `object`, or `string`. It defaults to `{}`. Names are
+literal; there are no glob, prefix, path, or regular-expression forms. Option validation rejects
+empty names, every `$`-prefixed name, and every standard keyword known to the plugin's supported
+JSON Schema dialects and vocabularies. A standard keyword cannot be relabeled as inert merely
+because it is not active in the selected dialect.
 
-Every reachable occurrence of a configured keyword must have the declared primitive kind. Objects
-and arrays never match, and a type mismatch fails compilation at that occurrence rather than
-silently ignoring the value. An accepted occurrence remains validation-inert and produces a
-`json-schema/ignored-keyword` warning so the compatibility decision is auditable. The same rules
-apply recursively to the root document and reachable registered external schemas; unused external
-resources remain quarantined from diagnostics and compilation.
+Every reachable occurrence of a configured keyword must have the declared JSON kind. A type mismatch
+fails compilation at that occurrence rather than silently ignoring the value. An accepted occurrence
+remains validation-inert and produces a `json-schema/ignored-keyword` warning so the compatibility
+decision is auditable. The same rules apply recursively to the root document and reachable
+registered external schemas; unused external resources remain quarantined from diagnostics and
+compilation.
 
 Core introspects a supported Zod option-schema subset and maps it to Optique parsers:
 
@@ -330,7 +330,6 @@ export type ZodExpression =
       readonly factory: ZodFactoryName;
       readonly args: readonly ZodArgument[];
       readonly calls: readonly ZodMethodCall[];
-      readonly annotations: readonly ZodAnnotation[];
     }
   | { readonly kind: "reference"; readonly symbol: ZodSymbol }
   | { readonly kind: "lazyReference"; readonly symbol: ZodSymbol };
@@ -346,16 +345,18 @@ not know JSON Schema vocabulary; it only emits the requested Zod calls and helpe
 Plugins should use builder APIs over raw tagged objects so lowering reads as a binding layer:
 
 ```ts
-const schema = ctx.z
-  .object({ mode: ctx.z.enum(["build", "watch"]), path: ctx.z.string() })
-  .loose()
-  .annotate({ description: "Tool configuration." });
+const schema = zodPlan.describe(
+  zodPlan.passthrough(
+    zodPlan.object({ mode: zodPlan.enum(["build", "watch"]), path: zodPlan.string() }),
+  ),
+  "Tool configuration.",
+);
 ```
 
 Internally, that builder records factories, arguments, chained method calls, references, helper
-arguments, and annotations. We should avoid bespoke semantic nodes such as `StringMinLengthCheck` or
-`ObjectAdditionalPropertiesPolicy` unless the emitter truly needs information that cannot be
-represented as planned Zod calls.
+arguments, and metadata method calls. Source annotations belong to the input plugin. Avoid bespoke
+semantic nodes such as `StringMinLengthCheck` or `ObjectAdditionalPropertiesPolicy` unless the
+emitter truly needs information that cannot be represented as planned Zod calls.
 
 The module-level plan is separate from expression planning:
 
@@ -634,9 +635,9 @@ before the plugin returns failures to core.
 
 ## Source Profiles
 
-Unknown-keyword compatibility is owned by the JSON Schema plugin through explicit source profiles.
-The default profile is `none`, which rejects unknown non-vocabulary keywords. Named profiles
-describe real producer quirks without weakening global strictness.
+Unknown-keyword policy and producer compatibility are separate JSON Schema plugin concerns. The
+default profile is `none`; the default unknown-keyword policy is `warn`. Named profiles describe
+explicit producer compatibility rules.
 
 The `opencode` profile exists because the OpenCode config schema includes both standard `$ref` and a
 nonstandard `ref` field. It treats `ref` as inert producer metadata, never as a reference alias or
@@ -646,15 +647,29 @@ handling or resolve SchemaStore's external references; callers still provide tho
 the external schema registry.
 
 The caller-owned `inertKeywords` map composes additively with the selected source profile. An
-explicit configured rule is checked first and its primitive kind is enforced even when the selected
+explicit configured rule is checked first and its JSON kind is enforced even when the selected
 profile also recognizes that name; a type mismatch cannot fall through to the profile. When no
 configured rule matches, the profile may apply its built-in compatibility rule. Configuration never
-replaces, broadens, or disables a profile rule. The default combination of `sourceProfile: "none"`
-and `inertKeywords: {}` therefore preserves strict unknown-keyword rejection.
+replaces, broadens, or disables a profile rule. Set `unknownKeywords: "reject"` to preserve the
+previous strict acceptance behavior.
+
+The `unknownKeywords` policy (`warn` by default, `reject`, or `ignore`) is the generic tier beneath
+profiles and configured inert keywords. It applies only to keywords that are unknown in every
+supported dialect, so cross-dialect keywords such as `definitions` in a Draft 2020-12 document still
+fail without an explicit compatibility rule, and the generic policy never accepts the `$`-reserved
+namespace. `warn` accepts the keyword as a validation-inert vendor extension and reports each
+occurrence with an ignored-keyword warning; `ignore` accepts it silently for reviewed pipelines.
+Because unrecognized keywords are annotations under the JSON Schema specification, this tier models
+vendor extensions such as SchemaStore's `x-taplo` and `x-tombi-*` without per-producer profiles.
+
+The `inertKeywords` value kinds cover all JSON value types: `array`, `boolean`, `null`, `number`,
+`object`, and `string`. Vendor annotations whose values are objects or arrays can therefore be
+declared as typed inert metadata without any pre-transform step.
 
 A source profile may:
 
 - allow exact known inert annotation keywords;
+- allow documented cross-dialect declaration containers while preserving reference semantics;
 - restrict allowances by schema location when a keyword is only safe in specific positions;
 - attach ignored-key diagnostics so generated output is auditable.
 
@@ -668,6 +683,37 @@ A source profile may not:
 If a source-specific construct needs runtime behavior, the JSON Schema plugin must model and lower
 that behavior explicitly. Otherwise compilation fails with an unknown or unsupported keyword
 diagnostic.
+
+### Source annotation projection
+
+Accepted source annotations remain in the JSON Schema plugin, keyed by resource-graph location. Each
+immutable context contains the document retrieval URI, resource URI, document-relative schema
+pointer, and keyword/value/pointer entries. Values are opaque JSON: their contents are never walked
+as schemas unless an explicit reference independently designates a schema at that location. This is
+source metadata, not annotation results collected while evaluating instances.
+
+`createJsonSchemaInputPlugin({ projectAnnotations })` provides a synchronous library hook. It runs
+once per emitted, annotated source location; synthetic sibling schemas do not create another
+projection. The hook must be deterministic and returns a validated `{ description?: string }`.
+Unsupported fields and exceptions fail compilation. It cannot return expressions, add assertions, or
+change the schema. Promise and thenable results fail immediately without waiting for completion;
+their rejections are handled so they do not escape into the host process. The callback is installed
+on the plugin, not serialized into plugin options. CLI/config callers can enable the built-in
+projection with `annotationKeywords: { description: true }` or
+`--annotation-keywords description=true`. Callback descriptions override the built-in description;
+returning `{}` leaves the built-in projection unchanged. Other metadata remains unprojected.
+
+Reference targets own their annotations; reference sites own theirs. Composition branch annotations
+stay on branches and parent annotations attach to the resulting expression. Draft 7 `$ref` siblings
+are ignored. Runtime-guarded exports retain their location's description. Conservative runtime
+fallbacks may omit structural child expressions; metadata for those children has no emitted target.
+Core receives only typed `.describe(...)` calls, with no JSON Schema annotation model or callbacks.
+
+When exact runtime validation is needed, schemas carrying nonstandard keys use the resource-graph
+backend. Its validation atoms exclude those keys so Ajv extensions such as `nullable` cannot change
+validation. Opaque containers remain addressable for explicit references. This may change helper
+code and runtime cost compared with the same schema without metadata; performance equivalence is not
+promised.
 
 ## Dialects And References
 
@@ -729,8 +775,9 @@ Generated modules should:
 - emit module-level deduplicated helpers for advanced runtime semantics;
 - expose encoded wire properties through `z.input` and decoded application properties through
   `z.output` and `z.infer` when an emission transform produces a codec-backed schema;
-- emit JSON Schema metadata only when it is represented in the annotation IR; the current slice
-  recognizes validation-inert annotations but does not emit them;
+- emit `.describe(...)` calls for schema-node `description` annotations when the caller enables
+  `annotationKeywords.description`; other accepted annotations remain available to the plugin
+  projector without affecting validation;
 - format output through the TypeScript printer and Oxfmt in CLI/repo workflows.
 
 Generated modules should not import an `@x2zod/runtime` helper package in v1. Advanced helpers
@@ -755,10 +802,10 @@ V1 semantic target:
 - `default` is metadata-only by default.
 - required format-assertion vocabulary overrides the default `format` metadata policy.
 - Unknown non-ref keywords are rejected unless the selected source profile marks them as inert
-  compatibility metadata or an exact caller-supplied `inertKeywords` rule accepts their primitive
-  value.
-- Profile- or configuration-allowed unknown keywords are accepted as validation-inert input and
-  reported in diagnostics; emitting them requires the annotation IR.
+  compatibility metadata, an exact caller-supplied `inertKeywords` rule accepts their value, or the
+  generic `unknownKeywords` policy accepts them as cross-dialect vendor extensions.
+- Profile-, configuration-, or generic-policy-accepted unknown keywords are validation-inert; `warn`
+  reports each occurrence while `ignore` stays silent.
 - Unknown required vocabularies fail.
 - `$dynamicAnchor` and `$dynamicRef` are supported for Draft 2020-12.
 - `patternProperties` is supported with runtime checks where needed.
@@ -788,10 +835,12 @@ and 2020-12. The pinned official-suite baseline and the additional interaction f
 `docs/json-schema-conformance.md` are the implementation-status authority. Passing the official
 suite is necessary Gate 1 evidence rather than proof of every cross-keyword interaction.
 
-Recognized annotations do not change validation and are not emitted until the annotation IR is
-implemented. Named format, content, standardized-output, lossless-number, remote-resource, custom-
-vocabulary, historical-draft, and future-draft capabilities remain outside the stock claim unless
-their explicit profile or plugin contract is implemented and evidenced.
+Recognized annotations do not change validation. `description` is projected to `.describe(...)`
+through the planned-call annotation path when explicitly enabled; other recognized annotations are
+not emitted until their projection is implemented. Named format, content, standardized-output,
+lossless-number, remote-resource, custom- vocabulary, historical-draft, and future-draft
+capabilities remain outside the stock claim unless their explicit profile or plugin contract is
+implemented and evidenced.
 
 Untyped object and array assertions retain their JSON Schema applicability: they constrain their own
 instance domains and accept the other JSON value domains, including when reached through refs or

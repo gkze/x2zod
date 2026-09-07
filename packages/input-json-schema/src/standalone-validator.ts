@@ -61,13 +61,12 @@ const addExternalSchemas = (
 
 type AddDialectMetaSchemasRequest = Readonly<{
   dialect: JsonSchemaDialect;
-  externalSchemas: JsonSchemaInputPluginOptions["externalSchemas"];
-  rootRetrievalUri?: string | undefined;
+  providedResourceUris: ReadonlySet<string>;
 }>;
 
 const addDialectMetaSchemas = (
   ajv: JsonSchemaAjv,
-  { dialect, externalSchemas, rootRetrievalUri }: AddDialectMetaSchemasRequest,
+  { dialect, providedResourceUris }: AddDialectMetaSchemasRequest,
 ): void => {
   const schemas = {
     ...jsonSchemaDialectMetaSchemas(dialect),
@@ -76,8 +75,7 @@ const addDialectMetaSchemas = (
   for (const [uri, schema] of Object.entries(schemas).toSorted(([left], [right]) =>
     compareCodeUnits(left, right),
   ))
-    if (uri !== rootRetrievalUri && !Object.hasOwn(externalSchemas, uri))
-      ajv.addSchema(schema, uri);
+    if (!providedResourceUris.has(uri)) ajv.addSchema(schema, uri);
 };
 
 const standaloneExpressionSource = (source: string): Result<string> => {
@@ -148,12 +146,17 @@ export const createStandaloneRuntimeProgram = async (
             schema: normalizedSchema,
           })
         : { externalSchemas: normalizedExternalSchemas, schema: normalizedSchema };
-    addDialectMetaSchemas(ajv, {
-      dialect: request.dialect,
-      externalSchemas: documents.externalSchemas,
-      rootRetrievalUri: request.references.graph.location(request.references.graph.root)
-        ?.retrievalUri,
-    });
+    const root = request.references.graph.location(request.references.graph.root);
+    const providedRetrievalUris = new Set([
+      ...(root === undefined ? [] : [root.retrievalUri]),
+      ...Object.keys(documents.externalSchemas),
+    ]);
+    const providedResourceUris = new Set(
+      request.references.graph.resources
+        .filter((resource) => providedRetrievalUris.has(resource.retrievalUri))
+        .flatMap((resource) => [resource.canonicalUri, resource.retrievalUri]),
+    );
+    addDialectMetaSchemas(ajv, { dialect: request.dialect, providedResourceUris });
     addExternalSchemas(ajv, documents.externalSchemas);
     const rootRetrievalUri = request.references.graph.location(
       request.references.graph.root,

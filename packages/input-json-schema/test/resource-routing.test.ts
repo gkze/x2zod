@@ -176,7 +176,7 @@ void test("reports reachable external profile metadata once", async () => {
 });
 
 void test("diagnoses schema-valued unevaluatedItems", async () => {
-  const pluginOptions = options({ validator: "none" });
+  const pluginOptions = options({ unknownKeywords: "reject", validator: "none" });
   const result = await lowerInline(
     { type: "array", unevaluatedItems: { x2zodUnknown: true } },
     pluginOptions,
@@ -324,6 +324,7 @@ void test("diagnoses unknown keywords reached through dynamic and recursive refe
     { $dynamicRef: `${dynamicUri}#target` },
     options({
       externalSchemas: { [dynamicUri]: { $dynamicAnchor: "target", x2zodUnknown: true } },
+      unknownKeywords: "reject",
       validator: "none",
     }),
   );
@@ -342,6 +343,7 @@ void test("diagnoses unknown keywords reached through dynamic and recursive refe
           x2zodUnknown: true,
         },
       },
+      unknownKeywords: "reject",
       validator: "none",
     }),
   );

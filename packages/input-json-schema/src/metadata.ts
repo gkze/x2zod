@@ -3,13 +3,22 @@ export const jsonSchemaInputPluginKind = "json-schema" as const;
 export const jsonSchemaDialects = ["draft-2020-12", "draft-2019-09", "draft-7"] as const;
 export const jsonSchemaValidators = ["ajv", "none"] as const;
 export const jsonSchemaSourceProfiles = ["none", "opencode", "schemastore"] as const;
-export const jsonSchemaInertKeywordValueTypes = ["boolean", "null", "number", "string"] as const;
+export const jsonSchemaInertKeywordValueTypes = [
+  "array",
+  "boolean",
+  "null",
+  "number",
+  "object",
+  "string",
+] as const;
+export const jsonSchemaUnknownKeywordPolicies = ["reject", "warn", "ignore"] as const;
 
 export type JsonSchemaDialect = (typeof jsonSchemaDialects)[number];
 export type JsonSchemaValidator = (typeof jsonSchemaValidators)[number];
 export type JsonSchemaSourceProfile = (typeof jsonSchemaSourceProfiles)[number];
 export type JsonSchemaInertKeywordValueType = (typeof jsonSchemaInertKeywordValueTypes)[number];
 export type JsonSchemaInertKeywords = Readonly<Record<string, JsonSchemaInertKeywordValueType>>;
+export type JsonSchemaUnknownKeywordPolicy = (typeof jsonSchemaUnknownKeywordPolicies)[number];
 export type JsonSchemaInputPluginKind = typeof jsonSchemaInputPluginKind;
 export type JsonSchemaKeywordPolicy = "supported" | "unknown";
 
@@ -198,14 +207,34 @@ export const jsonSchemaSourceProfileMetadataKeywords: Readonly<
 > = {
   none: new Set<string>(),
   opencode: new Set<string>([
-    jsonSchemaKeywords.definitions,
-    jsonSchemaKeywords.dollarDefs,
     jsonSchemaKeywords.allowComments,
     jsonSchemaKeywords.allowTrailingCommas,
     "ref",
   ]),
   schemastore: new Set<string>(["tsType", "x-intellij-language-injection"]),
 };
+
+// Declaration containers remain schema-bearing compatibility rules, never opaque metadata.
+export const jsonSchemaSourceProfileDeclarationKeywords: Readonly<
+  Record<JsonSchemaSourceProfile, ReadonlySet<string>>
+> = {
+  none: new Set<string>(),
+  opencode: new Set<string>([jsonSchemaKeywords.definitions, jsonSchemaKeywords.dollarDefs]),
+  schemastore: new Set<string>(),
+};
+
+export const jsonSchemaAnnotationKeywords: ReadonlySet<string> = new Set([
+  jsonSchemaKeywords.title,
+  jsonSchemaKeywords.description,
+  jsonSchemaKeywords.default,
+  jsonSchemaKeywords.examples,
+  jsonSchemaKeywords.deprecated,
+  jsonSchemaKeywords.readOnly,
+  jsonSchemaKeywords.writeOnly,
+  jsonSchemaKeywords.format,
+  jsonSchemaKeywords.contentEncoding,
+  jsonSchemaKeywords.contentMediaType,
+]);
 
 export const opencodeModelRef = "https://models.dev/model-schema.json#/$defs/Model";
 
@@ -255,3 +284,10 @@ export const jsonSchemaKeywordPolicyForDialect = (
   if (draft2020OnlyKeywords.has(keyword) && dialect !== "draft-2020-12") return "unknown";
   return jsonSchemaKeywordPolicy(keyword);
 };
+
+export const jsonSchemaCrossDialectKeywordPolicy = (keyword: string): JsonSchemaKeywordPolicy =>
+  jsonSchemaDialects.some(
+    (dialect) => jsonSchemaKeywordPolicyForDialect(keyword, dialect) === "supported",
+  )
+    ? "supported"
+    : "unknown";

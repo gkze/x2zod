@@ -36,3 +36,18 @@ void test("scans the tracked direnv script without reading dotenv secrets or bui
   assert.equal(isScannableFile(".env.local"), false);
   assert.equal(isScannableFile("tsconfig.tsbuildinfo"), false);
 });
+
+void test("distinguishes JSON descriptions from operative suppression comments", () => {
+  const directive = ["eslint", "disable"].join("-");
+  const json = JSON.stringify({ description: `Documents ${directive} comments.` });
+  assert.deepEqual(findSuppressionDirectives(json, "schema.json"), []);
+  assert.deepEqual(findSuppressionDirectives(`// ${directive}\n{}`, "schema.json"), [
+    { line: 1, value: directive },
+  ]);
+  assert.deepEqual(findSuppressionDirectives(`// ${directive}\n{}`, "config.jsonc"), [
+    { line: 1, value: directive },
+  ]);
+  assert.deepEqual(findSuppressionDirectives(`// ${directive}\nexport {};`, "source.ts"), [
+    { line: 1, value: directive },
+  ]);
+});

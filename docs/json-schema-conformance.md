@@ -45,7 +45,7 @@ are part of conformance rather than preprocessing conveniences.
 
 - A required unknown vocabulary fails compilation with a structured diagnostic.
 - An optional unknown vocabulary does not grant permission to silently accept its keywords. Those
-  keywords still follow the plugin's strict unknown-keyword and source-profile policy.
+  keywords still follow the plugin's unknown-keyword, source-profile, and inert-keyword policy.
 - Custom vocabulary behavior is supported only when that vocabulary has an explicit implementation.
   `x2zod` does not infer semantics from an arbitrary vocabulary URI or meta-schema.
 - When a custom meta-schema declares `$vocabulary`, the finite custom-dialect subset requires its
@@ -91,8 +91,9 @@ added only where required, remain declaration-safe, preserve accepted values, an
 ## Annotations And Evaluation Output
 
 Static annotations such as `title`, `description`, `default`, `examples`, `deprecated`, `readOnly`,
-and `writeOnly` are recognized according to their dialect and retained in annotation IR once that IR
-is implemented. JSON Schema `default` never becomes Zod `.default()` as part of conformance.
+and `writeOnly` are retained as plugin-owned source metadata. Description projection is opt-in;
+consumer projectors can derive descriptions from accepted annotations. JSON Schema `default` never
+becomes Zod `.default()` as part of conformance.
 
 Zod `safeParse` does not expose the standardized JSON Schema output formats or every
 instance-dependent annotation result. Those observable evaluator outputs require a companion
