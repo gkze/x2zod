@@ -271,7 +271,10 @@ export const createPreservedObjectCodecHelper = (): VariableStatement => {
           ),
         ),
       ],
-      undefined,
+      zodType("ZodCodec", [
+        zodType("ZodCustom", [zodType("input", [schemaType]), zodType("input", [schemaType])]),
+        zodType("ZodCustom", [zodType("output", [schemaType]), zodType("output", [schemaType])]),
+      ]),
       createToken(SyntaxKind.EqualsGreaterThanToken),
       createBlock(
         [

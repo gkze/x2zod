@@ -94,7 +94,15 @@ const createRuntimePredicateHelper = (parseStructural: boolean): VariableStateme
       createArrowParameter(parseStructural ? "schema" : "_schema", schemaTypeReference),
       createArrowParameter("predicate", predicateType),
     ],
-    undefined,
+    parseStructural
+      ? zodType("ZodPipe", [
+          zodType("ZodCustom", [inputTypeReference, inputTypeReference]),
+          schemaTypeReference,
+        ])
+      : zodType("ZodCustom", [
+          zodTypeProjection("infer", schemaTypeReference),
+          zodTypeProjection("infer", schemaTypeReference),
+        ]),
     createToken(SyntaxKind.EqualsGreaterThanToken),
     result,
   );
