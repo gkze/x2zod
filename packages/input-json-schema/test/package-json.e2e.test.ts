@@ -21,6 +21,9 @@ import {
 } from "./schemastore-fixtures";
 
 const schemaStoreFixtureCount = 16;
+// Full-closure compilation, declarations, and consumer subprocesses have separate deadlines.
+// Leave the outer test enough time to report a phase failure and clean up on slower CI hosts.
+const manifestTestTimeoutMs = 180_000;
 const cacheDirectory = nodePath.join(import.meta.dirname, "../node_modules/.cache");
 const packageManifest = {
   name: "x2zod-package-fixture",
@@ -99,7 +102,7 @@ void test("SchemaStore manifest fixtures retain pinned full resource provenance"
 
 void test(
   "package.json compiles its real resource closure and round-trips through Bun",
-  { timeout: 15_000 },
+  { timeout: manifestTestTimeoutMs },
   async () => {
     const directory = createTemporaryDirectory({
       prefix: "package-json-e2e-",
@@ -194,7 +197,7 @@ void test(
 
 void test(
   "Cargo compiles vendor metadata and real lint resources without schema surgery",
-  { timeout: 15_000 },
+  { timeout: manifestTestTimeoutMs },
   async () => {
     const directory = createTemporaryDirectory({
       prefix: "cargo-e2e-",

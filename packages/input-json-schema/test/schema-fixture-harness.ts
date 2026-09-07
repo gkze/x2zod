@@ -17,6 +17,8 @@ type ParseResult = Readonly<{ success: false }> | Readonly<{ success: true; data
 export type FixtureValidator = Readonly<{ safeParse: (value: unknown) => ParseResult }>;
 const packageDirectory = nodePath.resolve(import.meta.dirname, "..");
 const typeScriptBinary = nodePath.resolve(packageDirectory, "../../node_modules/.bin/tsgo");
+const compilerDeadlineMs = 60_000;
+const declarationDeadlineMs = 15_000;
 const isFixtureValidator = (value: unknown): value is FixtureValidator =>
   isRecord(value) && typeof value["safeParse"] === "function";
 
@@ -44,6 +46,7 @@ export const generateSchemaFixture = async (
     allowedStderr: isNativePreviewShutdownStderr,
     args: [bundleFile, schemaFile, "Fixture", optionsFile],
     cwd: packageDirectory,
+    timeoutMs: compilerDeadlineMs,
   });
   await writeFile(generatedFile, source);
   const declarations = spawnSync(
@@ -64,7 +67,7 @@ export const generateSchemaFixture = async (
       "es2022",
       generatedFile,
     ],
-    { cwd: packageDirectory, encoding: "utf8", timeout: 15_000 },
+    { cwd: packageDirectory, encoding: "utf8", timeout: declarationDeadlineMs },
   );
   if (declarations.error !== undefined) throw declarations.error;
   assert.equal(declarations.status, 0, declarations.stdout + declarations.stderr);
