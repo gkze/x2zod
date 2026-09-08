@@ -196,6 +196,16 @@ const hasDuplicateResourceIdentifiers = (
   return false;
 };
 
+// Wide compositions otherwise become single Ajv functions that exceed TypeScript's flow budget.
+// The descriptor evaluator keeps branches as data and compiles only each node's own assertions.
+const maximumStandaloneCompositionBranches = 32;
+const hasWideComposition = (schema: JsonSchemaValue): boolean =>
+  isJsonObject(schema) &&
+  ["allOf", "anyOf", "oneOf"].some((keyword) => {
+    const branches = schema[keyword];
+    return Array.isArray(branches) && branches.length > maximumStandaloneCompositionBranches;
+  });
+
 export const requestNeedsResourceGraphRuntime = (request: StandaloneRuntimeRequest): boolean => {
   const reachable = reachableSchemas(request);
   return (
@@ -203,6 +213,7 @@ export const requestNeedsResourceGraphRuntime = (request: StandaloneRuntimeReque
     reachable.some(
       ({ location, schema }) =>
         policyForLocation(request, location).dialect !== request.dialect ||
+        hasWideComposition(schema) ||
         // Ajv has nonstandard semantics (for example nullable). Only graph atoms may see these nodes.
         (isJsonObject(schema) &&
           Object.keys(schema).some((keyword) => jsonSchemaKeywordPolicy(keyword) === "unknown")) ||
