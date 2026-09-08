@@ -1,5 +1,16 @@
 # @x2zod/core
 
+## 0.8.1
+
+### Patch Changes
+
+- 271a147: Emit explicit return types for runtime helpers so the shared runtime public API passes
+  JSR's type checks while preserving the inferred input, output, custom schema, and codec types.
+- 7370ecb: Fix generated catalogs under strict unused-binding checks by omitting private
+  shared-helper imports and unused Ajv bindings. Evaluate wide compositions through resource
+  descriptors to avoid oversized TypeScript control-flow bodies while preserving runtime validation
+  and inferred types. Regenerate output after upgrading; the shared runtime ABI is unchanged.
+
 ## 0.8.0
 
 ### Minor Changes
