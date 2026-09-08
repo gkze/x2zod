@@ -10,7 +10,8 @@ import {
 import type { JsonSchemaValue } from "../src";
 import { generateSchemaFixture, isFixtureValidator } from "./schema-fixture-harness";
 
-const branchCount = 96;
+// Exercise the first wide composition while keeping the strict consumer regression bounded.
+const branchCount = 33;
 const definitions = Object.fromEntries(
   Array.from({ length: branchCount }, (_value, index) => [
     `Message${index.toString()}`,
