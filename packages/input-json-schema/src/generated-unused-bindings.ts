@@ -20,6 +20,7 @@ import {
 import { visitEachChild } from "@typescript/native-preview/unstable/ast/visitor";
 
 type UnusedDiagnostic = Readonly<{ code: number; pos: number; end: number }>;
+const binarySearchDivisor = 2;
 const unusedDeclarationCode = 6133;
 const unusedBindingPatternCode = 6198;
 const unusedCodes: ReadonlySet<number> = new Set([unusedDeclarationCode, unusedBindingPatternCode]);
@@ -73,14 +74,39 @@ const isAjvContextBinding = (node: Node): boolean => {
   );
 };
 
+// Prefix maximum ends preserve containment even when diagnostic ranges overlap or nest.
+export const createUnusedDiagnosticMatcher = (
+  diagnostics: readonly UnusedDiagnostic[],
+): ((start: number, end: number) => boolean) => {
+  let maximumEnd = 0;
+  const ranges = diagnostics
+    .filter((diagnostic) => unusedCodes.has(diagnostic.code))
+    .toSorted((left, right) => left.pos - right.pos)
+    .map((diagnostic) => {
+      maximumEnd = Math.max(maximumEnd, diagnostic.end);
+      return { start: diagnostic.pos, end: maximumEnd };
+    });
+  return (start, end): boolean => {
+    let lower = 0;
+    let upper = ranges.length;
+    while (lower < upper) {
+      const middle = lower + Math.floor((upper - lower) / binarySearchDivisor);
+      const range = ranges[middle];
+      if (range === undefined || range.start > start) upper = middle;
+      else lower = middle + 1;
+    }
+    const preceding = ranges[lower - 1];
+    return preceding !== undefined && preceding.end >= end;
+  };
+};
+
 // Use the compiler's binding analysis: spelling-based counts confuse property names and shadowing.
 export const removeGeneratedUnusedBindings = (
   root: Node,
   diagnostics: readonly UnusedDiagnostic[],
 ): Node => {
-  const unused = diagnostics.filter((diagnostic) => unusedCodes.has(diagnostic.code));
-  const isUnused = (node: Node): boolean =>
-    unused.some((diagnostic) => diagnostic.pos <= node.getStart() && diagnostic.end >= node.end);
+  const containsUnused = createUnusedDiagnosticMatcher(diagnostics);
+  const isUnused = (node: Node): boolean => containsUnused(node.getStart(), node.end);
   const visit = (node: Node): Node | undefined => {
     if (
       isBindingElement(node) &&
