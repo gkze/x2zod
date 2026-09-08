@@ -60,12 +60,21 @@ const preserveObjectInputHelperName = "x2zodPreserveObjectInput";
 const wrapperHelperNames: Readonly<Record<ZodWrapperName, string>> = {
   preserveObjectInput: preserveObjectInputHelperName,
 };
-const helperIdentifierNames: Readonly<Record<ZodHelperName, readonly string[]>> = {
-  codePointLength: [codePointLengthHelperName],
-  exactMultipleOf: [decimalPartsHelperName, exactMultipleOfHelperName],
-  preserveObjectInput: [preserveObjectInputHelperName],
-  uniqueItems: [jsonEqualHelperName, uniqueItemsHelperName],
+const helperIdentifiers: Readonly<
+  Record<ZodHelperName, Readonly<{ entrypoint: string; dependencies: readonly string[] }>>
+> = {
+  codePointLength: { entrypoint: codePointLengthHelperName, dependencies: [] },
+  exactMultipleOf: {
+    entrypoint: exactMultipleOfHelperName,
+    dependencies: [decimalPartsHelperName],
+  },
+  preserveObjectInput: { entrypoint: preserveObjectInputHelperName, dependencies: [] },
+  uniqueItems: { entrypoint: uniqueItemsHelperName, dependencies: [jsonEqualHelperName] },
 };
+
+export const zodHelperDependencyIdentifierNames: ReadonlySet<string> = new Set(
+  Object.values(helperIdentifiers).flatMap((helper) => helper.dependencies),
+);
 
 const assertNever = (value: never): never => {
   throw new Error(`Unexpected Zod helper request: ${JSON.stringify(value)}`);
@@ -458,4 +467,11 @@ export const createZodHelperStatements = (
 
 export const zodHelperIdentifierNames = (
   helperNames: ReadonlySet<ZodHelperName>,
-): readonly string[] => [...helperNames].flatMap((helperName) => helperIdentifierNames[helperName]);
+): readonly string[] => {
+  const names: string[] = [];
+  for (const helperName of helperNames) {
+    const helper = helperIdentifiers[helperName];
+    names.push(...helper.dependencies, helper.entrypoint);
+  }
+  return names;
+};

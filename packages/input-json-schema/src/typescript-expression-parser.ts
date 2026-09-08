@@ -37,12 +37,14 @@ import { API as AsyncAPI } from "@typescript/native-preview/unstable/async";
 import { createVirtualFileSystem } from "@typescript/native-preview/unstable/fs";
 import { API as SyncAPI } from "@typescript/native-preview/unstable/sync";
 
+import { removeGeneratedUnusedBindings } from "./generated-unused-bindings";
+
 const configPath = "/__x2zod_runtime_program__/tsconfig.json";
 const expressionPath = "/__x2zod_runtime_program__/expression.ts";
 const expressionVariableName = "x2zodParsedExpression";
 const virtualDirectory = "/__x2zod_runtime_program__";
 const configSource = JSON.stringify({
-  compilerOptions: { noLib: true, strict: true },
+  compilerOptions: { noLib: true, strict: true, noUnusedLocals: true, noUnusedParameters: true },
   files: ["expression.ts"],
 });
 const runningUnderBun = process.versions["bun"] !== undefined;
@@ -74,9 +76,13 @@ const typeParameter = (parameter: ParameterDeclaration): ParameterDeclaration =>
     parameter.initializer,
   );
 
+const isForInOrOfDeclarationList = (parent: Node | undefined): boolean =>
+  parent !== undefined &&
+  isVariableDeclarationList(parent) &&
+  (isForInStatement(parent.parent) || isForOfStatement(parent.parent));
+
 const isForInOrOfInitializer = (declaration: VariableDeclaration): boolean =>
-  isVariableDeclarationList(declaration.parent) &&
-  (isForInStatement(declaration.parent.parent) || isForOfStatement(declaration.parent.parent));
+  isForInOrOfDeclarationList(declaration.parent);
 
 const typeVariable = (declaration: VariableDeclaration, annotate: boolean): VariableDeclaration =>
   updateVariableDeclaration(
@@ -133,7 +139,10 @@ const typeGeneratedNode = (node: Node): Node => {
 const expressionFileSource = (source: string): string =>
   `const ${expressionVariableName} = (${source});`;
 
-const detachedExpression = (sourceFile: SourceFile): Expression => {
+const detachedExpression = (
+  sourceFile: SourceFile,
+  diagnostics: readonly Readonly<{ code: number; pos: number; end: number }>[],
+): Expression => {
   const [statement] = sourceFile.statements;
   if (statement === undefined || !isVariableStatement(statement))
     throw new Error("Generated runtime parser envelope is missing its declaration.");
@@ -146,7 +155,9 @@ const detachedExpression = (sourceFile: SourceFile): Expression => {
   )
     throw new Error("Generated runtime parser envelope has an invalid declaration.");
 
-  const expression = visitNode(declaration.initializer, typeGeneratedNode, isExpression);
+  const cleaned = removeGeneratedUnusedBindings(declaration.initializer, diagnostics);
+  if (!isExpression(cleaned)) throw new Error("Expected a generated expression.");
+  const expression = visitNode(cleaned, typeGeneratedNode, isExpression);
   return getSynthesizedDeepClone(expression, false);
 };
 
@@ -171,7 +182,7 @@ const parseGeneratedExpressionSync = (source: string): Expression => {
     throw new Error("Native TypeScript parser did not return the generated expression file.");
   if (project.program.getSyntacticDiagnostics(expressionPath).length > 0)
     throw new Error("Generated runtime program is not syntactically valid TypeScript.");
-  return detachedExpression(sourceFile);
+  return detachedExpression(sourceFile, project.program.getSemanticDiagnostics(expressionPath));
 };
 
 const parseGeneratedExpressionAsync = async (source: string): Promise<Expression> => {
@@ -190,7 +201,10 @@ const parseGeneratedExpressionAsync = async (source: string): Promise<Expression
     const syntacticDiagnostics = await project.program.getSyntacticDiagnostics(expressionPath);
     if (syntacticDiagnostics.length > 0)
       throw new Error("Generated runtime program is not syntactically valid TypeScript.");
-    return detachedExpression(sourceFile);
+    return detachedExpression(
+      sourceFile,
+      await project.program.getSemanticDiagnostics(expressionPath),
+    );
   } finally {
     await snapshot.dispose();
     await api.close();

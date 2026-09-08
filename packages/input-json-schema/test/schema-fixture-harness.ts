@@ -3,7 +3,7 @@ import { spawnSync } from "node:child_process";
 import { writeFile } from "node:fs/promises";
 import nodePath from "node:path";
 
-import type { RuntimeMode } from "@x2zod/core";
+import type { DeclarationExportMode, RuntimeMode } from "@x2zod/core";
 
 import {
   buildNodeBundle,
@@ -21,7 +21,7 @@ const packageDirectory = nodePath.resolve(import.meta.dirname, "..");
 const typeScriptBinary = nodePath.resolve(packageDirectory, "../../node_modules/.bin/tsgo");
 const compilerDeadlineMs = 60_000;
 const declarationDeadlineMs = 15_000;
-const isFixtureValidator = (value: unknown): value is FixtureValidator =>
+export const isFixtureValidator = (value: unknown): value is FixtureValidator =>
   isRecord(value) && typeof value["safeParse"] === "function";
 
 // Compile through the public API in Node, emit declarations, and import the generated module.
@@ -32,6 +32,7 @@ export const generateSchemaFixture = async (
     pluginOptions?: JsonSchemaInputPluginOptionsInput | undefined;
     consumerSource?: string;
     runtimeMode?: RuntimeMode;
+    declarationExportMode?: DeclarationExportMode;
   }> = {},
 ): Promise<FixtureValidator> => {
   const { pluginOptions = {}, consumerSource } = request;
@@ -51,7 +52,14 @@ export const generateSchemaFixture = async (
   });
   const source = runNode({
     allowedStderr: isNativePreviewShutdownStderr,
-    args: [bundleFile, schemaFile, "Fixture", optionsFile, request.runtimeMode ?? "inline"],
+    args: [
+      bundleFile,
+      schemaFile,
+      "Fixture",
+      optionsFile,
+      request.runtimeMode ?? "inline",
+      request.declarationExportMode ?? "root",
+    ],
     cwd: packageDirectory,
     timeoutMs: compilerDeadlineMs,
   });
@@ -72,6 +80,11 @@ export const generateSchemaFixture = async (
       nodePath.join(directory, "declarations"),
       "--skipLibCheck",
       "--strict",
+      "--noUnusedLocals",
+      "--noUnusedParameters",
+      "--noUncheckedIndexedAccess",
+      "--exactOptionalPropertyTypes",
+      "--noPropertyAccessFromIndexSignature",
       "--target",
       "es2022",
       generatedFile,

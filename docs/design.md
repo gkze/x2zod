@@ -806,6 +806,18 @@ and inferred types remain in the generated module. Consumers must install the ru
 the runtime version shipped with the generator and regenerate before upgrading across a breaking
 runtime release. Inline mode does not require that consumer dependency.
 
+Generated source must also compile with `noUnusedLocals` and `noUnusedParameters`. Shared imports
+include callable helpers used by the module, leaving their private dependencies in the runtime
+package. The JSON Schema plugin uses TypeScript binding diagnostics to remove unused Ajv schema
+constants, export aliases, and validation-context bindings before final emission. Positional
+validator parameters remain ABI-compatible when unused.
+
+Wide compositions use the existing resource descriptor evaluator instead of a single unrolled Ajv
+function, keeping TypeScript control-flow analysis bounded at those branch boundaries. Each exported
+schema still owns an independent runtime program; large catalogs can therefore repeat reachable
+validators and descriptors. Sharing these programs would require an explicit initialization and
+entry-point contract in core, rather than ambient state or schema-specific coupling in core.
+
 Core's runtime-program ABI permits an optional shared expression with a map from expression-local
 namespace bindings to module specifiers. Core validates both expressions, permits only declared
 imports as additional free identifiers, allocates collision-free module namespaces, and binds those

@@ -23,6 +23,7 @@ import {
 
 import type { ZodRuntimeProgram } from "./runtime-program";
 import { createSourceArrowParameter, createSourceFunctionCall } from "./source-ast";
+import { zodHelperDependencyIdentifierNames } from "./source-helpers";
 import type { TypeScriptIdentifierAllocator } from "./typescript-identifiers";
 
 export const createSharedImport = (
@@ -59,7 +60,10 @@ export const helperStatementNames = (statements: readonly Statement[]): readonly
   });
 
 export const sharedHelperStatements = (statements: readonly Statement[]): readonly Statement[] => {
-  const names = helperStatementNames(statements);
+  // Dependencies of imported helpers live in the runtime package, not in the consumer module.
+  const names = helperStatementNames(statements).filter(
+    (name) => !zodHelperDependencyIdentifierNames.has(name),
+  );
   return names.length === 0
     ? []
     : [
