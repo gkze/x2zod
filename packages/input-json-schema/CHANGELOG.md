@@ -1,5 +1,21 @@
 # @x2zod/input-json-schema
 
+## 0.8.1
+
+### Patch Changes
+
+- 5ad92f1: Index unused-binding diagnostic ranges during generated runtime cleanup to avoid repeated
+  linear scans in large schemas. Preserve nested diagnostic containment and generated validation
+  behavior.
+- 7370ecb: Fix generated catalogs under strict unused-binding checks by omitting private
+  shared-helper imports and unused Ajv bindings. Evaluate wide compositions through resource
+  descriptors to avoid oversized TypeScript control-flow bodies while preserving runtime validation
+  and inferred types. Regenerate output after upgrading; the shared runtime ABI is unchanged.
+- Updated dependencies [271a147]
+- Updated dependencies [7370ecb]
+  - @x2zod/core@0.8.1
+  - @x2zod/runtime@0.2.0
+
 ## 0.8.0
 
 ### Minor Changes
