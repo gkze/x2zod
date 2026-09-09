@@ -13,6 +13,7 @@ import {
   createKeywordTypeNode,
   createStringLiteral,
   createToken,
+  createTypeAliasDeclaration,
   createTypeParameterDeclaration,
   createTypeReferenceNode,
 } from "@typescript/native-preview/unstable/ast/factory";
@@ -31,7 +32,9 @@ import type { TypeScriptIdentifierAllocator } from "./typescript-identifiers";
 import type { ZodEmissionModule } from "./zod-plan";
 
 const noTokenFlags = 0;
+const runtimePredicateTypeName = "X2zodRuntimePredicate";
 const runtimePredicateHelperName = "x2zodApplyRuntimePredicate";
+const encodedRuntimePredicateTypeName = "X2zodEncodedRuntimePredicate";
 const encodedRuntimePredicateHelperName = "x2zodApplyEncodedRuntimePredicate";
 const runtimeProgramNamePrefix = "x2zodRuntimeProgram";
 
@@ -43,8 +46,10 @@ type RuntimeProgramEmission = Readonly<{
 export const runtimePredicateHelperNames = (
   parseModes: ReadonlySet<boolean>,
 ): readonly string[] => [
-  ...(parseModes.has(false) ? [runtimePredicateHelperName] : []),
-  ...(parseModes.has(true) ? [encodedRuntimePredicateHelperName] : []),
+  ...(parseModes.has(false) ? [runtimePredicateHelperName, runtimePredicateTypeName] : []),
+  ...(parseModes.has(true)
+    ? [encodedRuntimePredicateHelperName, encodedRuntimePredicateTypeName]
+    : []),
 ];
 
 const createRuntimePredicateType = (): TypeNode =>
@@ -60,17 +65,13 @@ const zodTypeProjection = (projection: "infer" | "input", schemaType: TypeNode):
 const createRuntimePredicateHelper = (parseStructural: boolean): VariableStatement => {
   const schemaType = createIdentifier("TSchema");
   const schemaTypeReference = createTypeReferenceNode(schemaType);
-  const inputType = createIdentifier("TInput");
-  const inputTypeReference = createTypeReferenceNode(inputType);
-  const outputType = createIdentifier("TOutput");
-  const outputTypeReference = createTypeReferenceNode(outputType);
   const schema = createIdentifier("schema");
   const predicate = createIdentifier("predicate");
   const predicateType = createRuntimePredicateType();
   const custom = createCallExpression(
     createPropertyAccess(createIdentifier("z"), "custom"),
     undefined,
-    [parseStructural ? inputTypeReference : zodTypeProjection("infer", schemaTypeReference)],
+    [zodTypeProjection(parseStructural ? "input" : "infer", schemaTypeReference)],
     [predicate, createStringLiteral("Input does not satisfy the source schema.", noTokenFlags)],
     NodeFlags.None,
   );
@@ -79,30 +80,28 @@ const createRuntimePredicateHelper = (parseStructural: boolean): VariableStateme
     : custom;
   const helper = createArrowFunction(
     undefined,
-    parseStructural
-      ? [
-          createTypeParameterDeclaration(undefined, inputType),
-          createTypeParameterDeclaration(undefined, outputType),
-          createTypeParameterDeclaration(
-            undefined,
-            schemaType,
-            zodType("ZodType", [outputTypeReference, inputTypeReference]),
-          ),
-        ]
-      : [createTypeParameterDeclaration(undefined, schemaType, zodType("ZodType"))],
+    [
+      createTypeParameterDeclaration(
+        undefined,
+        schemaType,
+        parseStructural
+          ? zodType("ZodType", [
+              createKeywordTypeNode(SyntaxKind.UnknownKeyword),
+              zodTypeProjection("input", schemaTypeReference),
+            ])
+          : zodType("ZodType"),
+      ),
+    ],
     [
       createArrowParameter(parseStructural ? "schema" : "_schema", schemaTypeReference),
       createArrowParameter("predicate", predicateType),
     ],
-    parseStructural
-      ? zodType("ZodPipe", [
-          zodType("ZodCustom", [inputTypeReference, inputTypeReference]),
-          schemaTypeReference,
-        ])
-      : zodType("ZodCustom", [
-          zodTypeProjection("infer", schemaTypeReference),
-          zodTypeProjection("infer", schemaTypeReference),
-        ]),
+    createTypeReferenceNode(
+      createIdentifier(
+        parseStructural ? encodedRuntimePredicateTypeName : runtimePredicateTypeName,
+      ),
+      [schemaTypeReference],
+    ),
     createToken(SyntaxKind.EqualsGreaterThanToken),
     result,
   );
@@ -117,8 +116,44 @@ export const createRuntimePredicateHelperStatements = (
   parseModes: ReadonlySet<boolean>,
 ): readonly Statement[] => {
   const statements: Statement[] = [];
-  if (parseModes.has(false)) statements.push(createRuntimePredicateHelper(false));
-  if (parseModes.has(true)) statements.push(createRuntimePredicateHelper(true));
+  if (parseModes.has(false)) {
+    const schemaType = createTypeReferenceNode(createIdentifier("TSchema"));
+    const outputType = zodTypeProjection("infer", schemaType);
+    statements.push(
+      createTypeAliasDeclaration(
+        undefined,
+        createIdentifier(runtimePredicateTypeName),
+        [
+          createTypeParameterDeclaration(
+            undefined,
+            createIdentifier("TSchema"),
+            zodType("ZodType"),
+          ),
+        ],
+        zodType("ZodCustom", [outputType, outputType]),
+      ),
+      createRuntimePredicateHelper(false),
+    );
+  }
+  if (parseModes.has(true)) {
+    const schemaType = createTypeReferenceNode(createIdentifier("TSchema"));
+    const inputType = zodTypeProjection("input", schemaType);
+    statements.push(
+      createTypeAliasDeclaration(
+        undefined,
+        createIdentifier(encodedRuntimePredicateTypeName),
+        [
+          createTypeParameterDeclaration(
+            undefined,
+            createIdentifier("TSchema"),
+            zodType("ZodType"),
+          ),
+        ],
+        zodType("ZodPipe", [zodType("ZodCustom", [inputType, inputType]), schemaType]),
+      ),
+      createRuntimePredicateHelper(true),
+    );
+  }
   return statements;
 };
 

@@ -206,6 +206,16 @@ const hasWideComposition = (schema: JsonSchemaValue): boolean =>
     return Array.isArray(branches) && branches.length > maximumStandaloneCompositionBranches;
   });
 
+// Ajv filters __proto__ out of property maps, including its additional-property check.
+// The resource evaluator handles these names as ordinary own keys.
+const hasPrototypeProperty = (schema: JsonSchemaValue): boolean => {
+  if (!isJsonObject(schema)) return false;
+  return [jsonSchemaKeywords.properties, jsonSchemaKeywords.patternProperties].some((keyword) => {
+    const properties = schema[keyword];
+    return isJsonObject(properties) && Object.hasOwn(properties, "__proto__");
+  });
+};
+
 export const requestNeedsResourceGraphRuntime = (request: StandaloneRuntimeRequest): boolean => {
   const reachable = reachableSchemas(request);
   return (
@@ -214,6 +224,7 @@ export const requestNeedsResourceGraphRuntime = (request: StandaloneRuntimeReque
       ({ location, schema }) =>
         policyForLocation(request, location).dialect !== request.dialect ||
         hasWideComposition(schema) ||
+        hasPrototypeProperty(schema) ||
         // Ajv has nonstandard semantics (for example nullable). Only graph atoms may see these nodes.
         (isJsonObject(schema) &&
           Object.keys(schema).some((keyword) => jsonSchemaKeywordPolicy(keyword) === "unknown")) ||

@@ -1,8 +1,7 @@
-import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
-import { mkdirSync, rmSync } from "node:fs";
+import { rmSync } from "node:fs";
 import nodePath from "node:path";
 
+import { checkGeneratedTypeScript } from "../../../test/generated-consumer";
 import {
   buildNodeBundle,
   createTemporaryDirectory,
@@ -12,8 +11,8 @@ import {
 } from "../../../test/native-source-harness";
 
 const corePackageRootDirectory = nodePath.resolve(import.meta.dirname, "..");
+const defaultDeclarationTimeoutMs = 15_000;
 const coreEntrypoint = "src/index.ts";
-const typeScriptBinary = nodePath.resolve(corePackageRootDirectory, "../../node_modules/.bin/tsgo");
 
 export type GeneratedSourceHarness = Readonly<{
   directory: string;
@@ -76,38 +75,11 @@ export const emitGeneratedDeclarations = (
   outputDirectory: string,
   timeoutMs?: number,
 ): void => {
-  mkdirSync(outputDirectory, { recursive: true });
-  const result = spawnSync(
-    typeScriptBinary,
-    [
-      "--declaration",
-      "--emitDeclarationOnly",
-      "--ignoreConfig",
-      "--module",
-      "nodenext",
-      "--moduleResolution",
-      "nodenext",
-      "--outDir",
-      outputDirectory,
-      "--skipLibCheck",
-      "--strict",
-      "--target",
-      "es2022",
-      sourceFile,
-    ],
-    {
-      cwd: corePackageRootDirectory,
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"],
-      ...(timeoutMs === undefined ? {} : { timeout: timeoutMs, killSignal: "SIGKILL" }),
-    },
-  );
-
-  if (result.error !== undefined)
-    throw new Error(`Generated declaration emit failed: ${result.error.message}`, {
-      cause: result.error,
-    });
-  if (result.signal !== null)
-    throw new Error(`Generated declaration emit was terminated by ${result.signal}.`);
-  assert.equal(result.status, 0, `${result.stdout}${result.stderr}`);
+  checkGeneratedTypeScript({
+    cwd: corePackageRootDirectory,
+    files: [sourceFile],
+    outputDirectory,
+    moduleResolution: "nodenext",
+    timeoutMs: timeoutMs ?? defaultDeclarationTimeoutMs,
+  });
 };

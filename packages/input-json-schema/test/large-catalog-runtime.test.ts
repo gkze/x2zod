@@ -11,6 +11,7 @@ import type { JsonSchemaValue } from "../src";
 import { generateSchemaFixture, isFixtureValidator } from "./schema-fixture-harness";
 
 // Exercise the first wide composition while keeping the strict consumer regression bounded.
+const maximumSourceBytes = 1_048_576;
 const branchCount = 33;
 const definitions = Object.fromEntries(
   Array.from({ length: branchCount }, (_value, index) => [
@@ -41,7 +42,7 @@ const catalog: JsonSchemaValue = {
 };
 
 for (const runtimeMode of ["inline", "shared"] as const)
-  void test(`strictly compiles a wide catalog with exact ${runtimeMode} validators`, async () => {
+  void test(`strictly compiles a wide catalog with exact ${runtimeMode} validators`, async (context) => {
     const directory = createTemporaryDirectory({
       prefix: "large-catalog-",
       rootDirectory: path.join(import.meta.dirname, "../node_modules/.cache"),
@@ -51,6 +52,12 @@ for (const runtimeMode of ["inline", "shared"] as const)
         runtimeMode,
         declarationExportMode: "all",
         pluginOptions: { unknownKeywords: "reject" },
+        onMetrics: (metrics) => {
+          // A bounded synthetic catalog should not grow into multi-megabyte output. Wall-clock
+          // Measurements are diagnostics; the harness owns the subprocess deadlines.
+          assert.ok(metrics.sourceBytes < maximumSourceBytes, JSON.stringify(metrics));
+          context.diagnostic(JSON.stringify({ runtimeMode, branchCount, ...metrics }));
+        },
         consumerSource: [
           'import { fixtureSchema, message0Schema } from "./generated";',
           'import type { z } from "zod/v4";',

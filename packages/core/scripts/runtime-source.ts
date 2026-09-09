@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+import { isTypeAliasDeclaration } from "@typescript/native-preview/unstable/ast";
 import {
   createExportDeclaration,
   createExportSpecifier,
@@ -13,7 +14,10 @@ import { printNativeSourceFile } from "../../../test/native-print-helper";
 import { formatWithOxfmt } from "../../build-inputs/src/oxfmt";
 import { buildZodSourceFile } from "../src/source";
 import { createRemapPropertiesHelper } from "../src/source-codecs";
-import { createPreservedObjectCodecHelper, createZodHelperStatements } from "../src/source-helpers";
+import {
+  createPreservedObjectCodecStatements,
+  createZodHelperStatements,
+} from "../src/source-helpers";
 import { createRuntimePredicateHelperStatements } from "../src/source-runtime";
 import { createSharedImport, helperStatementNames } from "../src/source-shared";
 import { zodHelperNames } from "../src/zod-helpers";
@@ -30,7 +34,7 @@ const generate = (): string => {
   if (!base.ok) throw new Error("Could not create runtime helper source file.");
   const helpers = [
     ...createZodHelperStatements(new Set(zodHelperNames)),
-    createPreservedObjectCodecHelper(),
+    ...createPreservedObjectCodecStatements(),
     ...createRuntimePredicateHelperStatements(new Set([false, true])),
     createRemapPropertiesHelper(),
   ];
@@ -39,6 +43,15 @@ const generate = (): string => {
     [
       createSharedImport("zod/v4", [{ imported: "z", local: "z" }]),
       ...helpers,
+      createExportDeclaration(
+        undefined,
+        true,
+        createNamedExports(
+          helpers
+            .filter((statement) => isTypeAliasDeclaration(statement))
+            .map((statement) => createExportSpecifier(false, undefined, statement.name)),
+        ),
+      ),
       createExportDeclaration(
         undefined,
         false,

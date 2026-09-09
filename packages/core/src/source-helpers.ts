@@ -1,4 +1,4 @@
-import { NodeFlags, SyntaxKind } from "@typescript/native-preview/unstable/ast";
+import { SyntaxKind } from "@typescript/native-preview/unstable/ast";
 import type {
   BindingElement,
   Expression,
@@ -8,12 +8,10 @@ import type {
 import {
   createArrayBindingPattern,
   createArrayLiteralExpression,
-  createArrayTypeNode,
   createArrowFunction,
   createBigIntLiteral,
   createBindingElement,
   createBlock,
-  createCallExpression,
   createConditionalExpression,
   createIdentifier,
   createKeywordExpression,
@@ -21,15 +19,11 @@ import {
   createLiteralTypeNode,
   createNumericLiteral,
   createPrefixUnaryExpression,
-  createQualifiedName,
   createReturnStatement,
   createStringLiteral,
   createToken,
-  createTypeOfExpression,
   createTupleTypeNode,
   createTypeOperatorNode,
-  createTypeParameterDeclaration,
-  createTypeReferenceNode,
   createUnionTypeNode,
 } from "@typescript/native-preview/unstable/ast/factory";
 
@@ -39,10 +33,14 @@ import {
   createSourceConstStatement as createConstStatement,
   createSourceFunctionCall as createFunctionCall,
   createSourcePropertyAccess as createPropertyAccess,
-  createSourceZodType as zodType,
 } from "./source-ast";
 import type { SourceWrapperExpression } from "./source-model";
 import { preservedObjectCodecHelperName } from "./source-preserved-object-codecs";
+import {
+  createPreserveObjectInputStatements,
+  preservedInputTypeName,
+  preserveObjectInputHelperName,
+} from "./source-preserved-object-input";
 import {
   createUniqueItemsHelperStatements,
   jsonEqualHelperName,
@@ -50,13 +48,12 @@ import {
 } from "./source-unique-items";
 import type { ZodHelperName, ZodHelperRequest, ZodWrapperName } from "./zod-helpers";
 
-export { createPreservedObjectCodecHelper } from "./source-preserved-object-codecs";
+export { createPreservedObjectCodecStatements } from "./source-preserved-object-codecs";
 
 const noTokenFlags = 0;
 const decimalPartsHelperName = "x2zodDecimalParts";
 const codePointLengthHelperName = "x2zodCodePointLength";
 const exactMultipleOfHelperName = "x2zodExactMultipleOf";
-const preserveObjectInputHelperName = "x2zodPreserveObjectInput";
 const wrapperHelperNames: Readonly<Record<ZodWrapperName, string>> = {
   preserveObjectInput: preserveObjectInputHelperName,
 };
@@ -68,7 +65,10 @@ const helperIdentifiers: Readonly<
     entrypoint: exactMultipleOfHelperName,
     dependencies: [decimalPartsHelperName],
   },
-  preserveObjectInput: { entrypoint: preserveObjectInputHelperName, dependencies: [] },
+  preserveObjectInput: {
+    entrypoint: preserveObjectInputHelperName,
+    dependencies: [preservedInputTypeName],
+  },
   uniqueItems: { entrypoint: uniqueItemsHelperName, dependencies: [jsonEqualHelperName] },
 };
 
@@ -310,104 +310,6 @@ const createExactMultipleOfHelper = (): VariableStatement => {
   return createConstStatement(createIdentifier(exactMultipleOfHelperName), helper);
 };
 
-const createPreserveObjectInputHelper = (): VariableStatement => {
-  const schemaType = createIdentifier("TSchema");
-  const schema = createIdentifier("schema");
-  const keys = createIdentifier("requiredOwnKeys");
-  const value = createIdentifier("value");
-  const key = createIdentifier("key");
-  const ownValue = createFunctionCall(createPropertyAccess(createIdentifier("Object"), "assign"), [
-    createFunctionCall(createPropertyAccess(createIdentifier("Object"), "create"), [
-      createKeywordExpression(SyntaxKind.NullKeyword),
-    ]),
-    value,
-  ]);
-  const schemaInputType = createTypeReferenceNode(
-    createQualifiedName(createIdentifier("z"), createIdentifier("input")),
-    [createTypeReferenceNode(schemaType)],
-  );
-  const parsesWithSchema = createPropertyAccess(
-    createFunctionCall(createPropertyAccess(schema, "safeParse"), [ownValue]),
-    "success",
-  );
-  const valueCanHaveOwnKeys = createBinary(
-    createBinary(
-      createBinary(
-        createTypeOfExpression(value),
-        SyntaxKind.EqualsEqualsEqualsToken,
-        createStringLiteral("object", noTokenFlags),
-      ),
-      SyntaxKind.AmpersandAmpersandToken,
-      createBinary(
-        value,
-        SyntaxKind.ExclamationEqualsEqualsToken,
-        createKeywordExpression(SyntaxKind.NullKeyword),
-      ),
-    ),
-    SyntaxKind.AmpersandAmpersandToken,
-    createPrefixUnaryExpression(
-      SyntaxKind.ExclamationToken,
-      createFunctionCall(createPropertyAccess(createIdentifier("Array"), "isArray"), [value]),
-    ),
-  );
-  const hasEveryRequiredOwnKey = createFunctionCall(createPropertyAccess(keys, "every"), [
-    createArrowFunction(
-      undefined,
-      undefined,
-      [createArrowParameter("key")],
-      undefined,
-      createToken(SyntaxKind.EqualsGreaterThanToken),
-      createFunctionCall(createPropertyAccess(createIdentifier("Object"), "hasOwn"), [value, key]),
-    ),
-  ]);
-  const predicate = createArrowFunction(
-    undefined,
-    undefined,
-    [createArrowParameter("value")],
-    undefined,
-    createToken(SyntaxKind.EqualsGreaterThanToken),
-    createBinary(
-      createBinary(valueCanHaveOwnKeys, SyntaxKind.AmpersandAmpersandToken, hasEveryRequiredOwnKey),
-      SyntaxKind.AmpersandAmpersandToken,
-      parsesWithSchema,
-    ),
-  );
-  const customSchema = createCallExpression(
-    createPropertyAccess(createIdentifier("z"), "custom"),
-    undefined,
-    [schemaInputType],
-    [predicate],
-    NodeFlags.None,
-  );
-  const helper = createArrowFunction(
-    undefined,
-    [
-      createTypeParameterDeclaration(
-        undefined,
-        schemaType,
-        createTypeReferenceNode(
-          createQualifiedName(createIdentifier("z"), createIdentifier("ZodType")),
-        ),
-      ),
-    ],
-    [
-      createArrowParameter("schema", createTypeReferenceNode(schemaType)),
-      createArrowParameter(
-        "requiredOwnKeys",
-        createTypeOperatorNode(
-          SyntaxKind.ReadonlyKeyword,
-          createArrayTypeNode(createKeywordTypeNode(SyntaxKind.StringKeyword)),
-        ),
-      ),
-    ],
-    zodType("ZodCustom", [schemaInputType, schemaInputType]),
-    createToken(SyntaxKind.EqualsGreaterThanToken),
-    customSchema,
-  );
-
-  return createConstStatement(createIdentifier(preserveObjectInputHelperName), helper);
-};
-
 export const createZodHelperExpression = (request: ZodHelperRequest): Expression => {
   switch (request.helper) {
     case "codePointLength": {
@@ -461,7 +363,8 @@ export const createZodHelperStatements = (
   if (helperNames.has("exactMultipleOf"))
     statements.push(createDecimalPartsHelper(), createExactMultipleOfHelper());
   if (helperNames.has("uniqueItems")) statements.push(...createUniqueItemsHelperStatements());
-  if (helperNames.has("preserveObjectInput")) statements.push(createPreserveObjectInputHelper());
+  if (helperNames.has("preserveObjectInput"))
+    statements.push(...createPreserveObjectInputStatements());
   return statements;
 };
 

@@ -1,5 +1,6 @@
 import {
   isIdentifier,
+  isTypeAliasDeclaration,
   isVariableStatement,
   SyntaxKind,
 } from "@typescript/native-preview/unstable/ast";
@@ -50,6 +51,7 @@ export const createSharedImport = (
 
 export const helperStatementNames = (statements: readonly Statement[]): readonly string[] =>
   statements.flatMap((statement) => {
+    if (isTypeAliasDeclaration(statement)) return [];
     if (!isVariableStatement(statement))
       throw new Error("Runtime helper must be a variable statement.");
     return statement.declarationList.declarations.map((declaration) => {

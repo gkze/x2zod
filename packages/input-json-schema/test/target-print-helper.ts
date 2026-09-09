@@ -1,7 +1,12 @@
 import { readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
-import { compileToZodSource, declarationExportModeSchema, runtimeModeSchema } from "@x2zod/core";
+import {
+  compileToZodSource,
+  declarationExportModeSchema,
+  runtimeModeSchema,
+  zodEmissionTransformsSchema,
+} from "@x2zod/core";
 
 import {
   diagnosticText,
@@ -16,6 +21,7 @@ const typeNameArgumentIndex = 3;
 const optionsPathArgumentIndex = 4;
 const runtimeModeArgumentIndex = 5;
 const declarationExportModeArgumentIndex = 6;
+const transformsArgumentIndex = 7;
 
 const schemaPath = requiredArgument(schemaPathArgumentIndex, "JSON Schema fixture");
 const typeName = requiredArgument(typeNameArgumentIndex, "output type name");
@@ -40,6 +46,9 @@ const result = await compileToZodSource({
   },
   plugin: jsonSchemaInputPlugin,
   pluginOptions,
+  transforms: zodEmissionTransformsSchema.parse(
+    JSON.parse(optionalArgument(transformsArgumentIndex) ?? "[]"),
+  ),
 });
 
 if (!result.ok) throw new Error(diagnosticText(result.diagnostics));

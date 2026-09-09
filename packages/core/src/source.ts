@@ -48,10 +48,16 @@ import {
   createRemapPropertiesHelper,
   createSourceCodecExpression,
 } from "./source-codecs";
+import {
+  createDeclarationTypes,
+  declarationReferenceAnnotation,
+  declarationSchemaAnnotation,
+} from "./source-declaration-types";
+import type { DeclarationTypeNames } from "./source-declaration-types";
 import { projectExportDeclarations, resolveZodDeclarationNames } from "./source-declarations";
 import type { NamedZodDeclaration } from "./source-declarations";
 import {
-  createPreservedObjectCodecHelper,
+  createPreservedObjectCodecStatements,
   createZodHelperExpression,
   createZodHelperStatements,
   createZodWrapperExpression,
@@ -61,12 +67,6 @@ import { createLazyReferenceExpression } from "./source-lazy-references";
 import type { SourceArgument, SourceExpression, SourceMethodCall } from "./source-model";
 import { resolveZodSourceOutputOptions } from "./source-options";
 import type { ZodSourceOutputOptions } from "./source-options";
-import {
-  createRecursiveDeclarationTypes,
-  recursiveReferenceAnnotation,
-  recursiveSchemaAnnotation,
-} from "./source-recursive-types";
-import type { RecursiveDeclarationTypeNames } from "./source-recursive-types";
 import {
   createRuntimeGuardExpression,
   createRuntimePredicateHelperStatements,
@@ -102,7 +102,7 @@ const prototypeSetterKey = "__proto__";
 
 type SourceExpressionContext = Readonly<{
   lazyReferenceTargets: ReadonlySet<ZodSymbol>;
-  recursiveTypeNames: ReadonlyMap<ZodSymbol, RecursiveDeclarationTypeNames>;
+  declarationTypeNames: ReadonlyMap<ZodSymbol, DeclarationTypeNames>;
   runtimeProgramNames: ReadonlyMap<ZodRuntimeProgramId, string>;
   schemaConstNames: ReadonlyMap<ZodSymbol, string>;
 }>;
@@ -279,7 +279,7 @@ const createBaseZodExpression = (
     return context.lazyReferenceTargets.has(expression.symbol)
       ? createLazyReferenceExpression(
           projectedReference,
-          recursiveReferenceAnnotation(expression, context.recursiveTypeNames),
+          declarationReferenceAnnotation(expression, context.declarationTypeNames),
         )
       : projectedReference;
   }
@@ -338,9 +338,9 @@ const createSchemaStatementWithNames = (
         createVariableDeclaration(
           createIdentifier(namedDeclaration.schemaConstName),
           undefined,
-          recursiveSchemaAnnotation(
+          declarationSchemaAnnotation(
             namedDeclaration.declaration.symbol,
-            context.recursiveTypeNames,
+            context.declarationTypeNames,
           ),
           createZodExpression(expression, context),
         ),
@@ -401,18 +401,15 @@ export const buildZodSourceFile = (
     identifierAllocation.allocator,
   );
   const cyclicPeers = collectCyclicZodDeclarationPeers(exported.module);
-  const cyclicSymbols = namedModule.value.declarations
-    .map((declaration) => declaration.declaration.symbol)
-    .filter((symbol) => cyclicPeers.has(symbol));
-  const recursiveTypes = createRecursiveDeclarationTypes({
+  const declarationTypes = createDeclarationTypes({
     allocator: identifierAllocation.allocator,
-    cyclicSymbols,
+    cyclicSymbols: new Set(cyclicPeers.keys()),
     module: sourceModule.value,
     schemaConstNames: namedModule.value.schemaConstNames,
   });
   const sourceExpressionContext: SourceExpressionContext = {
     lazyReferenceTargets: new Set<ZodSymbol>(),
-    recursiveTypeNames: recursiveTypes.names,
+    declarationTypeNames: declarationTypes.names,
     runtimeProgramNames: runtimeProgramEmission.names,
     schemaConstNames: namedModule.value.schemaConstNames,
   };
@@ -432,7 +429,9 @@ export const buildZodSourceFile = (
       : { imports: [], programs: runtimeProgramEmission.programs };
   const inlineHelpers = [
     ...createZodHelperStatements(identifierAllocation.helperNames),
-    ...(identifierAllocation.needsPreservedObjectCodec ? [createPreservedObjectCodecHelper()] : []),
+    ...(identifierAllocation.needsPreservedObjectCodec
+      ? createPreservedObjectCodecStatements()
+      : []),
     ...createRuntimePredicateHelperStatements(identifierAllocation.runtimeGuardParseModes),
     ...(identifierAllocation.needsRemapHelper ? [createRemapPropertiesHelper()] : []),
   ];
@@ -449,7 +448,7 @@ export const buildZodSourceFile = (
           program,
         ),
       ),
-      ...recursiveTypes.statements,
+      ...declarationTypes.statements,
       ...namedModule.value.declarations.map((declaration) =>
         createSchemaStatementWithNames(declaration, expressionFor(declaration.declaration.symbol), {
           ...sourceExpressionContext,

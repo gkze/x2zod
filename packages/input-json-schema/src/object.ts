@@ -1,4 +1,4 @@
-import { zodPlan } from "@x2zod/core";
+import { zodFactory, zodPlan } from "@x2zod/core";
 import type { JsonPointer, ZodExpression } from "@x2zod/core";
 
 import type { JsonSchemaDiagnosticSink } from "./diagnostics";
@@ -152,12 +152,12 @@ const lowerRequiredUndeclaredPropertyValue = (
   return zodPlan.unknown();
 };
 
-const objectShape = ({
+const lowerObjectShape = ({
   context,
   pointer,
   required,
   schema,
-}: ObjectShapeRequest): Record<string, ZodExpression> => {
+}: ObjectShapeRequest): ZodExpression => {
   const properties = schema[jsonSchemaKeywords.properties];
   const shape = new Map<string, ZodExpression>();
 
@@ -184,13 +184,24 @@ const objectShape = ({
     if (!shape.has(key))
       shape.set(key, lowerRequiredUndeclaredPropertyValue(schema, pointer, context));
 
-  if (!shape.has(prototypeSetterKey) && needsExplicitPrototypeProperty(schema))
+  const syntheticPrototypeKey =
+    !shape.has(prototypeSetterKey) && needsExplicitPrototypeProperty(schema);
+  if (syntheticPrototypeKey)
     shape.set(
       prototypeSetterKey,
       zodPlan.optional(lowerRequiredUndeclaredPropertyValue(schema, pointer, context)),
     );
 
-  return Object.fromEntries(shape);
+  return zodFactory("object", [
+    {
+      kind: "object",
+      properties: [...shape].map(([key, expression]) => ({
+        key,
+        expression,
+        keyTransform: syntheticPrototypeKey && key === prototypeSetterKey ? "preserve" : undefined,
+      })),
+    },
+  ]);
 };
 
 export const applyJsonSchemaRequiredKeys = (
@@ -231,7 +242,7 @@ export const lowerJsonSchemaObject = (
 ): ZodExpression => {
   const requiredKeys = requiredProperties(schema, pointer, context);
   const object = applyJsonSchemaRequiredKeys(
-    zodPlan.object(objectShape({ context, pointer, required: new Set(requiredKeys), schema })),
+    lowerObjectShape({ context, pointer, required: new Set(requiredKeys), schema }),
     requiredKeys,
   );
   const additionalProperties = schema[jsonSchemaKeywords.additionalProperties];

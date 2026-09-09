@@ -1,3 +1,4 @@
+import { projectObjectPropertyKey } from "./property-key-projection";
 import type { ZodEmissionModule, ZodExpression, ZodSymbol } from "./zod-plan";
 import { zodMethodMetadataFor } from "./zod-plan-metadata";
 import { walkZodExpression } from "./zod-plan-walker";
@@ -15,14 +16,24 @@ const expressionChanges = (
       owner.kind === "factory" &&
       owner.factory === "object" &&
       zodMethodMetadataFor(call.method)?.printArgument === "requiredKeys" &&
-      decodedKey(argument.value) !== argument.value,
+      decodedKey(argument.value) !== argument.value &&
+      !(
+        owner.args[0]?.kind === "object" &&
+        owner.args[0].properties.some(
+          (property) =>
+            property.key === argument.value &&
+            projectObjectPropertyKey(property, decodedKey) === property.key,
+        )
+      ),
     expression: (current) => {
       if (current.kind === "reference" && transformedSymbols.has(current.symbol)) return true;
       if (current.kind !== "factory" || current.factory !== "object") return false;
       const [objectShape] = current.args;
       return (
         objectShape?.kind === "object" &&
-        objectShape.properties.some((property) => decodedKey(property.key) !== property.key)
+        objectShape.properties.some(
+          (property) => projectObjectPropertyKey(property, decodedKey) !== property.key,
+        )
       );
     },
   });

@@ -80,8 +80,16 @@ export type ZodMethodCallInput = Readonly<{
   args?: readonly ZodArgumentInput[] | undefined;
 }>;
 
-export type ZodObjectProperty = Readonly<{ key: string; expression: ZodExpression }>;
-export type ZodObjectPropertyInput = Readonly<{ key: string; expression: ZodExpressionInput }>;
+export type ZodObjectProperty = Readonly<{
+  key: string;
+  expression: ZodExpression;
+  keyTransform?: "preserve" | undefined;
+}>;
+export type ZodObjectPropertyInput = Readonly<{
+  key: string;
+  expression: ZodExpressionInput;
+  keyTransform?: "preserve" | undefined;
+}>;
 
 export interface ZodArrayArgument<TElement extends ZodArgument = ZodArgument> {
   readonly elements: readonly TElement[];
@@ -225,7 +233,14 @@ export const zodMethodCallSchema: z.ZodType<ZodMethodCall, ZodMethodCallInput> =
   zodMethodCallSchemaValue;
 
 const zodObjectPropertySchemaValue: z.ZodType<ZodObjectProperty, ZodObjectPropertyInput> = z.lazy(
-  () => z.strictObject({ key: z.string(), expression: zodExpressionSchemaValue }).readonly(),
+  () =>
+    z
+      .strictObject({
+        key: z.string(),
+        expression: zodExpressionSchemaValue,
+        keyTransform: z.literal("preserve").optional(),
+      })
+      .readonly(),
 );
 export const zodObjectPropertySchema: z.ZodType<ZodObjectProperty, ZodObjectPropertyInput> =
   zodObjectPropertySchemaValue;
