@@ -1,6 +1,6 @@
 {
   "name": "@x2zod/runtime",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Optional shared machinery for x2zod-generated Zod modules.",
   "license": "MIT",
   "repository": {
