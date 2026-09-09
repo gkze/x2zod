@@ -1,10 +1,10 @@
-import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
 import { writeFile } from "node:fs/promises";
 import nodePath from "node:path";
+import { performance } from "node:perf_hooks";
 
-import type { DeclarationExportMode, RuntimeMode } from "@x2zod/core";
+import type { DeclarationExportMode, RuntimeMode, ZodEmissionTransformInput } from "@x2zod/core";
 
+import { checkGeneratedConsumer, checkGeneratedTypeScript } from "../../../test/generated-consumer";
 import {
   buildNodeBundle,
   importGeneratedExport,
@@ -17,8 +17,12 @@ import type { JsonSchemaInputPluginOptionsInput, JsonSchemaValue } from "../src"
 
 type ParseResult = Readonly<{ success: false }> | Readonly<{ success: true; data: unknown }>;
 export type FixtureValidator = Readonly<{ safeParse: (value: unknown) => ParseResult }>;
+export type FixtureMetrics = Readonly<{
+  sourceBytes: number;
+  compileMs: number;
+  declarationsMs: number;
+}>;
 const packageDirectory = nodePath.resolve(import.meta.dirname, "..");
-const typeScriptBinary = nodePath.resolve(packageDirectory, "../../node_modules/.bin/tsgo");
 const compilerDeadlineMs = 60_000;
 const declarationDeadlineMs = 15_000;
 export const isFixtureValidator = (value: unknown): value is FixtureValidator =>
@@ -33,6 +37,8 @@ export const generateSchemaFixture = async (
     consumerSource?: string;
     runtimeMode?: RuntimeMode;
     declarationExportMode?: DeclarationExportMode;
+    transforms?: readonly ZodEmissionTransformInput[];
+    onMetrics?: (metrics: FixtureMetrics) => void;
   }> = {},
 ): Promise<FixtureValidator> => {
   const { pluginOptions = {}, consumerSource } = request;
@@ -50,6 +56,7 @@ export const generateSchemaFixture = async (
     externals: [...nativePreviewExternals, "jsonc-parser"],
     outfile: bundleFile,
   });
+  const compileStart = performance.now();
   const source = runNode({
     allowedStderr: isNativePreviewShutdownStderr,
     args: [
@@ -59,40 +66,30 @@ export const generateSchemaFixture = async (
       optionsFile,
       request.runtimeMode ?? "inline",
       request.declarationExportMode ?? "root",
+      JSON.stringify(request.transforms ?? []),
     ],
     cwd: packageDirectory,
     timeoutMs: compilerDeadlineMs,
   });
+  const compileMs = performance.now() - compileStart;
   await writeFile(generatedFile, source);
   const consumerFile = nodePath.join(directory, "consumer.ts");
-  if (consumerSource !== undefined) await writeFile(consumerFile, consumerSource);
-  const declarations = spawnSync(
-    typeScriptBinary,
-    [
-      "--declaration",
-      "--emitDeclarationOnly",
-      "--ignoreConfig",
-      "--module",
-      "esnext",
-      "--moduleResolution",
-      "bundler",
-      "--outDir",
-      nodePath.join(directory, "declarations"),
-      "--skipLibCheck",
-      "--strict",
-      "--noUnusedLocals",
-      "--noUnusedParameters",
-      "--noUncheckedIndexedAccess",
-      "--exactOptionalPropertyTypes",
-      "--noPropertyAccessFromIndexSignature",
-      "--target",
-      "es2022",
-      generatedFile,
-      ...(consumerSource === undefined ? [] : [consumerFile]),
-    ],
-    { cwd: packageDirectory, encoding: "utf8", timeout: declarationDeadlineMs },
-  );
-  if (declarations.error !== undefined) throw declarations.error;
-  assert.equal(declarations.status, 0, declarations.stdout + declarations.stderr);
+  const outputDirectory = nodePath.join(directory, "declarations");
+  const declarationsStart = performance.now();
+  const compiler = { cwd: packageDirectory, outputDirectory, timeoutMs: declarationDeadlineMs };
+  if (consumerSource === undefined)
+    checkGeneratedTypeScript({ ...compiler, files: [generatedFile] });
+  else
+    await checkGeneratedConsumer({
+      ...compiler,
+      generatedFiles: [generatedFile],
+      consumerFile,
+      consumerSource,
+    });
+  request.onMetrics?.({
+    sourceBytes: Buffer.byteLength(source),
+    compileMs,
+    declarationsMs: performance.now() - declarationsStart,
+  });
   return importGeneratedExport(generatedFile, "fixtureSchema", isFixtureValidator);
 };

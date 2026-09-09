@@ -32,8 +32,10 @@ const x2zodJsonEqual = (left: unknown, right: unknown): boolean => {
     return leftKeys.length === rightKeys.length && leftKeys.every(key => Object.hasOwn(rightRecord, key) && x2zodJsonEqual(leftRecord[key], rightRecord[key]));
 };
 const x2zodUniqueItems = (values: readonly unknown[]): boolean => values.every((value, index) => values.findIndex(candidate => x2zodJsonEqual(value, candidate)) === index);
-const x2zodPreserveObjectInput = <TSchema extends z.ZodType>(schema: TSchema, requiredOwnKeys: readonly string[]): z.ZodCustom<z.input<TSchema>, z.input<TSchema>> => z.custom<z.input<TSchema>>(value => typeof value === "object" && value !== null && !Array.isArray(value) && requiredOwnKeys.every(key => Object.hasOwn(value, key)) && schema.safeParse(Object.assign(Object.create(null), value)).success);
-const x2zodPreserveObjectCodec = <TSchema extends z.ZodObject>(schema: TSchema, requiredOwnKeys: readonly string[]): z.ZodCodec<z.ZodCustom<z.input<TSchema>, z.input<TSchema>>, z.ZodCustom<z.output<TSchema>, z.output<TSchema>>> => {
+type X2zodPreservedInput<TSchema extends z.ZodType> = z.ZodCustom<z.input<TSchema>, z.input<TSchema>>;
+const x2zodPreserveObjectInput = <TSchema extends z.ZodType>(schema: TSchema, requiredOwnKeys: readonly string[]): X2zodPreservedInput<TSchema> => z.custom<z.input<TSchema>>(value => typeof value === "object" && value !== null && !Array.isArray(value) && requiredOwnKeys.every(key => Object.hasOwn(value, key)) && schema.safeParse(Object.assign(Object.create(null), value)).success);
+type X2zodPreservedCodec<TSchema extends z.ZodObject> = z.ZodCodec<z.ZodCustom<z.input<TSchema>, z.input<TSchema>>, z.ZodCustom<z.output<TSchema>, z.output<TSchema>>>;
+const x2zodPreserveObjectCodec = <TSchema extends z.ZodObject>(schema: TSchema, requiredOwnKeys: readonly string[]): X2zodPreservedCodec<TSchema> => {
     const transform = (value: globalThis.Record<string, unknown>, payload: z.core.ParsePayload, direction: "decode" | "encode") => {
         const ownValue = Object.assign(Object.create(null), value);
         const parsed = direction === "decode" ? schema.safeDecode(ownValue) : schema.safeEncode(ownValue);
@@ -56,8 +58,10 @@ const x2zodPreserveObjectCodec = <TSchema extends z.ZodObject>(schema: TSchema, 
     const hasOwnKeys = (value: unknown) => typeof value === "object" && value !== null && !Array.isArray(value) && requiredOwnKeys.every(key => Object.hasOwn(value, key));
     return z.codec(z.custom<z.input<TSchema>>(hasOwnKeys), z.custom<z.output<TSchema>>(hasOwnKeys), { decode: (value, payload) => transform(value, payload, "decode") as z.output<TSchema>, encode: (value, payload) => transform(value, payload, "encode") as z.input<TSchema> });
 };
-const x2zodApplyRuntimePredicate = <TSchema extends z.ZodType>(_schema: TSchema, predicate: (value: unknown) => boolean): z.ZodCustom<z.infer<TSchema>, z.infer<TSchema>> => z.custom<z.infer<TSchema>>(predicate, "Input does not satisfy the source schema.");
-const x2zodApplyEncodedRuntimePredicate = <TInput, TOutput, TSchema extends z.ZodType<TOutput, TInput>>(schema: TSchema, predicate: (value: unknown) => boolean): z.ZodPipe<z.ZodCustom<TInput, TInput>, TSchema> => z.custom<TInput>(predicate, "Input does not satisfy the source schema.").pipe(schema);
+type X2zodRuntimePredicate<TSchema extends z.ZodType> = z.ZodCustom<z.infer<TSchema>, z.infer<TSchema>>;
+const x2zodApplyRuntimePredicate = <TSchema extends z.ZodType>(_schema: TSchema, predicate: (value: unknown) => boolean): X2zodRuntimePredicate<TSchema> => z.custom<z.infer<TSchema>>(predicate, "Input does not satisfy the source schema.");
+type X2zodEncodedRuntimePredicate<TSchema extends z.ZodType> = z.ZodPipe<z.ZodCustom<z.input<TSchema>, z.input<TSchema>>, TSchema>;
+const x2zodApplyEncodedRuntimePredicate = <TSchema extends z.ZodType<unknown, z.input<TSchema>>>(schema: TSchema, predicate: (value: unknown) => boolean): X2zodEncodedRuntimePredicate<TSchema> => z.custom<z.input<TSchema>>(predicate, "Input does not satisfy the source schema.").pipe(schema);
 const x2zodRemapProperties = <TOutput>(value: globalThis.Record<string, unknown>, mappings: readonly (readonly [
     string,
     string
@@ -85,4 +89,5 @@ const x2zodRemapProperties = <TOutput>(value: globalThis.Record<string, unknown>
     }
     return result as TOutput;
 };
+export type { X2zodPreservedInput, X2zodPreservedCodec, X2zodRuntimePredicate, X2zodEncodedRuntimePredicate };
 export { x2zodCodePointLength, x2zodDecimalParts, x2zodExactMultipleOf, x2zodJsonEqual, x2zodUniqueItems, x2zodPreserveObjectInput, x2zodPreserveObjectCodec, x2zodApplyRuntimePredicate, x2zodApplyEncodedRuntimePredicate, x2zodRemapProperties };

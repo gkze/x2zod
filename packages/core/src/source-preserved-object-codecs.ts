@@ -27,6 +27,7 @@ import {
   createToken,
   createTypeOfExpression,
   createTypeOperatorNode,
+  createTypeAliasDeclaration,
   createTypeParameterDeclaration,
   createTypeReferenceNode,
   createUnionTypeNode,
@@ -43,6 +44,7 @@ import {
 } from "./source-ast";
 import { createPropertyAssignment as assignment } from "./source-codecs";
 
+export const preservedObjectCodecTypeName = "X2zodPreservedCodec";
 export const preservedObjectCodecHelperName = "x2zodPreserveObjectCodec";
 const text = (value: string): Expression => createStringLiteral(value, 0);
 const identifier = createIdentifier;
@@ -271,10 +273,7 @@ export const createPreservedObjectCodecHelper = (): VariableStatement => {
           ),
         ),
       ],
-      zodType("ZodCodec", [
-        zodType("ZodCustom", [zodType("input", [schemaType]), zodType("input", [schemaType])]),
-        zodType("ZodCustom", [zodType("output", [schemaType]), zodType("output", [schemaType])]),
-      ]),
+      createTypeReferenceNode(identifier(preservedObjectCodecTypeName), [schemaType]),
       createToken(SyntaxKind.EqualsGreaterThanToken),
       createBlock(
         [
@@ -298,4 +297,20 @@ export const createPreservedObjectCodecHelper = (): VariableStatement => {
       ),
     ),
   );
+};
+
+export const createPreservedObjectCodecStatements = (): readonly Statement[] => {
+  const schemaType = createTypeReferenceNode(identifier("TSchema"));
+  return [
+    createTypeAliasDeclaration(
+      undefined,
+      identifier(preservedObjectCodecTypeName),
+      [createTypeParameterDeclaration(undefined, identifier("TSchema"), zodType("ZodObject"))],
+      zodType("ZodCodec", [
+        zodType("ZodCustom", [zodType("input", [schemaType]), zodType("input", [schemaType])]),
+        zodType("ZodCustom", [zodType("output", [schemaType]), zodType("output", [schemaType])]),
+      ]),
+    ),
+    createPreservedObjectCodecHelper(),
+  ];
 };

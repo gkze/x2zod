@@ -8,6 +8,7 @@ import type { CallsProjection, ExpressionProjection } from "./emission-runtime-t
 import { collectTransformedSymbols } from "./emission-transform-analysis";
 import type { ZodEmissionTransform, ZodPropertyKeyCase } from "./emission-transform-config";
 import { projectZodWrapperExpression } from "./emission-wrapper-transforms";
+import { projectObjectPropertyKey, propertyKeyCollision } from "./property-key-projection";
 import { err, ok } from "./result";
 import type { Result } from "./result";
 import type {
@@ -16,7 +17,6 @@ import type {
   SourceEmissionModule,
   SourceMethodCall,
   SourceObjectProperty,
-  SourcePropertyKeyMapping,
 } from "./source-model";
 import { sourceCodec, sourceFactory, sourceReference } from "./source-projection-builders";
 import { zodHelperReceiver } from "./zod-helpers";
@@ -95,7 +95,7 @@ const isArrayHelperRefinement = (call: ZodMethodCall): boolean =>
 const projectArgument = (
   argument: ZodArgument,
   context: ProjectionContext,
-  mapStringLiterals = false,
+  mapStringLiterals?: (key: string) => string,
 ): Result<ArgumentProjection> => {
   switch (argument.kind) {
     case "array": {
@@ -133,7 +133,7 @@ const projectArgument = (
     case "literal": {
       const decodedValue =
         mapStringLiterals && typeof argument.value === "string"
-          ? context.decodedKey(argument.value)
+          ? mapStringLiterals(argument.value)
           : argument.value;
       return ok({
         changed: decodedValue !== argument.value,
@@ -177,7 +177,7 @@ const projectArgument = (
 const projectCalls = (
   calls: readonly ZodMethodCall[],
   context: ProjectionContext,
-  mapRequiredKeys = false,
+  mapRequiredKeys?: (key: string) => string,
 ): Result<CallsProjection> => {
   const schemaCalls: SourceMethodCall[] = [];
   const decodedCalls: SourceMethodCall[] = [];
@@ -187,7 +187,9 @@ const projectCalls = (
     const schemaArgs: SourceArgument[] = [];
     const decodedArgs: SourceArgument[] = [];
     const mapStringLiterals =
-      mapRequiredKeys && zodMethodMetadataFor(call.method)?.printArgument === "requiredKeys";
+      zodMethodMetadataFor(call.method)?.printArgument === "requiredKeys"
+        ? mapRequiredKeys
+        : undefined;
     for (const argument of call.args) {
       const projection = projectArgument(argument, context, mapStringLiterals);
       if (!projection.ok) return projection;
@@ -202,33 +204,6 @@ const projectCalls = (
   return ok({ changed, decodedCalls, schemaCalls });
 };
 
-const propertyKeyCollision = (
-  encodedKeys: readonly string[],
-  decodedKey: (key: string) => string,
-): Result<readonly SourcePropertyKeyMapping[]> => {
-  const encodedByDecoded = new Map<string, string>();
-  const mappings: SourcePropertyKeyMapping[] = [];
-
-  for (const encodedKey of encodedKeys) {
-    const projectedKey = decodedKey(encodedKey);
-    const previous = encodedByDecoded.get(projectedKey);
-    if (previous !== undefined && previous !== encodedKey)
-      return err(
-        createDiagnostic({
-          code: "emission_transform_key_collision",
-          message: [
-            `Property-key transform maps both ${JSON.stringify(previous)}`,
-            `and ${JSON.stringify(encodedKey)} to ${JSON.stringify(projectedKey)}.`,
-          ].join(" "),
-        }),
-      );
-    encodedByDecoded.set(projectedKey, encodedKey);
-    if (projectedKey !== encodedKey) mappings.push({ decodedKey: projectedKey, encodedKey });
-  }
-
-  return ok(mappings);
-};
-
 const projectObjectExpression = (
   expression: Extract<ZodExpression, { kind: "factory" }>,
   context: ProjectionContext,
@@ -236,9 +211,16 @@ const projectObjectExpression = (
   const [shape] = expression.args;
   if (shape?.kind !== "object") return unsupportedTransformComposition("object");
 
+  const decodedKeys = new Map(
+    shape.properties.map((property) => [
+      property.key,
+      projectObjectPropertyKey(property, context.decodedKey),
+    ]),
+  );
+  const decodedKey = (key: string): string => decodedKeys.get(key) ?? context.decodedKey(key);
   const mappings = propertyKeyCollision(
     shape.properties.map((property) => property.key),
-    context.decodedKey,
+    decodedKey,
   );
   if (!mappings.ok) return mappings;
 
@@ -252,7 +234,7 @@ const projectObjectExpression = (
     schemaProperties.push({ expression: projection.value.schema, key: property.key });
     decodedProperties.push({
       expression: projection.value.decodedSchema,
-      key: context.decodedKey(property.key),
+      key: decodedKey(property.key),
     });
   }
 
@@ -265,7 +247,7 @@ const projectObjectExpression = (
       : expression.calls.slice(0, firstWrappingCall);
   const wrappingCalls =
     firstWrappingCall === notFoundIndex ? [] : expression.calls.slice(firstWrappingCall);
-  const projectedObjectCalls = projectCalls(objectCalls, context, true);
+  const projectedObjectCalls = projectCalls(objectCalls, context, decodedKey);
   if (!projectedObjectCalls.ok) return projectedObjectCalls;
   const projectedWrappingCalls = projectCalls(wrappingCalls, context);
   if (!projectedWrappingCalls.ok) return projectedWrappingCalls;

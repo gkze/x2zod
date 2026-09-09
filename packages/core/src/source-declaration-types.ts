@@ -44,20 +44,16 @@ const noTokenFlags = 0;
 
 type TypeProjection = "input" | "output";
 
-export type RecursiveDeclarationTypeNames = Readonly<{
-  input: string;
-  output: string;
-  schema: string;
-}>;
+export type DeclarationTypeNames = Readonly<{ input: string; output: string; schema: string }>;
 
-type RecursiveDeclarationTypes = Readonly<{
-  names: ReadonlyMap<ZodSymbol, RecursiveDeclarationTypeNames>;
+type DeclarationTypes = Readonly<{
+  names: ReadonlyMap<ZodSymbol, DeclarationTypeNames>;
   statements: readonly Statement[];
 }>;
 
 type ValueTypeContext = Readonly<{
   declarations: ReadonlyMap<ZodSymbol, SourceExpression>;
-  recursiveNames: ReadonlyMap<ZodSymbol, RecursiveDeclarationTypeNames>;
+  declarationNames: ReadonlyMap<ZodSymbol, DeclarationTypeNames>;
   schemaConstNames: ReadonlyMap<ZodSymbol, string>;
 }>;
 
@@ -76,7 +72,7 @@ type FactoryValueTypeRequest = Readonly<{
 type ValueTypeProjector = (request: ValueTypeRequest) => TypeNode;
 
 const assertNever = (value: never): never => {
-  throw new Error(`Unexpected recursive source type node: ${JSON.stringify(value)}`);
+  throw new Error(`Unexpected source value type node: ${JSON.stringify(value)}`);
 };
 
 const namedType = (name: string): TypeNode => createTypeReferenceNode(createIdentifier(name));
@@ -137,15 +133,15 @@ const referenceValueType = (
   context: ValueTypeContext,
 ): TypeNode => {
   const referencedProjection = expression.view === "schema" ? projection : expression.view;
-  const recursiveNames = context.recursiveNames.get(expression.symbol);
+  const declarationNames = context.declarationNames.get(expression.symbol);
   const base =
-    recursiveNames === undefined
+    declarationNames === undefined
       ? zodType(referencedProjection, [
           createTypeQueryNode(
             createIdentifier(context.schemaConstNames.get(expression.symbol) ?? expression.symbol),
           ),
         ])
-      : namedType(recursiveNames[referencedProjection]);
+      : namedType(declarationNames[referencedProjection]);
   return applyValueCalls(base, expression.calls);
 };
 
@@ -349,9 +345,14 @@ const valueType: ValueTypeProjector = (request) => {
   }
 };
 
-const recursiveSchemaType = (
+const canNameCustomSchema = (expression: SourceExpression): boolean =>
+  (expression.kind === "wrapper" || expression.kind === "runtime-guard") &&
+  !expression.parseStructural &&
+  expression.calls.every((call) => call.method === "describe");
+
+const declarationSchemaType = (
   expression: SourceExpression,
-  names: RecursiveDeclarationTypeNames,
+  names: DeclarationTypeNames,
   context: ValueTypeContext,
 ): TypeNode => {
   const schemaType =
@@ -363,7 +364,10 @@ const recursiveSchemaType = (
           ]),
           zodType("ZodType", [namedType(names.output), namedType(names.output)]),
         ])
-      : zodType("ZodType", [namedType(names.output), namedType(names.input)]);
+      : zodType(canNameCustomSchema(expression) ? "ZodCustom" : "ZodType", [
+          namedType(names.output),
+          namedType(names.input),
+        ]);
   const optionalMarkers = (["input", "output"] as const).flatMap((projection) =>
     optionalExpression({ context, expression, projection })
       ? [
@@ -393,84 +397,79 @@ const recursiveSchemaType = (
       ]);
 };
 
-const allocateRecursiveNames = (
-  symbols: readonly ZodSymbol[],
-  schemaConstNames: ReadonlyMap<ZodSymbol, string>,
-  allocator: TypeScriptIdentifierAllocator,
-): ReadonlyMap<ZodSymbol, RecursiveDeclarationTypeNames> =>
-  new Map(
-    symbols.map((symbol) => {
-      const schemaName = schemaConstNames.get(symbol) ?? symbol;
-      return [
-        symbol,
-        {
-          input: allocator.allocate(`${schemaName}Input`),
-          output: allocator.allocate(`${schemaName}Output`),
-          schema: allocator.allocate(`${schemaName}RecursiveType`),
-        },
-      ] as const;
-    }),
-  );
-
-export const createRecursiveDeclarationTypes = (input: {
+export const createDeclarationTypes = (input: {
   readonly allocator: TypeScriptIdentifierAllocator;
-  readonly cyclicSymbols: readonly ZodSymbol[];
+  readonly cyclicSymbols: ReadonlySet<ZodSymbol>;
   readonly module: SourceEmissionModule;
   readonly schemaConstNames: ReadonlyMap<ZodSymbol, string>;
-}): RecursiveDeclarationTypes => {
+}): DeclarationTypes => {
   const declarations = new Map(
     input.module.declarations.map((declaration) => [declaration.symbol, declaration.expression]),
   );
-  const names = allocateRecursiveNames(
-    input.cyclicSymbols,
-    input.schemaConstNames,
-    input.allocator,
+  // Preserve finite custom-schema boundaries as well as cycles: declaration serialization can
+  // Otherwise inline private chains and silently elide deep types to any.
+  const annotatedDeclarations = input.module.declarations
+    .filter(
+      (declaration) =>
+        input.cyclicSymbols.has(declaration.symbol) ||
+        (input.module.declarations.length > 1 && canNameCustomSchema(declaration.expression)),
+    )
+    .map((declaration) => {
+      const schemaName = input.schemaConstNames.get(declaration.symbol) ?? declaration.symbol;
+      return {
+        symbol: declaration.symbol,
+        expression: declaration.expression,
+        names: {
+          input: input.allocator.allocate(`${schemaName}Input`),
+          output: input.allocator.allocate(`${schemaName}Output`),
+          schema: input.allocator.allocate(
+            `${schemaName}${input.cyclicSymbols.has(declaration.symbol) ? "RecursiveType" : "SchemaType"}`,
+          ),
+        },
+      };
+    });
+  const names = new Map(
+    annotatedDeclarations.map((declaration) => [declaration.symbol, declaration.names]),
   );
   const context: ValueTypeContext = {
     declarations,
-    recursiveNames: names,
+    declarationNames: names,
     schemaConstNames: input.schemaConstNames,
   };
-  const statements: Statement[] = [];
-  for (const symbol of input.cyclicSymbols) {
-    const expression = declarations.get(symbol);
-    const declarationNames = names.get(symbol);
-    if (expression !== undefined && declarationNames !== undefined)
-      statements.push(
-        createTypeAliasDeclaration(
-          [createToken(SyntaxKind.ExportKeyword)],
-          createIdentifier(declarationNames.input),
-          undefined,
-          valueType({ context, expression, projection: "input" }),
-        ),
-        createTypeAliasDeclaration(
-          [createToken(SyntaxKind.ExportKeyword)],
-          createIdentifier(declarationNames.output),
-          undefined,
-          valueType({ context, expression, projection: "output" }),
-        ),
-        createTypeAliasDeclaration(
-          [createToken(SyntaxKind.ExportKeyword)],
-          createIdentifier(declarationNames.schema),
-          undefined,
-          recursiveSchemaType(expression, declarationNames, context),
-        ),
-      );
-  }
+  const statements = annotatedDeclarations.flatMap((declaration) => [
+    createTypeAliasDeclaration(
+      [createToken(SyntaxKind.ExportKeyword)],
+      createIdentifier(declaration.names.input),
+      undefined,
+      valueType({ context, expression: declaration.expression, projection: "input" }),
+    ),
+    createTypeAliasDeclaration(
+      [createToken(SyntaxKind.ExportKeyword)],
+      createIdentifier(declaration.names.output),
+      undefined,
+      valueType({ context, expression: declaration.expression, projection: "output" }),
+    ),
+    createTypeAliasDeclaration(
+      [createToken(SyntaxKind.ExportKeyword)],
+      createIdentifier(declaration.names.schema),
+      undefined,
+      declarationSchemaType(declaration.expression, declaration.names, context),
+    ),
+  ]);
   return { names, statements };
 };
 
-export const recursiveSchemaAnnotation = (
+export const declarationSchemaAnnotation = (
   symbol: ZodSymbol,
-  names: ReadonlyMap<ZodSymbol, RecursiveDeclarationTypeNames>,
+  names: ReadonlyMap<ZodSymbol, DeclarationTypeNames>,
 ): TypeNode | undefined => {
   const declarationNames = names.get(symbol);
   return declarationNames === undefined ? undefined : namedType(declarationNames.schema);
 };
 
-export const recursiveReferenceAnnotation = (
+export const declarationReferenceAnnotation = (
   expression: SourceReferenceExpression,
-  names: ReadonlyMap<ZodSymbol, RecursiveDeclarationTypeNames>,
+  names: ReadonlyMap<ZodSymbol, DeclarationTypeNames>,
 ): TypeNode | undefined => {
   const declarationNames = names.get(expression.symbol);
   if (declarationNames === undefined) return undefined;

@@ -4,6 +4,7 @@ import { writeFile } from "node:fs/promises";
 import nodePath from "node:path";
 import { describe, test } from "node:test";
 
+import { checkGeneratedConsumer } from "../../../test/generated-consumer";
 import { importGeneratedExport, isRecord } from "../../../test/native-source-harness";
 import {
   createGeneratedSourceHarness,
@@ -143,21 +144,24 @@ void describe("recursive declaration and naming contracts", () => {
       try {
         await writeFile(harness.generatedFile, harness.print(["recursive-optionality", "Exclude"]));
         const consumer = nodePath.join(harness.directory, "consumer.ts");
-        await writeFile(
-          consumer,
-          [
-            'import { z } from "zod/v4";',
-            'import { excludeSchema } from "./generated-runtime.js";',
-            'const input: z.input<typeof excludeSchema> = { tuple: [], requiredValue: "ok" };',
-            'const output: z.output<typeof excludeSchema> = { tuple: ["value"], requiredValue: "ok", next: input };',
-            "export { input, output };",
-          ].join("\n"),
-        );
-        emitGeneratedDeclarations(
-          consumer,
-          nodePath.join(harness.directory, "declarations"),
-          nativeProcessTimeoutMs,
-        );
+        const consumerSource = [
+          'import { z } from "zod/v4";',
+          'import { excludeSchema } from "./generated-runtime.js";',
+          'import type { excludeSchemaRecursiveType } from "./generated-runtime.js";',
+          "export const recursiveSchema: excludeSchemaRecursiveType = excludeSchema;",
+          'const input: z.input<typeof excludeSchema> = { tuple: [], requiredValue: "ok" };',
+          'const output: z.output<typeof excludeSchema> = { tuple: ["value"], requiredValue: "ok", next: input };',
+          "export { input, output };",
+        ].join("\n");
+        await checkGeneratedConsumer({
+          cwd: harness.directory,
+          generatedFiles: [harness.generatedFile],
+          consumerFile: consumer,
+          consumerSource,
+          outputDirectory: nodePath.join(harness.directory, "declarations"),
+          moduleResolution: "nodenext",
+          timeoutMs: nativeProcessTimeoutMs,
+        });
         const schema = await importGeneratedExport(
           harness.generatedFile,
           "excludeSchema",

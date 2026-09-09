@@ -2,7 +2,10 @@ import { remapPropertiesHelperName } from "./source-codecs";
 import { zodHelperIdentifierNames } from "./source-helpers";
 import { analyzeSourceExpression } from "./source-model";
 import type { SourceEmissionModule } from "./source-model";
-import { preservedObjectCodecHelperName } from "./source-preserved-object-codecs";
+import {
+  preservedObjectCodecHelperName,
+  preservedObjectCodecTypeName,
+} from "./source-preserved-object-codecs";
 import { runtimePredicateHelperNames } from "./source-runtime";
 import { createTypeScriptIdentifierAllocator } from "./typescript-identifiers";
 import type { TypeScriptIdentifierAllocator } from "./typescript-identifiers";
@@ -34,7 +37,9 @@ export const createSourceIdentifierAllocator = (
   return {
     allocator: createTypeScriptIdentifierAllocator([
       ...zodHelperIdentifierNames(helperNames),
-      ...(needsPreservedObjectCodec ? [preservedObjectCodecHelperName] : []),
+      ...(needsPreservedObjectCodec
+        ? [preservedObjectCodecHelperName, preservedObjectCodecTypeName]
+        : []),
       ...(needsRemapHelper ? [remapPropertiesHelperName] : []),
       ...runtimePredicateHelperNames(runtimeGuardParseModes),
     ]),

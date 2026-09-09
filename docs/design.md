@@ -434,13 +434,22 @@ Property casing emits bidirectional Zod codecs. For each finite object shape, co
 forward and reverse key map instead of pretending camel casing has a global inverse. Declared-key
 collisions fail compilation. A collision with a dynamic passthrough or catchall key becomes a Zod
 codec issue at runtime. Missing optional properties stay missing, and dynamic record, passthrough,
-and catchall keys remain unchanged.
+and catchall keys remain unchanged. A plugin may mark a `ZodObjectProperty` with
+`keyTransform: "preserve"` when a finite validation slot represents a dynamic key. Core preserves
+that key through mapping, collision checks, and required-key projection while still transforming its
+value. The JSON Schema plugin uses this for synthetic prototype-key validation slots; explicitly
+declared properties retain ordinary key mapping.
 
 Transforms recurse through supported container and reference shapes. If a composition cannot remain
 bidirectional, compilation fails with an unsupported-transform diagnostic rather than emitting a
 one-way or ambiguous schema. A third-party transform registry is deferred until a concrete external
 transform requires it; the initial discriminated union keeps the public surface small while leaving
 room for more core-owned transform kinds.
+
+Finite custom-schema reference chains retain explicit named input/output/schema types, using the
+same value projection as recursive declarations. This prevents TypeScript declaration serialization
+from silently eliding deeply inlined types. Concrete structural Zod factories keep their inferred
+schema surface; named custom schemas retain `ZodCustom` rather than widening to `ZodType`.
 
 ## Helper ABI
 
@@ -1024,6 +1033,9 @@ Emission transform tests:
 - absent and explicitly undefined optional properties;
 - bidirectional decode/encode round trips with dynamic keys left unchanged;
 - declaration emission proving encoded `z.input` and decoded `z.output` / `z.infer` types.
+
+The executable boundary map and test budgets are documented in
+[Compiler Test Contracts](testing-contracts.md).
 
 Generated runtime and conformance tests:
 
